@@ -107,7 +107,13 @@ class Div(Component):
 
 
 class Button(Component):
-    def __init__(self, text, id=None, cls=None, **attrs):
+    def __init__(self, text, id=None, cls=None, on_click: str | None = None, **attrs):
+        # Convert on_click to HTMX attributes
+        if on_click:
+            if 'hx-post' not in attrs:
+                attrs['hx-post'] = f"/{on_click.lstrip('/')}"
+            if 'hx-target' not in attrs:
+                attrs['hx-target'] = "#hx-target"
         super().__init__(id=id, cls=cls, **attrs)
         self.text = text
 
@@ -163,22 +169,8 @@ CounterLabel = Label(
 def Counter():
     return Div([
         CounterLabel,
-        Button(
-            "+1",
-            **{
-                "hx-post": "/increment",
-                "hx-target": "#hx-target",
-                "cls": "bg-blue-500 text-white p-2 rounded mt-2"
-            }
-        ),
-        Button(
-            "Reset",
-            **{
-                "hx-post": "/reset",
-                "hx-target": "#hx-target",
-                "cls": "bg-red-500 text-white p-2 rounded mt-2"
-            }
-        )
+        Button("+1", on_click="increment", cls="bg-blue-500 text-white p-2 rounded mt-2"),
+        Button("Reset", on_click="reset", cls="bg-red-500 text-white p-2 rounded mt-2")
     ], id="counter", cls="p-4 max-w-xs mx-auto")
 
 
