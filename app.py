@@ -49,11 +49,7 @@ def render_components_oob(*component_ids):
     html_parts = []
     for cid in component_ids:
         if cid in _component_registry:
-            component = _component_registry[cid]
-            if hasattr(component, 'render_oob'):
-                html_parts.append(component.render_oob())
-            else:
-                html_parts.append(component.render())
+            html_parts.append(_component_registry[cid].render_oob())
     return "".join(html_parts)
 
 
@@ -105,6 +101,17 @@ class Div(Component):
         )
         return f"<div {attrs}>{children_html}</div>"
 
+    def render_oob(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates"""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        children_html = "".join(
+            child.render() if hasattr(child, "render") else str(child)
+            for child in self.children
+        )
+        return f"<div {attrs}>{children_html}</div>"
+
 
 class Button(Component):
     def __init__(self, text, id=None, cls=None, on_click: str | None = None, **attrs):
@@ -119,6 +126,14 @@ class Button(Component):
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
+        resolved_text = self._resolve(self.text)
+        return f"<button {attrs}>{resolved_text}</button>"
+
+    def render_oob(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates"""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
         resolved_text = self._resolve(self.text)
         return f"<button {attrs}>{resolved_text}</button>"
 
