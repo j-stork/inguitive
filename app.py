@@ -44,7 +44,7 @@ class State(Generic[T]):
 counter_state = State(0, "counter")
 
 # --- Helper Functions ---
-def render_updates(*component_ids):
+def update_components(*component_ids):
     """Render multiple components as OOB HTML for HTMX updates"""
     html_parts = []
     for cid in component_ids:
@@ -197,13 +197,13 @@ def home(request: Request):
 @app.post("/increment", response_class=HTMLResponse)
 def increment():
     counter_state.set(counter_state.get() + 1)
-    return render_updates(*counter_state.listeners)
+    return update_components(*counter_state.listeners)
 
 
 @app.post("/reset", response_class=HTMLResponse)
 def reset():
     counter_state.set(0)
-    return render_updates(*counter_state.listeners)
+    return update_components(*counter_state.listeners)
 
 
 # --- Start ---
