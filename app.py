@@ -148,7 +148,7 @@ class Label(Component):
 def get_counter_style():
     """Dynamic styling based on counter value"""
     count = counter_state.get()
-    base = "text-xl"
+    base = "text-xl text-center"
     if count > 5:
         return f"{base} text-red-500 font-bold"
     elif count < 0:
