@@ -8,7 +8,7 @@ from typing import TypeVar, Generic
 BUTTON_BASE_CSS = "rounded-md px-3 py-2 text-sm font-semibold shadow-xs"
 
 # Primary button (indigo theme)
-BUTTON_PRIMARY_CSS = f"{BUTTON_BASE_CSS} bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+BUTTON_PRIMARY_CSS = f"{BUTTON_BASE_CSS} bg-slate-600 text-white hover:bg-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600"
 
 # Secondary button (white theme with gray ring)
 BUTTON_SECONDARY_CSS = f"{BUTTON_BASE_CSS} bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50"
