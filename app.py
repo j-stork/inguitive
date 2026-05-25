@@ -165,8 +165,8 @@ def Counter():
             cls=get_counter_style,
             listen_to="counter"
         ),
-        Button("+1", on_click="increment", cls="bg-blue-500 text-white p-2 rounded mt-2"),
-        Button("Reset", on_click="reset", cls="bg-red-500 text-white p-2 rounded mt-2"),
+        Button("+1", on_click="increment", cls="bg-blue-500 text-white p-2 rounded-lg mt-2 w-full"),
+        Button("Reset", on_click="reset", cls="bg-red-500 text-white p-2 rounded-lg mt-2 w-full"),
         id="counter",
         cls="p-4 max-w-xs mx-auto"
     )
