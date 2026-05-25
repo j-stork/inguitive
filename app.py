@@ -93,9 +93,13 @@ class Component:
 
 
 class Div(Component):
-    def __init__(self, children=None, id=None, cls=None, **attrs):
+    def __init__(self, *children, id=None, cls=None, **attrs):
         super().__init__(id=id, cls=cls, **attrs)
-        self.children = children or []
+        # Handle both Div(child1, child2) and Div([child1, child2]) for backward compatibility
+        if len(children) == 1 and isinstance(children[0], list):
+            self.children = children[0]
+        else:
+            self.children = list(children)
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
@@ -158,7 +162,7 @@ def get_counter_style():
 
 # --- Counter Component ---
 def Counter():
-    return Div([
+    return Div(
         Label(
             text=lambda: f"Count: {counter_state.get()}",
             id="counter-label",
@@ -166,8 +170,10 @@ def Counter():
             listen_to="counter"
         ),
         Button("+1", on_click="increment", cls="bg-blue-500 text-white p-2 rounded mt-2"),
-        Button("Reset", on_click="reset", cls="bg-red-500 text-white p-2 rounded mt-2")
-    ], id="counter", cls="p-4 max-w-xs mx-auto")
+        Button("Reset", on_click="reset", cls="bg-red-500 text-white p-2 rounded mt-2"),
+        id="counter",
+        cls="p-4 max-w-xs mx-auto"
+    )
 
 
 # --- Routes ---
