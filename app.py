@@ -53,6 +53,7 @@ class State(Generic[T]):
 
 # --- State Instances ---
 counter_state = State(0, "counter_state")
+theme_state = State("light", "theme_state")
 
 # --- Data Registry Example ---
 # Store complex data server-side, reference by ID from buttons
@@ -209,7 +210,8 @@ def Counter():
             ),
             cls="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm"
         ),
-        cls="w-full min-h-screen bg-slate-800 flex items-center justify-center"
+        cls="w-full min-h-screen bg-slate-800 flex items-center justify-center",
+        listen_to="theme_state",
     )
 
 
