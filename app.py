@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from typing import TypeVar, Generic
+from typing import TypeVar, Generic, Callable
 import re
 
 # --- Styling constants ---
@@ -57,9 +57,9 @@ counter_state = State(0, "counter_state")
 theme_state = State("light", "theme_state")
 
 # --- Helper Functions ---
-def update_components(*component_ids):
+def update_components(*component_ids: str) -> str:
     """Render multiple components as OOB HTML for HTMX updates"""
-    html_parts = []
+    html_parts: list[str] = []
     for cid in component_ids:
         if cid in _component_registry:
             html_parts.append(_component_registry[cid].update())
@@ -68,7 +68,8 @@ def update_components(*component_ids):
 
 # --- Components ---
 class Component:
-    def __init__(self, id=None, cls=None, listen_to: str | None = None, **attrs):
+    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None, 
+                 listen_to: str | None = None, **attrs):
         self.id = id
         self.cls = cls
         self.attrs = attrs
@@ -79,7 +80,7 @@ class Component:
             if listen_to in _state_registry:
                 _state_registry[listen_to].add_listener(self.id)
 
-    def _resolve(self, value):
+    def _resolve(self, value: str | Callable[[], str]) -> str:
         """Resolve a potentially dynamic value (callable or static)"""
         return value() if callable(value) else value
 
@@ -89,7 +90,7 @@ class Component:
         for k, v in self.attrs.items():
             if k != 'cls':
                 filtered_attrs[k] = self._resolve(v)
-        resolved_cls = self._resolve(self.cls)
+        resolved_cls = self._resolve(self.cls) if self.cls else None
         if resolved_cls:
             filtered_attrs['class'] = resolved_cls
         # Add id if present
@@ -102,7 +103,7 @@ class Component:
 
 
 class Div(Component):
-    def __init__(self, *children, id=None, cls=None, **attrs):
+    def __init__(self, *children, id: str | None = None, cls: str | Callable[[], str] | None = None, **attrs):
         super().__init__(id=id, cls=cls, **attrs)
         self.children = list(children)
 
@@ -127,8 +128,10 @@ class Div(Component):
 
 
 class Button(Component):
-    def __init__(self, text, id=None, cls=None, on_click: str | None = None,
-                 on_click_args: dict | None = None, **attrs):
+    def __init__(self, text: str | Callable[[], str], id: str | None = None, 
+                 cls: str | Callable[[], str] | None = None, 
+                 on_click: str | None = None,
+                 on_click_args: dict[str, str] | None = None, **attrs):
         # Convert on_click to HTMX attributes with optional query parameters
         if on_click:
             if 'hx-post' not in attrs:
@@ -156,7 +159,8 @@ class Button(Component):
 
 
 class Label(Component):
-    def __init__(self, text, id=None, cls=None, **attrs):
+    def __init__(self, text: str | Callable[[], str], id: str | None = None, 
+                 cls: str | Callable[[], str] | None = None, **attrs):
         super().__init__(id=id, cls=cls, **attrs)
         self.text = text
 
@@ -175,12 +179,12 @@ class Label(Component):
 
 
 class Icon(Component):
-    def __init__(self, svg, cls=None, **attrs):
+    def __init__(self, svg: str | Callable[[], str], cls: str | Callable[[], str] | None = None, **attrs):
         super().__init__(cls=cls, **attrs)
         self.svg = svg
 
     @staticmethod
-    def _replace_class(svg_str, cls_value):
+    def _replace_class(svg_str: str, cls_value: str) -> str:
         """Replace or insert class attribute in SVG string.
         
         Preserves all other attributes, quote style, and structure.
@@ -208,17 +212,17 @@ class Icon(Component):
             return f'<svg class="{cls_value}">{svg_str}'
 
     def render(self) -> str:
-        resolved_svg = self._resolve(self.svg)
+        resolved_svg: str = self._resolve(self.svg)
         
         if self.cls:
-            resolved_cls = self._resolve(self.cls)
+            resolved_cls: str = self._resolve(self.cls)
             resolved_svg = self._replace_class(resolved_svg, resolved_cls)
         
         return resolved_svg
 
 
 # --- Dynamic styling functions ---
-def get_counter_style():
+def get_counter_style() -> str:
     """Dynamic styling based on counter value"""
     count = counter_state.get()
     base = "text-xl text-center"
@@ -229,13 +233,13 @@ def get_counter_style():
     return base
 
 
-def get_theme_bg():
+def get_theme_bg() -> str:
     """Dynamic background based on theme state"""
     return "bg-white" if theme_state.get() == "light" else "bg-slate-800"
 
 
 # --- Counter Component ---
-def Counter():
+def Counter() -> Div:
     return Div(
         Div(
             Label(
@@ -263,7 +267,7 @@ def Counter():
 
 # --- Routes ---
 @app.get("/", response_class=HTMLResponse)
-def home(request: Request):
+def home(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         "base.html",
         {"request": request, "content": Counter().render()}
@@ -271,22 +275,22 @@ def home(request: Request):
 
 
 @app.post("/increment", response_class=HTMLResponse)
-def increment():
+def increment() -> str:
     counter_state.set(counter_state.get() + 1)
     return update_components(*counter_state.listeners)
 
 
 @app.post("/reset", response_class=HTMLResponse)
-def reset():
+def reset() -> str:
     counter_state.set(0)
     return update_components(*counter_state.listeners)
 
 
 @app.post("/toggle_theme", response_class=HTMLResponse)
-def toggle_theme():
+def toggle_theme() -> str:
     """Toggle between light and dark theme"""
-    current = theme_state.get()
-    new_theme = "dark" if current == "light" else "light"
+    current: str = theme_state.get()
+    new_theme: str = "dark" if current == "light" else "light"
     theme_state.set(new_theme)
     return update_components(*theme_state.listeners)
 
