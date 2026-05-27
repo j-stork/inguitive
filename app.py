@@ -203,7 +203,7 @@ def Counter():
             Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
             Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
             Button(
-                lambda: f"Toggle {theme_state.get().capitalize()} Theme",
+                lambda: f"Toggle {'Dark' if theme_state.get() == 'light' else 'Light'} Theme",
                 on_click="toggle_theme",
                 id="theme-toggle",
                 cls=f"{BUTTON_SECONDARY_CSS} w-full"
