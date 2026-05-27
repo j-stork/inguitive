@@ -203,7 +203,7 @@ def Counter():
             Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
             Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
             Button(
-                "Apply Dark Theme",
+                f"Toggle {theme_state.get().capitalize()} Theme",
                 on_click="apply_theme",
                 on_click_args={"config_id": "config_dark"},
                 cls=f"{BUTTON_SECONDARY_CSS} w-full"
