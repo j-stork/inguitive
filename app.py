@@ -55,11 +55,6 @@ class State(Generic[T]):
 counter_state = State(0, "counter_state")
 theme_state = State("light", "theme_state")
 
-# --- Data Registry Example ---
-# Store complex data server-side, reference by ID from buttons
-_data_registry["config_dark"] = {"theme": "dark", "accent": "indigo"}
-_data_registry["config_light"] = {"theme": "light", "accent": "blue"}
-
 # --- Helper Functions ---
 def update_components(*component_ids):
     """Render multiple components as OOB HTML for HTMX updates"""
@@ -178,7 +173,7 @@ class Label(Component):
         return f"<p {attrs}>{resolved_text}</p>"
 
 
-# --- Dynamic styling function ---
+# --- Dynamic styling functions ---
 def get_counter_style():
     """Dynamic styling based on counter value"""
     count = counter_state.get()
@@ -188,6 +183,11 @@ def get_counter_style():
     elif count < 0:
         return f"{base} text-blue-500"
     return base
+
+
+def get_theme_bg():
+    """Dynamic background based on theme state"""
+    return "bg-white" if theme_state.get() == "light" else "bg-slate-800"
 
 
 # --- Counter Component ---
@@ -203,15 +203,17 @@ def Counter():
             Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
             Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
             Button(
-                f"Toggle {theme_state.get().capitalize()} Theme",
-                on_click="apply_theme",
-                on_click_args={"config_id": "config_dark"},
+                lambda: f"Toggle {theme_state.get().capitalize()} Theme",
+                on_click="toggle_theme",
+                id="theme-toggle",
                 cls=f"{BUTTON_SECONDARY_CSS} w-full"
             ),
+            id="counter",
             cls="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm"
         ),
-        cls="w-full min-h-screen bg-slate-800 flex items-center justify-center",
-        listen_to="theme_state",
+        id="theme-container",
+        cls=lambda: f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center",
+        listen_to="theme_state"
     )
 
 
@@ -236,16 +238,13 @@ def reset():
     return update_components(*counter_state.listeners)
 
 
-@app.post("/apply_theme", response_class=HTMLResponse)
-def apply_theme(config_id: str):
-    """Example: Apply theme configuration from data registry"""
-    if config_id in _data_registry:
-        config = _data_registry[config_id]
-        # Here you would apply the theme config
-        # For demo purposes, we just update the counter label to show the theme
-        # In a real app, you might return update_components for a theme label
-        pass
-    return update_components(*counter_state.listeners)
+@app.post("/toggle_theme", response_class=HTMLResponse)
+def toggle_theme():
+    """Toggle between light and dark theme"""
+    current = theme_state.get()
+    new_theme = "dark" if current == "light" else "light"
+    theme_state.set(new_theme)
+    return update_components(*theme_state.listeners)
 
 
 # --- Start ---
