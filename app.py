@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from typing import TypeVar, Generic
+import re
 
 # --- Styling constants ---
 # Common base styling for all buttons
@@ -171,6 +172,34 @@ class Label(Component):
         resolved_text = self._resolve(self.text)
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
         return f"<p {attrs}>{resolved_text}</p>"
+
+
+class Icon(Component):
+    def __init__(self, svg, cls=None, **attrs):
+        super().__init__(cls=cls, **attrs)
+        self.svg = svg
+
+    def render(self) -> str:
+        resolved_svg = self._resolve(self.svg)
+        
+        if self.cls:
+            resolved_cls = self._resolve(self.cls)
+            # Replace class attribute value if exists, preserving quote style
+            if 'class=' in resolved_svg:
+                resolved_svg = re.sub(
+                    r'(class\s*=\s*)([\'"].*?)\2',
+                    rf'\g<1>{resolved_cls}\2',
+                    resolved_svg,
+                    count=1
+                )
+            else:
+                # No class attribute - add one
+                if resolved_svg.startswith('<svg'):
+                    resolved_svg = resolved_svg.replace('<svg', f'<svg class="{resolved_cls}"')
+                else:
+                    resolved_svg = f'<svg class="{resolved_cls}">{resolved_svg}'
+        
+        return resolved_svg
 
 
 # --- Dynamic styling functions ---
