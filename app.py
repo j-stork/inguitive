@@ -52,7 +52,7 @@ class State(Generic[T]):
 
 
 # --- State Instances ---
-counter_state = State(0, "counter")
+counter_state = State(0, "counter_state")
 
 # --- Data Registry Example ---
 # Store complex data server-side, reference by ID from buttons
@@ -197,7 +197,7 @@ def Counter():
                 text=lambda: f"Count: {counter_state.get()}",
                 id="counter-label",
                 cls=get_counter_style,
-                listen_to="counter"
+                listen_to="counter_state"
             ),
             Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
             Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
@@ -207,7 +207,6 @@ def Counter():
                 on_click_args={"config_id": "config_dark"},
                 cls=f"{BUTTON_SECONDARY_CSS} w-full"
             ),
-            id="counter",
             cls="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm"
         ),
         cls="w-full min-h-screen bg-slate-800 flex items-center justify-center"
