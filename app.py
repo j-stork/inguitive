@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from typing import TypeVar, Generic, Callable
 import re
-from svg import MOON
+from svg import MOON, SUN
 
 # --- Styling constants ---
 # Common base styling for all buttons
@@ -243,6 +243,16 @@ def get_theme_bg() -> str:
 def Counter() -> Div:
     return Div(
         Div(
+            Div(
+                Icon(
+                    lambda: MOON if theme_state.get() == "light" else SUN, 
+                    cls="w-6 h-6"
+                ),
+                cls="w-full flex justify-end"
+            ),
+            
+            
+            
             Label(
                 text=lambda: f"Count: {counter_state.get()}",
                 id="counter-label",
@@ -257,7 +267,7 @@ def Counter() -> Div:
                 id="theme-toggle",
                 cls=f"{BUTTON_SECONDARY_CSS} w-full"
             ),
-            id="counter",
+            id="counter-card",
             cls="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm"
         ),
         id="theme-container",
