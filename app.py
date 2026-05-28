@@ -128,7 +128,7 @@ class Div(Component):
 
 
 class Button(Component):
-    def __init__(self, text: str | Callable[[], str], id: str | None = None, 
+    def __init__(self, *children, id: str | None = None, 
                  cls: str | Callable[[], str] | None = None, 
                  on_click: str | None = None,
                  on_click_args: dict[str, str] | None = None, **attrs):
@@ -142,20 +142,26 @@ class Button(Component):
             if 'hx-target' not in attrs:
                 attrs['hx-target'] = "#hx-target"
         super().__init__(id=id, cls=cls, **attrs)
-        self.text = text
+        self.children = list(children)
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
-        resolved_text = self._resolve(self.text)
-        return f"<button {attrs}>{resolved_text}</button>"
+        children_html = "".join(
+            child.render() if hasattr(child, "render") else str(child)
+            for child in self.children
+        )
+        return f"<button {attrs}>{children_html}</button>"
 
     def update(self) -> str:
         """Render with hx-swap-oob for HTMX out-of-band updates"""
         if not self.id:
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        resolved_text = self._resolve(self.text)
-        return f"<button {attrs}>{resolved_text}</button>"
+        children_html = "".join(
+            child.render() if hasattr(child, "render") else str(child)
+            for child in self.children
+        )
+        return f"<button {attrs}>{children_html}</button>"
 
 
 class Label(Component):
@@ -258,16 +264,6 @@ def get_theme_bg() -> str:
 def Counter() -> Div:
     return Div(
         Div(
-            Div(
-                Icon(
-                    lambda: MOON if theme_state.get() == "light" else SUN, 
-                    cls="w-6 h-6"
-                ),
-                cls="w-full flex justify-end"
-            ),
-            
-            
-            
             Label(
                 text=lambda: f"Count: {counter_state.get()}",
                 id="counter-label",
@@ -277,6 +273,7 @@ def Counter() -> Div:
             Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
             Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
             Button(
+                Icon(lambda: MOON if theme_state.get() == "light" else SUN, cls="w-6 h-6"),
                 lambda: f"Toggle {'Dark' if theme_state.get() == 'light' else 'Light'} Theme",
                 on_click="toggle_theme",
                 id="theme-toggle",
