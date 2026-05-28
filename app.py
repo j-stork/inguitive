@@ -110,7 +110,7 @@ class Div(Component):
     def render(self) -> str:
         attrs = self._get_attrs_str()
         children_html = "".join(
-            child.render() if hasattr(child, "render") else str(child)
+            child.render() if hasattr(child, "render") else self._resolve(child)
             for child in self.children
         )
         return f"<div {attrs}>{children_html}</div>"
@@ -121,7 +121,7 @@ class Div(Component):
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
         children_html = "".join(
-            child.render() if hasattr(child, "render") else str(child)
+            child.render() if hasattr(child, "render") else self._resolve(child)
             for child in self.children
         )
         return f"<div {attrs}>{children_html}</div>"
@@ -147,7 +147,7 @@ class Button(Component):
     def render(self) -> str:
         attrs = self._get_attrs_str()
         children_html = "".join(
-            child.render() if hasattr(child, "render") else str(child)
+            child.render() if hasattr(child, "render") else self._resolve(child)
             for child in self.children
         )
         return f"<button {attrs}>{children_html}</button>"
@@ -158,7 +158,7 @@ class Button(Component):
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
         children_html = "".join(
-            child.render() if hasattr(child, "render") else str(child)
+            child.render() if hasattr(child, "render") else self._resolve(child)
             for child in self.children
         )
         return f"<button {attrs}>{children_html}</button>"
