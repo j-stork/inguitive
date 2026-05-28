@@ -197,20 +197,36 @@ class Icon(Component):
         Returns:
             SVG string with updated class attribute
         """
-        # Find class attribute: class=", " or class=''
-        match = re.search(r'(class\s*=\s*)([\'"](.*?)\2)', svg_str)
-        
-        if match:
-            # Replace only the value inside the quotes
-            before, quote = match.groups()[:2]
-            start, end = match.span()
-            return svg_str[:start] + f'{before}{quote}{cls_value}{quote}' + svg_str[end:]
-        else:
-            # No class attribute - insert one after <svg
-            if svg_str.startswith('<svg'):
-                pos = len('<svg')
-                return svg_str[:pos] + f' class="{cls_value}"' + svg_str[pos:]
-            return f'<svg class="{cls_value}">{svg_str}'
+        # Find class attribute with optional whitespace between class and =
+        idx = svg_str.find('class')
+        if idx != -1:
+            # Move past 'class'
+            idx += len('class')
+            # Skip whitespace
+            while idx < len(svg_str) and svg_str[idx] in ' \t':
+                idx += 1
+            # Check for '='
+            if idx < len(svg_str) and svg_str[idx] == '=':
+                idx += 1
+                # Skip whitespace after '='
+                while idx < len(svg_str) and svg_str[idx] in ' \t':
+                    idx += 1
+                # Now at the opening quote
+                if idx < len(svg_str) and svg_str[idx] in ('"', "'"):
+                    quote_char = svg_str[idx]
+                    # Find closing quote
+                    content_start = idx + 1
+                    content_end = svg_str.find(quote_char, content_start)
+                    if content_end != -1:
+                        # Replace the content between quotes
+                        return (svg_str[:content_start] +
+                                cls_value +
+                                svg_str[content_end:])
+        # No class attribute found - insert one
+        if svg_str.startswith('<svg'):
+            pos = len('<svg')
+            return svg_str[:pos] + f' class="{cls_value}"' + svg_str[pos:]
+        return f'<svg class="{cls_value}">{svg_str}'
 
     def render(self) -> str:
         resolved_svg: str = self._resolve(self.svg)
