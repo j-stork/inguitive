@@ -6,13 +6,13 @@ from svg import MOON, SUN
 
 # --- Styling constants ---
 # Common base styling for all buttons
-BUTTON_BASE_CSS = "rounded-md px-3 py-2 text-sm font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600"
+BUTTON_BASE_CSS = "rounded-md p-2 text-sm font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600"
 
 # Primary button (indigo theme)
-BUTTON_PRIMARY_CSS = f"{BUTTON_BASE_CSS} bg-slate-600 text-white hover:bg-slate-500 active:bg-slate-700"
+BUTTON_PRIMARY_CSS = f"{BUTTON_BASE_CSS} bg-slate-600 text-white hover:bg-slate-500 active:translate-y-0.5"
 
 # Secondary button (white theme with gray ring)
-BUTTON_SECONDARY_CSS = f"{BUTTON_BASE_CSS} bg-slate-300 text-black hover:bg-slate-200 active:bg-slate-400"
+BUTTON_SECONDARY_CSS = f"{BUTTON_BASE_CSS} bg-slate-300 text-black hover:bg-slate-200 active:translate-y-0.5"
 
 # --- FastAPI Setup ---
 app = FastAPI()
@@ -264,6 +264,17 @@ def get_theme_bg() -> str:
 def Counter() -> Div:
     return Div(
         Div(
+            Div(
+                Button(
+                    # TODO: Icon changes without `listen_to` parameter. Why is it so? Don't we need `listen_to` anymore?
+                    Icon(lambda: MOON if theme_state.get() == "light" else SUN, cls="w-6 h-6"),
+                    #lambda: f"Toggle {'Dark' if theme_state.get() == 'light' else 'Light'} Theme",
+                    on_click="toggle_theme",
+                    id="theme-toggle",
+                    cls=f"{BUTTON_SECONDARY_CSS}"
+                ),
+                cls="w-full flex justify-end",
+            ),
             Label(
                 text=lambda: f"Count: {counter_state.get()}",
                 id="counter-label",
@@ -272,13 +283,6 @@ def Counter() -> Div:
             ),
             Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
             Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
-            Button(
-                Icon(lambda: MOON if theme_state.get() == "light" else SUN, cls="w-6 h-6"),
-                lambda: f"Toggle {'Dark' if theme_state.get() == 'light' else 'Light'} Theme",
-                on_click="toggle_theme",
-                id="theme-toggle",
-                cls=f"{BUTTON_SECONDARY_CSS} w-full"
-            ),
             id="counter-card",
             cls="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm"
         ),
