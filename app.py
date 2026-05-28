@@ -2,7 +2,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from typing import TypeVar, Generic, Callable
-import re
 from svg import MOON, SUN
 
 # --- Styling constants ---
