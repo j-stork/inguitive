@@ -4,6 +4,7 @@ Component classes for INGUITIVE framework.
 
 from typing import Callable
 from inguitive.state import get_component_registry, get_state_registry
+import markdown
 
 
 class Component:
@@ -224,7 +225,6 @@ class Markdown(Component):
 
     def render(self) -> str:
         """Render the Markdown content as HTML."""
-        import markdown
         resolved_content = self._resolve(self.content)
         html_content = markdown.markdown(resolved_content)
         attrs = self._get_attrs_str()
@@ -235,7 +235,6 @@ class Markdown(Component):
         if not self.id:
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        import markdown
         resolved_content = self._resolve(self.content)
         html_content = markdown.markdown(resolved_content)
         return f"<div {attrs}>{html_content}</div>"
