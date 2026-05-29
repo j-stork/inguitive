@@ -266,7 +266,6 @@ def Counter() -> Div:
         Div(
             Div(
                 Button(
-                    # TODO: Icon changes without `listen_to` parameter. Why is it so? Don't we need `listen_to` anymore?
                     Icon(lambda: MOON if theme_state.get() == "light" else SUN, cls="w-6 h-6"),
                     #lambda: f"Toggle {'Dark' if theme_state.get() == 'light' else 'Light'} Theme",
                     on_click="toggle_theme",
