@@ -217,9 +217,9 @@ class Markdown(Component):
             cls: Optional Tailwind CSS classes (defaults to "prose" for nice typography)
             **attrs: Additional HTML attributes
         """
-        # Default to Tailwind Typography for nice styling
+        # Default to GitHub Markdown CSS for nice styling
         if cls is None:
-            cls = "prose"
+            cls = "markdown-body"
         super().__init__(id=id, cls=cls, **attrs)
         self.content = content
 
