@@ -24,14 +24,15 @@ pip install inguitive
 ```python
 from inguitive import Div, Button, Label, State, create_app
 from inguitive.fastapi import BUTTON_PRIMARY_CSS
+from inguitive.htmx import update_components
 
 # Create reactive state
-count_state = State(0, "count")
+counter_state = State(0, "counter_state")
 
 # Define a component
 def Counter():
     return Div(
-        Label(text=lambda: f"Count: {count_state.get()}", id="count-label", listen_to="count"),
+        Label(text=lambda: f"Count: {counter_state.get()}", id="counter-label", listen_to="counter_state"),
         Button("+1", on_click="increment", cls=BUTTON_PRIMARY_CSS),
     )
 
@@ -40,9 +41,8 @@ app = create_app()
 
 @app.post("/increment")
 def increment():
-    count_state.set(count_state.get() + 1)
-    from inguitive.htmx import update_components
-    return update_components(*count_state.listeners)
+    counter_state.set(counter_state.get() + 1)
+    return update_components(*counter_state.listeners)
 ```
 
 ## Project Structure
