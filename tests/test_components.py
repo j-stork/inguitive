@@ -3,6 +3,7 @@
 import pytest
 from inguitive.components import Component, Div, Button, Label, Icon
 from inguitive.state import State, get_component_registry, get_state_registry
+from inguitive.hx import update_components
 
 
 @pytest.fixture(autouse=True)

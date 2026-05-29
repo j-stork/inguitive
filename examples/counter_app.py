@@ -9,17 +9,13 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import (
-    State, Div, Button, Label, Icon, update_components,
-    BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS,
-    counter_state, theme_state,
-)
+from inguitive import State, Div, Button, Label, Icon, update_components
+from inguitive.fastapi import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 from inguitive.svg import MOON, SUN
 
-# --- Override default state instances for this app ---
-# (They're already created in inguitive.state, but we can reset them)
-counter_state.set(0)
-theme_state.set("light")
+# --- State Instances ---
+counter_state = State(0, "counter_state")
+theme_state = State("light", "theme_state")
 
 # --- App Setup ---
 app = FastAPI()
