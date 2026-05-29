@@ -8,13 +8,6 @@ from fastapi.templating import Jinja2Templates
 from typing import Callable
 from pathlib import Path
 
-# Re-export styling constants for convenience
-from inguitive.css import (
-    BUTTON_BASE_CSS,
-    BUTTON_PRIMARY_CSS,
-    BUTTON_SECONDARY_CSS,
-)
-
 
 def create_app(template_dir: str | Path = "templates") -> FastAPI:
     """Create and configure a FastAPI application for INGUITIVE.
