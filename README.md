@@ -41,7 +41,7 @@ app = create_app()
 @app.post("/increment")
 def increment():
     count_state.set(count_state.get() + 1)
-    from inguitive import update_components
+    from inguitive.htmx import update_components
     return update_components(*count_state.listeners)
 ```
 

@@ -9,7 +9,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import State, Div, Button, Label, Icon, update_components
+from inguitive import State, Div, Button, Label, Icon
+from inguitive.htmx import update_components
 from inguitive.fastapi import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 from inguitive.svg import MOON, SUN
 
