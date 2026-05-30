@@ -418,6 +418,93 @@ class Checkbox(Component):
         return f"<input {hx_attrs}>"
 
 
+class Radio(Component):
+    """HTML radio input component.
+    
+    Example:
+        Radio(id="gender-m", name="gender", value="male", label="Male", checked=True)
+        Radio(id="gender-f", name="gender", value="female", label="Female")
+        Radio(id="theme-light", name="theme", value="light", label="Light",
+              checked=lambda: theme_state.get() == "light", listen_to="theme_state")
+    """
+    
+    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+                 label: str | Callable[[], str] = "",
+                 value: str = "",
+                 checked: bool | Callable[[], bool] = False,
+                 listen_to: str | None = None, **attrs):
+        """Initialize a Radio component.
+        
+        Args:
+            id: HTML id attribute
+            cls: Tailwind CSS classes (applied to the wrapper div)
+            label: Label text displayed next to the radio
+            value: Value for this radio option (submitted with form)
+            checked: Checked state (boolean or callable)
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, disabled, etc.)
+        """
+        # Set type to radio
+        attrs['type'] = 'radio'
+        if value:
+            attrs['value'] = value
+        # Store label separately
+        self.label = label
+        # Store checked state
+        self.checked = checked
+        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+
+    def render(self) -> str:
+        """Render the radio with optional label."""
+        # Resolve checked state
+        resolved_checked = self._resolve(self.checked) if self.checked else False
+        # Get existing attrs but add checked if needed
+        attrs = self._get_attrs_str()
+        if resolved_checked:
+            attrs += ' checked'
+        
+        # Resolve label
+        resolved_label = self._resolve(self.label) if self.label else ""
+        
+        # Wrap in a div for styling and label association
+        if resolved_label:
+            return f'<div {self._get_wrapper_attrs()}><input {attrs}><span class="ml-2">{resolved_label}</span></div>'
+        return f"<input {attrs}>"
+    
+    def _get_wrapper_attrs(self) -> str:
+        """Get attributes for the wrapper div."""
+        filtered_attrs = {}
+        if self.id:
+            filtered_attrs['id'] = self.id
+        if self.cls:
+            resolved_cls = self._resolve(self.cls) if self.cls else None
+            if resolved_cls:
+                filtered_attrs['class'] = resolved_cls
+        # Add flex and items-center for proper radio+label alignment
+        existing_class = filtered_attrs.get('class', '')
+        filtered_attrs['class'] = f"{existing_class} flex items-center".strip()
+        return " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        # Build attrs with hx-swap-oob
+        attrs_str = self._get_attrs_str()
+        hx_attrs = f'hx-swap-oob="true" {attrs_str}'.strip()
+        
+        resolved_checked = self._resolve(self.checked) if self.checked else False
+        if resolved_checked:
+            hx_attrs += ' checked'
+        
+        resolved_label = self._resolve(self.label) if self.label else ""
+        
+        if resolved_label:
+            wrapper_attrs = f'hx-swap-oob="true" {self._get_wrapper_attrs()}'
+            return f'<div {wrapper_attrs}><input {hx_attrs}><span class="ml-2">{resolved_label}</span></div>'
+        return f"<input {hx_attrs}>"
+
+
 class Markdown(Component):
     """A component that renders Markdown content as HTML.
     
