@@ -238,6 +238,52 @@ class Input(Component):
         return f"<input {attrs}>"
 
 
+class Textarea(Component):
+    """HTML textarea component for multi-line text input.
+    
+    Example:
+        Textarea(id="bio", placeholder="Tell us about yourself", rows=5)
+        Textarea(id="notes", value=content_state, listen_to="notes_state")
+    """
+    
+    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+                 value: str | Callable[[], str] | None = None,
+                 placeholder: str = "", rows: int = 3,
+                 listen_to: str | None = None, **attrs):
+        """Initialize a Textarea component.
+        
+        Args:
+            id: HTML id attribute
+            cls: Tailwind CSS classes
+            value: Initial value (string or callable)
+            placeholder: Placeholder text
+            rows: Number of visible rows
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, etc.)
+        """
+        if placeholder:
+            attrs['placeholder'] = placeholder
+        if rows:
+            attrs['rows'] = str(rows)
+        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+        self.value = value
+
+    def render(self) -> str:
+        """Render the textarea element."""
+        attrs = self._get_attrs_str()
+        # Textarea content goes between tags, not in value attribute
+        resolved_value = self._resolve(self.value) if self.value else ""
+        return f"<textarea {attrs}>{resolved_value}</textarea>"
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        resolved_value = self._resolve(self.value) if self.value else ""
+        return f"<textarea {attrs}>{resolved_value}</textarea>"
+
+
 class Markdown(Component):
     """A component that renders Markdown content as HTML.
     
