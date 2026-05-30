@@ -72,6 +72,7 @@ Thumbs.db
 
 # Local development
 *.pyc
+TODO.md
 
 # FastAPI/UVicorn
 uvicorn.log
