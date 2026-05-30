@@ -284,6 +284,58 @@ class Textarea(Component):
         return f"<textarea {attrs}>{resolved_value}</textarea>"
 
 
+class Select(Component):
+    """HTML select dropdown component.
+    
+    Example:
+        Select(id="country", options=[("us", "USA"), ("de", "Germany")], value="us")
+        Select(id="theme", options=[("light", "Light"), ("dark", "Dark")], 
+               value=lambda: theme_state.get(), listen_to="theme_state")
+    """
+    
+    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+                 options: list[tuple[str, str]] | Callable[[], list[tuple[str, str]]] | None = None,
+                 value: str | Callable[[], str] | None = None,
+                 listen_to: str | None = None, **attrs):
+        """Initialize a Select component.
+        
+        Args:
+            id: HTML id attribute
+            cls: Tailwind CSS classes
+            options: List of (value, display_text) tuples, or callable returning such list
+            value: Selected value (string or callable)
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, disabled, etc.)
+        """
+        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+        self.options = options or []
+        self.value = value
+
+    def _render_options(self) -> str:
+        """Render all option elements."""
+        resolved_options = self._resolve(self.options) if self.options else []
+        resolved_value = self._resolve(self.value) if self.value else None
+        option_tags = []
+        for val, text in resolved_options:
+            selected = ' selected' if val == resolved_value else ''
+            option_tags.append(f'<option value="{val}"{selected}>{text}</option>')
+        return "".join(option_tags)
+
+    def render(self) -> str:
+        """Render the select element with options."""
+        attrs = self._get_attrs_str()
+        options_html = self._render_options()
+        return f"<select {attrs}>{options_html}</select>"
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        options_html = self._render_options()
+        return f"<select {attrs}>{options_html}</select>"
+
+
 class Markdown(Component):
     """A component that renders Markdown content as HTML.
     
