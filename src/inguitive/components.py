@@ -505,6 +505,62 @@ class Radio(Component):
         return f"<input {hx_attrs}>"
 
 
+class Form(Component):
+    """HTML form component for grouping input elements.
+    
+    Example:
+        Form(
+            Input(id="name", name="name"),
+            Select(id="country", name="country", options=[...]),
+            Button("Submit", type="submit"),
+            action="/submit",
+            method="POST"
+        )
+        Form(on_click="save", children=[...])  # HTMX form
+    """
+    
+    def __init__(self, *children, id: str | None = None, cls: str | Callable[[], str] | None = None,
+                 action: str = "", method: str = "post",
+                 listen_to: str | None = None, **attrs):
+        """Initialize a Form component.
+        
+        Args:
+            *children: Form elements (Input, Textarea, Select, Button, etc.)
+            id: HTML id attribute
+            cls: Tailwind CSS classes
+            action: Form action URL
+            method: HTTP method (get, post, etc.)
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (hx-post, hx-target, etc.)
+        """
+        if action:
+            attrs['action'] = action
+        if method:
+            attrs['method'] = method
+        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+        self.children = list(children)
+
+    def render(self) -> str:
+        """Render the form with children."""
+        attrs = self._get_attrs_str()
+        children_html = "".join(
+            child.render() if hasattr(child, "render") else self._resolve(child)
+            for child in self.children
+        )
+        return f"<form {attrs}>{children_html}</form>"
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        children_html = "".join(
+            child.render() if hasattr(child, "render") else self._resolve(child)
+            for child in self.children
+        )
+        return f"<form {attrs}>{children_html}</form>"
+
+
 class Markdown(Component):
     """A component that renders Markdown content as HTML.
     
