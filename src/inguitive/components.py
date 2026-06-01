@@ -499,7 +499,7 @@ class Radio(Component):
         attrs_str = " ".join(f'{k}="{v}"' for k, v in resolved_attrs.items())
         # Generate a unique id for each radio option
         radio_id = f"{self.id}-{radio_value}" if self.id else f"radio-{uuid.uuid4().hex[:8]}"
-        return f'<div class="flex items-center"><input {attrs_str}{checked} id="{radio_id}"><label for="{radio_id}" class="ml-2">{resolved_text}</label></div>'
+        return f'<div class="flex items-baseline"><input {attrs_str}{checked} id="{radio_id}"><label for="{radio_id}" class="ml-2">{resolved_text}</label></div>'
 
     def render(self) -> str:
         """Render the radio group with all options."""
