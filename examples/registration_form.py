@@ -68,6 +68,7 @@ def RegistrationForm() -> Div:
         Div(
             Label(
                 text=lambda: f"Welcome, {name_state.get()}!" if name_state.get() else "Fill out the form",
+                id="welcome",
                 listen_to="name_state",
                 cls="text-xl font-bold text-center mt-6"
             ),
@@ -102,14 +103,14 @@ def home(request: Request) -> HTMLResponse:
 @app.post("/register", response_class=HTMLResponse)
 async def register(request: Request) -> str:
     """Handle form submission."""
-    listeners = []
+    listeners = set()
     form_data = await request.form()
     if form_data:
         for field, state in [("name", name_state), ("email", email_state), ("password", password_state)]:
             field_value = form_data.get(field, "")
-            if field_value and field_value != state.get():
+            if field_value != state.get():
                 state.set(field_value)
-                listeners.append(*state.listeners)
+                listeners.update(state.listeners)
     if listeners:
         return update_components(*listeners)
     return ""
