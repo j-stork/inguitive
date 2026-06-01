@@ -29,6 +29,15 @@ app = FastAPI()
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 
+# --- Helper Functions ---
+def GenderRadio(id: str, value: str, label: str) -> Div:
+    return Div(
+        Radio(id=id, name="gender", value=value),
+        Label(label, for_=id),
+        cls="flex items-baseline gap-2"
+    )
+
+
 # --- Registration Form Component ---
 def RegistrationForm() -> Div:
     """Registration form with reactive state updates."""
@@ -69,13 +78,10 @@ def RegistrationForm() -> Div:
                 cls="flex items-baseline gap-2"
             ),
             Div(
-                Radio(id="gender-male", name="gender", value="male"),
-                Label("Male", for_="gender-male"),
-                Radio(id="gender-female", name="gender", value="female"),
-                Label("Female", for_="gender-female"),
-                Radio(id="gender-other", name="gender", value="other"),
-                Label("Other", for_="gender-other"),
-                cls="flex items-baselinegap-6"
+                GenderRadio(id="gender-male", value="male", label="Male"),
+                GenderRadio(id="gender-female", value="female", label="Female"),
+                GenderRadio(id="gender-other", value="other", label="Other"),
+                cls="flex items-baseline gap-6"
             ),
             Button(
                 "Register",
