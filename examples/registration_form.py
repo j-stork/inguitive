@@ -57,10 +57,9 @@ def RegistrationForm() -> Div:
             Button(
                 "Register",
                 type="submit",
+                on_click="register",
                 cls="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600"
             ),
-            action="/register",
-            method="POST",
             id="registration-form",
             cls="space-y-4 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md"
         ),
