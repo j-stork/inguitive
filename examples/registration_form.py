@@ -66,7 +66,7 @@ def RegistrationForm() -> Div:
             Div(
                 Checkbox(id="terms", name="terms"),
                 Label("I agree to the terms and conditions", for_="terms"),
-                cls="flex items-center gap-2"
+                cls="flex items-baseline gap-2"
             ),
             Div(
                 Radio(id="gender-male", name="gender", value="male"),
@@ -75,7 +75,7 @@ def RegistrationForm() -> Div:
                 Label("Female", for_="gender-female"),
                 Radio(id="gender-other", name="gender", value="other"),
                 Label("Other", for_="gender-other"),
-                cls="flex gap-6"
+                cls="flex items-baselinegap-6"
             ),
             Button(
                 "Register",
