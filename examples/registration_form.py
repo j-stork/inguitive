@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
 from inguitive import Form, Input, Button, Label, Div, State
+from inguitive.htmx import update_components
 
 # --- State Instances ---
 name_state = State("", "name_state")
@@ -35,10 +36,6 @@ def RegistrationForm() -> Div:
                 name="name",
                 placeholder="Enter your name",
                 value=name_state.get,
-                listen_to="name_state",
-                hx_post="/update_name",
-                hx_target="#hx-target",
-                hx_trigger="keyup changed delay:500ms",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Input(
@@ -47,10 +44,6 @@ def RegistrationForm() -> Div:
                 type="email",
                 placeholder="Enter your email",
                 value=email_state.get,
-                listen_to="email_state",
-                hx_post="/update_email",
-                hx_target="#hx-target",
-                hx_trigger="keyup changed delay:500ms",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Input(
@@ -59,16 +52,11 @@ def RegistrationForm() -> Div:
                 type="password",
                 placeholder="Enter your password",
                 value=password_state.get,
-                listen_to="password_state",
-                hx_post="/update_password",
-                hx_target="#hx-target",
-                hx_trigger="keyup changed delay:500ms",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Button(
                 "Register",
                 type="submit",
-                on_click="register",
                 cls="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600"
             ),
             action="/register",
@@ -80,12 +68,19 @@ def RegistrationForm() -> Div:
         Div(
             Label(
                 text=lambda: f"Welcome, {name_state.get()}!" if name_state.get() else "Fill out the form",
-                id="welcome",
+                listen_to="name_state",
                 cls="text-xl font-bold text-center mt-6"
             ),
             Label(
                 text=lambda: f"Email: {email_state.get()}" if email_state.get() else "",
                 id="email-display",
+                listen_to="email_state",
+                cls="text-center mt-2"
+            ),
+            Label(
+                text=lambda: f"Password: {password_state.get()}" if password_state.get() else "",
+                id="password-display",
+                listen_to="password_state",
                 cls="text-center mt-2"
             ),
             id="confirmation",
@@ -104,37 +99,21 @@ def home(request: Request) -> HTMLResponse:
     )
 
 
-@app.post("/update_name", response_class=HTMLResponse)
-async def update_name(request: Request) -> str:
-    """Update name state from form input."""
-    form_data = await request.form()
-    name_state.set(form_data.get("name", ""))
-    return ""
-
-
-@app.post("/update_email", response_class=HTMLResponse)
-async def update_email(request: Request) -> str:
-    """Update email state from form input."""
-    form_data = await request.form()
-    email_state.set(form_data.get("email", ""))
-    return ""
-
-
-@app.post("/update_password", response_class=HTMLResponse)
-async def update_password(request: Request) -> str:
-    """Update password state from form input."""
-    form_data = await request.form()
-    password_state.set(form_data.get("password", ""))
-    return ""
-
-
 @app.post("/register", response_class=HTMLResponse)
-def register() -> str:
+async def register(request: Request) -> str:
     """Handle form submission."""
-    # Form submission handled by OOB swaps from the field updates
-    # Just return empty - the confirmation display reacts to state changes
+    listeners = []
+    form_data = await request.form()
+    if form_data:
+        for field, state in [("name", name_state), ("email", email_state), ("password", password_state)]:
+            field_value = form_data.get(field, "")
+            if field_value and field_value != state.get():
+                state.set(field_value)
+                listeners.append(*state.listeners)
+    if listeners:
+        return update_components(*listeners)
     return ""
-
+            
 
 # --- Start ---
 if __name__ == "__main__":
