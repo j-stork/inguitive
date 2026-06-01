@@ -226,6 +226,9 @@ class Input(Component):
             attrs['placeholder'] = placeholder
         if type != "text":
             attrs['type'] = type
+        # Auto-set name to id if not provided
+        if 'name' not in attrs and id is not None:
+            attrs['name'] = id
         super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
 
     def render(self) -> str:
@@ -268,6 +271,9 @@ class Textarea(Component):
             attrs['placeholder'] = placeholder
         if rows:
             attrs['rows'] = str(rows)
+        # Auto-set name to id if not provided
+        if 'name' not in attrs and id is not None:
+            attrs['name'] = id
         super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
         self.value = value
 
@@ -310,6 +316,9 @@ class Select(Component):
             listen_to: State name to listen for changes
             **attrs: Additional HTML attributes (name, required, disabled, etc.)
         """
+        # Auto-set name to id if not provided
+        if 'name' not in attrs and id is not None:
+            attrs['name'] = id
         super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
         self.options = options or []
         self.value = value
@@ -364,6 +373,9 @@ class Checkbox(Component):
         """
         # Set type to checkbox
         attrs['type'] = 'checkbox'
+        # Auto-set name to id if not provided
+        if 'name' not in attrs and id is not None:
+            attrs['name'] = id
         # Store label separately (not an HTML attribute of input)
         self.label = label
         # Store checked state
@@ -451,6 +463,9 @@ class Radio(Component):
         attrs['type'] = 'radio'
         if value:
             attrs['value'] = value
+        # Auto-set name to id if not provided
+        if 'name' not in attrs and id is not None:
+            attrs['name'] = id
         # Store label separately
         self.label = label
         # Store checked state
