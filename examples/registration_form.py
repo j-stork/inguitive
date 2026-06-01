@@ -56,30 +56,22 @@ def RegistrationForm() -> Div:
                 id="bio",
                 placeholder="Tell us about yourself",
                 rows=3,
-                value=bio_state.get,
-                listen_to="bio_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Select(
                 id="country",
                 options=[("us", "United States"), ("de", "Germany"), ("fr", "France")],
-                value=country_state.get,
-                listen_to="country_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Checkbox(
                 id="terms",
                 label="I agree to the terms and conditions",
-                value=terms_state.get,
-                listen_to="terms_state",
                 cls="mb-4"
             ),
             Radio(
                 id="gender",
                 name="gender",
                 options=[("male", "Male"), ("female", "Female"), ("other", "Other")],
-                value=gender_state.get,
-                listen_to="gender_state",
                 cls="flex gap-4 mb-4"
             ),
             Button(
