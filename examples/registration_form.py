@@ -11,13 +11,17 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import Form, Input, Button, Label, Div, State
+from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Div, State
 from inguitive.htmx import update_components
 
 # --- State Instances ---
 name_state = State("", "name_state")
 email_state = State("", "email_state")
 password_state = State("", "password_state")
+bio_state = State("", "bio_state")
+country_state = State("us", "country_state")
+terms_state = State(False, "terms_state")
+gender_state = State("male", "gender_state")
 
 
 # --- App Setup ---
@@ -35,6 +39,7 @@ def RegistrationForm() -> Div:
                 id="name",
                 placeholder="Enter your name",
                 value=name_state.get,
+                listen_to="name_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Input(
@@ -42,6 +47,7 @@ def RegistrationForm() -> Div:
                 type="email",
                 placeholder="Enter your email",
                 value=email_state.get,
+                listen_to="email_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Input(
@@ -49,7 +55,57 @@ def RegistrationForm() -> Div:
                 type="password",
                 placeholder="Enter your password",
                 value=password_state.get,
+                listen_to="password_state",
                 cls="w-full p-2 border rounded-md mb-4"
+            ),
+            Textarea(
+                id="bio",
+                placeholder="Tell us about yourself",
+                rows=3,
+                value=bio_state.get,
+                listen_to="bio_state",
+                cls="w-full p-2 border rounded-md mb-4"
+            ),
+            Select(
+                id="country",
+                options=[("us", "United States"), ("de", "Germany"), ("fr", "France")],
+                value=country_state.get,
+                listen_to="country_state",
+                cls="w-full p-2 border rounded-md mb-4"
+            ),
+            Checkbox(
+                id="terms",
+                label="I agree to the terms and conditions",
+                checked=terms_state.get,
+                listen_to="terms_state",
+                cls="mb-4"
+            ),
+            Div(
+                Radio(
+                    id="gender-male",
+                    name="gender",
+                    value="male",
+                    label="Male",
+                    checked=lambda: gender_state.get() == "male",
+                    listen_to="gender_state"
+                ),
+                Radio(
+                    id="gender-female",
+                    name="gender",
+                    value="female",
+                    label="Female",
+                    checked=lambda: gender_state.get() == "female",
+                    listen_to="gender_state"
+                ),
+                Radio(
+                    id="gender-other",
+                    name="gender",
+                    value="other",
+                    label="Other",
+                    checked=lambda: gender_state.get() == "other",
+                    listen_to="gender_state"
+                ),
+                cls="flex gap-4 mb-4"
             ),
             Button(
                 "Register",
@@ -64,19 +120,34 @@ def RegistrationForm() -> Div:
             Label(
                 text=lambda: f"Name: {name_state.get()}" if name_state.get() else "Name:",
                 listen_to="name_state",
-                cls="text-xl font-bold text-center mt-6"
+                cls="text-center"
             ),
             Label(
                 text=lambda: f"Email: {email_state.get()}" if email_state.get() else "Email:",
                 listen_to="email_state",
-                cls="text-center mt-2"
+                cls="text-center"
             ),
             Label(
-                text=lambda: f"Password: {password_state.get()}" if password_state.get() else "Password:",
-                listen_to="password_state",
-                cls="text-center mt-2"
+                text=lambda: f"Bio: {bio_state.get()}" if bio_state.get() else "Bio:",
+                listen_to="bio_state",
+                cls="text-center"
             ),
-            cls="mt-6"
+            Label(
+                text=lambda: f"Country: {country_state.get()}" if country_state.get() else "Country:",
+                listen_to="country_state",
+                cls="text-center"
+            ),
+            Label(
+                text=lambda: f"Terms accepted: {terms_state.get()}" if terms_state.get() is not False else "Terms accepted: No",
+                listen_to="terms_state",
+                cls="text-center"
+            ),
+            Label(
+                text=lambda: f"Gender: {gender_state.get()}" if gender_state.get() else "Gender:",
+                listen_to="gender_state",
+                cls="text-center"
+            ),
+            cls="text-xl font-bold mt-6 space-y-2"
         ),
         cls="w-full min-h-screen flex flex-col items-center justify-center p-4"
     )
@@ -97,8 +168,21 @@ async def register(request: Request) -> str:
     listeners = set()
     form_data = await request.form()
     if form_data:
-        for field, state in [("name", name_state), ("email", email_state), ("password", password_state)]:
+        # Map all form fields to their states
+        field_states = [
+            ("name", name_state),
+            ("email", email_state),
+            ("password", password_state),
+            ("bio", bio_state),
+            ("country", country_state),
+            ("terms", terms_state),
+            ("gender", gender_state),
+        ]
+        for field, state in field_states:
             field_value = form_data.get(field, "")
+            # For checkbox, handle boolean value
+            if field == "terms":
+                field_value = field_value == "on"  # Checkboxes send "on" when checked
             if field_value != state.get():
                 state.set(field_value)
                 listeners.update(state.listeners)
