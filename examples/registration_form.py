@@ -137,6 +137,7 @@ def RegistrationForm() -> Div:
 # --- Routes ---
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request) -> HTMLResponse:
+    # TODO: Could this be made more elegant for example by creating a dedicated render function?
     return templates.TemplateResponse(
         "base.html",
         {"request": request, "content": RegistrationForm().render()}
