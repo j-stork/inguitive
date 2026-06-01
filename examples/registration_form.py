@@ -33,14 +33,12 @@ def RegistrationForm() -> Div:
         Form(
             Input(
                 id="name",
-                name="name",
                 placeholder="Enter your name",
                 value=name_state.get,
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Input(
                 id="email",
-                name="email",
                 type="email",
                 placeholder="Enter your email",
                 value=email_state.get,
@@ -48,7 +46,6 @@ def RegistrationForm() -> Div:
             ),
             Input(
                 id="password",
-                name="password",
                 type="password",
                 placeholder="Enter your password",
                 value=password_state.get,
