@@ -66,19 +66,19 @@ def RegistrationForm() -> Div:
         # Confirmation display
         Div(
             Label(
-                text=lambda: f"Welcome, {name_state.get()}!" if name_state.get() else "Fill out the form",
+                text=lambda: f"Name: {name_state.get()}" if name_state.get() else "Name:",
                 id="welcome",
                 listen_to="name_state",
                 cls="text-xl font-bold text-center mt-6"
             ),
             Label(
-                text=lambda: f"Email: {email_state.get()}" if email_state.get() else "",
+                text=lambda: f"Email: {email_state.get()}" if email_state.get() else "Email:",
                 id="email-display",
                 listen_to="email_state",
                 cls="text-center mt-2"
             ),
             Label(
-                text=lambda: f"Password: {password_state.get()}" if password_state.get() else "",
+                text=lambda: f"Password: {password_state.get()}" if password_state.get() else "Password:",
                 id="password-display",
                 listen_to="password_state",
                 cls="text-center mt-2"
