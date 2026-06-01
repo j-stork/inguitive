@@ -32,14 +32,12 @@ def RegistrationForm() -> Div:
         # Form
         Form(
             Input(
-                id="name",
                 name="name",
                 placeholder="Enter your name",
                 value=name_state.get,
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Input(
-                id="email",
                 name="email",
                 type="email",
                 placeholder="Enter your email",
@@ -47,7 +45,6 @@ def RegistrationForm() -> Div:
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Input(
-                id="password",
                 name="password",
                 type="password",
                 placeholder="Enter your password",
@@ -60,30 +57,25 @@ def RegistrationForm() -> Div:
                 on_click="register",
                 cls="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600"
             ),
-            id="registration-form",
             cls="space-y-4 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md"
         ),
         # Confirmation display
         Div(
             Label(
                 text=lambda: f"Name: {name_state.get()}" if name_state.get() else "Name:",
-                id="welcome",
                 listen_to="name_state",
                 cls="text-xl font-bold text-center mt-6"
             ),
             Label(
                 text=lambda: f"Email: {email_state.get()}" if email_state.get() else "Email:",
-                id="email-display",
                 listen_to="email_state",
                 cls="text-center mt-2"
             ),
             Label(
                 text=lambda: f"Password: {password_state.get()}" if password_state.get() else "Password:",
-                id="password-display",
                 listen_to="password_state",
                 cls="text-center mt-2"
             ),
-            id="confirmation",
             cls="mt-6"
         ),
         cls="w-full min-h-screen flex flex-col items-center justify-center p-4"
