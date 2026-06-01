@@ -410,7 +410,7 @@ class Checkbox(Component):
                 filtered_attrs['class'] = resolved_cls
         # Add flex and items-center for proper checkbox+label alignment
         existing_class = filtered_attrs.get('class', '')
-        filtered_attrs['class'] = f"{existing_class} flex items-center".strip()
+        filtered_attrs['class'] = f"{existing_class} flex items-baseline".strip()
         return " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
 
     def update(self) -> str:
