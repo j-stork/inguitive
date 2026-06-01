@@ -38,72 +38,50 @@ def RegistrationForm() -> Div:
             Input(
                 id="name",
                 placeholder="Enter your name",
-                value=name_state.get,
-                listen_to="name_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Input(
                 id="email",
                 type="email",
                 placeholder="Enter your email",
-                value=email_state.get,
-                listen_to="email_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Input(
                 id="password",
                 type="password",
                 placeholder="Enter your password",
-                value=password_state.get,
-                listen_to="password_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Textarea(
                 id="bio",
                 placeholder="Tell us about yourself",
                 rows=3,
-                value=bio_state.get,
-                listen_to="bio_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Select(
                 id="country",
                 options=[("us", "United States"), ("de", "Germany"), ("fr", "France")],
-                value=country_state.get,
-                listen_to="country_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Checkbox(
                 id="terms",
                 label="I agree to the terms and conditions",
-                checked=terms_state.get,
-                listen_to="terms_state",
                 cls="mb-4"
             ),
             Div(
                 Radio(
                     id="gender-male",
                     name="gender",
-                    value="male",
                     label="Male",
-                    checked=lambda: gender_state.get() == "male",
-                    listen_to="gender_state"
                 ),
                 Radio(
                     id="gender-female",
-                    name="gender",
-                    value="female",
                     label="Female",
-                    checked=lambda: gender_state.get() == "female",
-                    listen_to="gender_state"
                 ),
                 Radio(
                     id="gender-other",
                     name="gender",
-                    value="other",
                     label="Other",
-                    checked=lambda: gender_state.get() == "other",
-                    listen_to="gender_state"
                 ),
                 cls="flex gap-4 mb-4"
             ),
@@ -128,6 +106,11 @@ def RegistrationForm() -> Div:
                 cls="text-center"
             ),
             Label(
+                text=lambda: f"Password: {'*' * len(password_state.get())}" if password_state.get() else "Password:",
+                listen_to="password_state",
+                cls="text-center"
+            ),
+            Label(
                 text=lambda: f"Bio: {bio_state.get()}" if bio_state.get() else "Bio:",
                 listen_to="bio_state",
                 cls="text-center"
@@ -138,7 +121,7 @@ def RegistrationForm() -> Div:
                 cls="text-center"
             ),
             Label(
-                text=lambda: f"Terms accepted: {terms_state.get()}" if terms_state.get() is not False else "Terms accepted: No",
+                text=lambda: f"Terms accepted: {'Yes' if terms_state.get() is not False else 'No'}",
                 listen_to="terms_state",
                 cls="text-center"
             ),
@@ -182,7 +165,7 @@ async def register(request: Request) -> str:
             field_value = form_data.get(field, "")
             # For checkbox, handle boolean value
             if field == "terms":
-                field_value = field_value == "on"  # Checkboxes send "on" when checked
+                field_value = True if field_value == "on" else False    # Checkboxes send "on" when checked
             if field_value != state.get():
                 state.set(field_value)
                 listeners.update(state.listeners)
