@@ -156,6 +156,45 @@ class Label(Component):
         return f"<label {attrs}>{resolved_text}</label>"
 
 
+class Text(Component):
+    """HTML paragraph/text component.
+    
+    Renders a <p> tag for paragraph text content. Use for standalone text blocks,
+    descriptions, and any content that isn't a form label.
+    
+    Example:
+        Text("Welcome to our application")
+        Text("This is a paragraph", cls="text-gray-600 mt-4")
+        Text(lambda: get_description(), listen_to="desc_state")
+    """
+    
+    def __init__(self, text: str | Callable[[], str], id: str | None = None,
+                 cls: str | Callable[[], str] | None = None, **attrs):
+        """Initialize a Text component.
+        
+        Args:
+            text: Text content (string or callable returning string)
+            id: HTML id attribute
+            cls: Tailwind CSS classes
+            **attrs: Additional HTML attributes
+        """
+        super().__init__(id=id, cls=cls, **attrs)
+        self.text = text
+
+    def render(self) -> str:
+        attrs = self._get_attrs_str()
+        resolved_text = self._resolve(self.text)
+        return f"<p {attrs}>{resolved_text}</p>"
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        resolved_text = self._resolve(self.text)
+        return f"<p {attrs}>{resolved_text}</p>"
+
+
 class Icon(Component):
     """SVG icon component."""
     
