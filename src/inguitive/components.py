@@ -116,25 +116,44 @@ class Button(Component):
 
 
 class Label(Component):
-    """HTML label/paragraph component."""
+    """HTML label component.
+    
+    Renders a <label> element. Use for_ parameter to associate with input elements.
+    
+    Example:
+        Label("Username", for_="username-input")
+        Label("Remember me", for_="remember", cls="text-sm")
+    """
     
     def __init__(self, text: str | Callable[[], str], id: str | None = None, 
-                 cls: str | Callable[[], str] | None = None, **attrs):
+                 cls: str | Callable[[], str] | None = None, 
+                 for_: str | None = None, **attrs):
+        """Initialize a Label component.
+        
+        Args:
+            text: Label text content
+            id: HTML id attribute
+            cls: Tailwind CSS classes
+            for_: ID of the form element this label is for (uses 'for' HTML attribute)
+            **attrs: Additional HTML attributes
+        """
+        if for_ is not None:
+            attrs['for'] = for_
         super().__init__(id=id, cls=cls, **attrs)
         self.text = text
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
         resolved_text = self._resolve(self.text)
-        return f"<p {attrs}>{resolved_text}</p>"
+        return f"<label {attrs}>{resolved_text}</label>"
 
     def update(self) -> str:
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        resolved_text = self._resolve(self.text)
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        return f"<p {attrs}>{resolved_text}</p>"
+        resolved_text = self._resolve(self.text)
+        return f"<label {attrs}>{resolved_text}</label>"
 
 
 class Icon(Component):
@@ -352,22 +371,25 @@ class Select(Component):
 class Checkbox(Component):
     """HTML checkbox input component.
     
+    Renders only the <input type="checkbox"> element. Use with Label and Div
+    for composed structures.
+    
     Example:
-        Checkbox(id="agree", label="I agree to terms", checked=True)
-        Checkbox(id="notify", label="Email notifications", 
-                 checked=lambda: notify_state.get(), listen_to="notify_state")
+        Div(
+            Checkbox(id="agree", checked=True),
+            Label("I agree to terms", for_="agree"),
+            cls="flex items-center gap-2"
+        )
     """
     
     def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
-                 label: str | Callable[[], str] = "",
                  checked: bool | Callable[[], bool] = False,
                  listen_to: str | None = None, **attrs):
         """Initialize a Checkbox component.
         
         Args:
             id: HTML id attribute
-            cls: Tailwind CSS classes (applied to the wrapper div)
-            label: Label text displayed next to the checkbox
+            cls: Tailwind CSS classes
             checked: Checked state (boolean or callable)
             listen_to: State name to listen for changes
             **attrs: Additional HTML attributes (name, required, disabled, etc.)
@@ -377,150 +399,87 @@ class Checkbox(Component):
         # Auto-set name to id if not provided
         if 'name' not in attrs and id is not None:
             attrs['name'] = id
-        # Store label separately (not an HTML attribute of input)
-        self.label = label
         # Store checked state
         self.checked = checked
         super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
 
     def render(self) -> str:
-        """Render the checkbox with optional label."""
-        # Resolve checked state
-        resolved_checked = self._resolve(self.checked) if self.checked else False
-        # Get existing attrs but add checked if needed
+        """Render the checkbox input element."""
         attrs = self._get_attrs_str()
+        resolved_checked = self._resolve(self.checked) if self.checked else False
         if resolved_checked:
             attrs += ' checked'
-        
-        # Resolve label
-        resolved_label = self._resolve(self.label) if self.label else ""
-        
-        # Wrap in a div for styling and label association
-        if resolved_label:
-            return f'<div {self._get_wrapper_attrs()}><input {attrs}><span class="ml-2">{resolved_label}</span></div>'
         return f"<input {attrs}>"
-    
-    def _get_wrapper_attrs(self) -> str:
-        """Get attributes for the wrapper div."""
-        filtered_attrs = {}
-        if self.id:
-            filtered_attrs['id'] = self.id
-        if self.cls:
-            resolved_cls = self._resolve(self.cls) if self.cls else None
-            if resolved_cls:
-                filtered_attrs['class'] = resolved_cls
-        # Add flex and items-center for proper checkbox+label alignment
-        existing_class = filtered_attrs.get('class', '')
-        filtered_attrs['class'] = f"{existing_class} flex items-baseline".strip()
-        return " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
-
-    def update(self) -> str:
-        """Render with hx-swap-oob for HTMX out-of-band updates."""
-        if not self.id:
-            return self.render()
-        # Build attrs with hx-swap-oob
-        attrs_str = self._get_attrs_str()
-        hx_attrs = f'hx-swap-oob="true" {attrs_str}'.strip()
-        
-        resolved_checked = self._resolve(self.checked) if self.checked else False
-        if resolved_checked:
-            hx_attrs += ' checked'
-        
-        resolved_label = self._resolve(self.label) if self.label else ""
-        
-        if resolved_label:
-            wrapper_attrs = f'hx-swap-oob="true" {self._get_wrapper_attrs()}'
-            return f'<div {wrapper_attrs}><input {hx_attrs}><span class="ml-2">{resolved_label}</span></div>'
-        return f"<input {hx_attrs}>"
-
-
-class Radio(Component):
-    """HTML radio input group component.
-    
-    Renders a group of radio buttons from options. Only one can be selected.
-    
-    Example:
-        Radio(
-            id="gender",
-            name="gender",
-            options=[("male", "Male"), ("female", "Female"), ("other", "Other")],
-            value=gender_state.get,
-            listen_to="gender_state",
-            cls="flex gap-4"
-        )
-        
-    Note: This replaces the old single Radio component. For individual radio buttons,
-    use Input(type="radio") or create multiple Radio groups with single options.
-    """
-    
-    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
-                 options: list[tuple[str, str]] | Callable[[], list[tuple[str, str]]] = [],
-                 value: str | Callable[[], str] | None = None,
-                 name: str | None = None,
-                 listen_to: str | None = None, **attrs):
-        """Initialize a Radio group component.
-        
-        Args:
-            id: HTML id attribute (for the wrapper div)
-            cls: Tailwind CSS classes (applied to the wrapper div)
-            options: List of (value, display_text) tuples, or callable returning such list
-            value: Currently selected value (string or callable)
-            name: Name attribute for all radio inputs (defaults to id if not provided)
-            listen_to: State name to listen for changes
-            **attrs: Additional HTML attributes (disabled, required, etc.)
-        """
-        self.options = options
-        self.value = value
-        # Auto-set name to id if not provided
-        if name is None and id is not None:
-            name = id
-        if name:
-            attrs['name'] = name
-        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
-
-    def _render_radio(self, radio_value: str, display_text: str) -> str:
-        """Render a single radio button."""
-        resolved_value = self._resolve(self.value) if self.value else None
-        checked = ' checked' if radio_value == resolved_value else ''
-        resolved_text = self._resolve(display_text) if callable(display_text) else display_text
-        # Build attrs for the radio input
-        input_attrs = {}
-        if 'name' in self.attrs:
-            input_attrs['name'] = self.attrs['name']
-        input_attrs['type'] = 'radio'
-        input_attrs['value'] = radio_value
-        # Add any other attrs from parent (disabled, required, etc.)
-        for k, v in self.attrs.items():
-            if k not in ('name', 'cls', 'id'):
-                input_attrs[k] = v
-        # Resolve all attribute values
-        resolved_attrs = {}
-        for k, v in input_attrs.items():
-            resolved_attrs[k] = self._resolve(v) if callable(v) else v
-        attrs_str = " ".join(f'{k}="{v}"' for k, v in resolved_attrs.items())
-        # Generate a unique id for each radio option
-        radio_id = f"{self.id}-{radio_value}" if self.id else f"radio-{uuid.uuid4().hex[:8]}"
-        return f'<div class="flex items-baseline"><input {attrs_str}{checked} id="{radio_id}"><label for="{radio_id}" class="ml-2">{resolved_text}</label></div>'
-
-    def render(self) -> str:
-        """Render the radio group with all options."""
-        resolved_options = self._resolve(self.options) if self.options else []
-        radios_html = "".join(
-            self._render_radio(val, text) for val, text in resolved_options
-        )
-        attrs = self._get_attrs_str()
-        return f"<div {attrs}>{radios_html}</div>"
 
     def update(self) -> str:
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        resolved_options = self._resolve(self.options) if self.options else []
-        radios_html = "".join(
-            self._render_radio(val, text) for val, text in resolved_options
+        resolved_checked = self._resolve(self.checked) if self.checked else False
+        if resolved_checked:
+            attrs += ' checked'
+        return f"<input {attrs}>"
+
+
+class Radio(Component):
+    """HTML radio input component.
+    
+    Renders only the <input type="radio"> element. Use with Label and Div
+    for composed radio groups.
+    
+    Example:
+        Div(
+            Radio(id="male", name="gender", value="male", checked=True),
+            Label("Male", for_="male"),
+            Radio(id="female", name="gender", value="female"),
+            Label("Female", for_="female"),
+            cls="flex gap-4"
         )
-        return f"<div {attrs}>{radios_html}</div>"
+    """
+    
+    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+                 value: str = "",
+                 checked: bool | Callable[[], bool] = False,
+                 listen_to: str | None = None, **attrs):
+        """Initialize a Radio component.
+        
+        Args:
+            id: HTML id attribute
+            cls: Tailwind CSS classes
+            value: Value for this radio option
+            checked: Checked state (boolean or callable)
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, disabled, etc.)
+        """
+        # Set type to radio
+        attrs['type'] = 'radio'
+        if value:
+            attrs['value'] = value
+        # Auto-set name to id if not provided
+        if 'name' not in attrs and id is not None:
+            attrs['name'] = id
+        # Store checked state
+        self.checked = checked
+        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+
+    def render(self) -> str:
+        """Render the radio input element."""
+        attrs = self._get_attrs_str()
+        resolved_checked = self._resolve(self.checked) if self.checked else False
+        if resolved_checked:
+            attrs += ' checked'
+        return f"<input {attrs}>"
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        resolved_checked = self._resolve(self.checked) if self.checked else False
+        if resolved_checked:
+            attrs += ' checked'
+        return f"<input {attrs}>"
 
 
 class Form(Component):
