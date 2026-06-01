@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Div, State
+from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Text, Div, State
 from inguitive.htmx import update_components
 
 # --- State Instances ---
@@ -63,14 +63,18 @@ def RegistrationForm() -> Div:
                 options=[("us", "United States"), ("de", "Germany"), ("fr", "France")],
                 cls="w-full p-2 border border-zinc-500 rounded-md"
             ),
-            Checkbox(
-                id="terms",
-                label="I agree to the terms and conditions",
+            Div(
+                Checkbox(id="terms", name="terms"),
+                Label("I agree to the terms and conditions", for_="terms"),
+                cls="flex items-center gap-2"
             ),
-            Radio(
-                id="gender",
-                name="gender",
-                options=[("male", "Male"), ("female", "Female"), ("other", "Other")],
+            Div(
+                Radio(id="gender-male", name="gender", value="male"),
+                Label("Male", for_="gender-male"),
+                Radio(id="gender-female", name="gender", value="female"),
+                Label("Female", for_="gender-female"),
+                Radio(id="gender-other", name="gender", value="other"),
+                Label("Other", for_="gender-other"),
                 cls="flex gap-6"
             ),
             Button(
@@ -83,38 +87,38 @@ def RegistrationForm() -> Div:
         ),
         # Confirmation display
         Div(
-            Label(
-                text=lambda: f"Name: {name_state.get()}" if name_state.get() else "Name:",
+            Text(
+                lambda: f"Name: {name_state.get()}" if name_state.get() else "Name:",
                 listen_to="name_state",
                 cls="text-center"
             ),
-            Label(
-                text=lambda: f"Email: {email_state.get()}" if email_state.get() else "Email:",
+            Text(
+                lambda: f"Email: {email_state.get()}" if email_state.get() else "Email:",
                 listen_to="email_state",
                 cls="text-center"
             ),
-            Label(
-                text=lambda: f"Password: {'*' * len(password_state.get())}" if password_state.get() else "Password:",
+            Text(
+                lambda: f"Password: {'*' * len(password_state.get())}" if password_state.get() else "Password:",
                 listen_to="password_state",
                 cls="text-center"
             ),
-            Label(
-                text=lambda: f"Bio: {bio_state.get()}" if bio_state.get() else "Bio:",
+            Text(
+                lambda: f"Bio: {bio_state.get()}" if bio_state.get() else "Bio:",
                 listen_to="bio_state",
                 cls="text-center"
             ),
-            Label(
-                text=lambda: f"Country: {country_state.get()}" if country_state.get() else "Country:",
+            Text(
+                lambda: f"Country: {country_state.get()}" if country_state.get() else "Country:",
                 listen_to="country_state",
                 cls="text-center"
             ),
-            Label(
-                text=lambda: f"Terms accepted: {'Yes' if terms_state.get() is not False else 'No'}",
+            Text(
+                lambda: f"Terms accepted: {'Yes' if terms_state.get() is not False else 'No'}",
                 listen_to="terms_state",
                 cls="text-center"
             ),
-            Label(
-                text=lambda: f"Gender: {gender_state.get()}" if gender_state.get() else "Gender:",
+            Text(
+                lambda: f"Gender: {gender_state.get()}" if gender_state.get() else "Gender:",
                 listen_to="gender_state",
                 cls="text-center"
             ),
