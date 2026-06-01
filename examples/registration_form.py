@@ -38,49 +38,48 @@ def RegistrationForm() -> Div:
             Input(
                 id="name",
                 placeholder="Enter your name",
-                cls="w-full p-2 border rounded-md mb-4"
+                cls="w-full p-2 border border-zinc-500 rounded-md",
             ),
             Input(
                 id="email",
                 type="email",
                 placeholder="Enter your email",
-                cls="w-full p-2 border rounded-md mb-4"
+                cls="w-full p-2 border border-zinc-500 rounded-md"
             ),
             Input(
                 id="password",
                 type="password",
                 placeholder="Enter your password",
-                cls="w-full p-2 border rounded-md mb-4"
+                cls="w-full p-2 border border-zinc-500 rounded-md"
             ),
             Textarea(
                 id="bio",
                 placeholder="Tell us about yourself",
                 rows=3,
-                cls="w-full p-2 border rounded-md mb-4"
+                cls="w-full p-2 border border-zinc-500 rounded-md"
             ),
             Select(
                 id="country",
                 options=[("us", "United States"), ("de", "Germany"), ("fr", "France")],
-                cls="w-full p-2 border rounded-md mb-4"
+                cls="w-full p-2 border border-zinc-500 rounded-md"
             ),
             Checkbox(
                 id="terms",
                 label="I agree to the terms and conditions",
-                cls="mb-4"
             ),
             Radio(
                 id="gender",
                 name="gender",
                 options=[("male", "Male"), ("female", "Female"), ("other", "Other")],
-                cls="flex gap-4 mb-4"
+                cls="flex gap-6"
             ),
             Button(
                 "Register",
                 type="submit",
                 on_click="register",
-                cls="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600"
+                cls="w-full bg-blue-500 text-white font-bold p-2 rounded-md hover:bg-blue-600"
             ),
-            cls="space-y-4 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md"
+            cls="space-y-6 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md"
         ),
         # Confirmation display
         Div(
@@ -119,9 +118,9 @@ def RegistrationForm() -> Div:
                 listen_to="gender_state",
                 cls="text-center"
             ),
-            cls="text-xl font-bold mt-6 space-y-2"
+            cls="text-xl font-bold mt-6 space-y-3"
         ),
-        cls="w-full min-h-screen flex flex-col items-center justify-center p-4"
+        cls="w-full min-h-screen flex flex-col items-center justify-center p-6"
     )
 
 
