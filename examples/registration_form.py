@@ -56,33 +56,30 @@ def RegistrationForm() -> Div:
                 id="bio",
                 placeholder="Tell us about yourself",
                 rows=3,
+                value=bio_state.get,
+                listen_to="bio_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Select(
                 id="country",
                 options=[("us", "United States"), ("de", "Germany"), ("fr", "France")],
+                value=country_state.get,
+                listen_to="country_state",
                 cls="w-full p-2 border rounded-md mb-4"
             ),
             Checkbox(
                 id="terms",
                 label="I agree to the terms and conditions",
+                value=terms_state.get,
+                listen_to="terms_state",
                 cls="mb-4"
             ),
-            Div(
-                Radio(
-                    id="gender-male",
-                    name="gender",
-                    label="Male",
-                ),
-                Radio(
-                    id="gender-female",
-                    label="Female",
-                ),
-                Radio(
-                    id="gender-other",
-                    name="gender",
-                    label="Other",
-                ),
+            Radio(
+                id="gender",
+                name="gender",
+                options=[("male", "Male"), ("female", "Female"), ("other", "Other")],
+                value=gender_state.get,
+                listen_to="gender_state",
                 cls="flex gap-4 mb-4"
             ),
             Button(
@@ -165,7 +162,7 @@ async def register(request: Request) -> str:
             field_value = form_data.get(field, "")
             # For checkbox, handle boolean value
             if field == "terms":
-                field_value = True if field_value == "on" else False    # Checkboxes send "on" when checked
+                field_value = field_value == "on"  # Checkboxes send "on" when checked
             if field_value != state.get():
                 state.set(field_value)
                 listeners.update(state.listeners)
