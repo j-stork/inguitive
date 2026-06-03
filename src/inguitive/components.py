@@ -36,7 +36,8 @@ class Component:
             attrs.setdefault('hx-get', f"/{navigate.lstrip('/')}")
             attrs.setdefault('hx-target', "body")
         if redirect:
-            attrs.setdefault('hx-redirect', redirect)
+            attrs.setdefault('hx-redirect', f"{redirect.lstrip('/')}")
+
         
         self.attrs = attrs
         get_component_registry()[self.id] = self
