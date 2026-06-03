@@ -2,7 +2,7 @@
 INGUITIVE - A pure Python web framework combining intuitive syntax with HTMX and Tailwind CSS.
 """
 
-from inguitive.components import Component, Div, Button, Label, Icon, Input, Textarea, Select, Checkbox, Radio, Form, Markdown, Text, TemplateComponent
+from inguitive.components import Component, Div, Button, Label, Icon, Input, Textarea, Select, Checkbox, Radio, Form, Markdown, Text, Link, TemplateComponent
 from inguitive.state import State
 from inguitive.htmx import update_components
 from inguitive.fastapi import create_app, run_app
@@ -29,6 +29,7 @@ __all__ = [
     "Form",
     "Markdown",
     "Text",
+    "Link",
     "TemplateComponent",
     # State
     "State",

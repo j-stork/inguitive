@@ -172,6 +172,49 @@ class Label(Component):
         return f"<label {attrs}>{resolved_text}</label>"
 
 
+class Link(Component):
+    """HTML link/anchor component for semantic navigation.
+    
+    Renders a standard <a> tag. Use for traditional links where semantic
+    HTML matters (SEO, accessibility, browser behavior).
+    
+    Example:
+        Link("Home", href="/")
+        Link("Documentation", href="/docs", cls="text-blue-500 hover:underline")
+        Link(Icon(HOME_SVG), href="/", cls="w-6 h-6")
+    """
+    
+    def __init__(self, text: str | Callable[[], str], href: str,
+                 id: str | None = None, cls: str | Callable[[], str] | None = None,
+                 **attrs):
+        """Initialize a Link component.
+        
+        Args:
+            text: Link text content (string or callable returning string)
+            href: URL to link to
+            id: HTML id attribute
+            cls: Tailwind CSS classes
+            **attrs: Additional HTML attributes (target, rel, etc.)
+        """
+        super().__init__(id=id, cls=cls, **attrs)
+        if href:
+            attrs['href'] = href
+        self.text = text
+
+    def render(self) -> str:
+        attrs = self._get_attrs_str()
+        resolved_text = self._resolve(self.text)
+        return f"<a {attrs}>{resolved_text}</a>"
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        resolved_text = self._resolve(self.text)
+        return f"<a {attrs}>{resolved_text}</a>"
+
+
 class Text(Component):
     """HTML paragraph/text component.
     
