@@ -13,12 +13,31 @@ class Component:
     """Base component class for INGUITIVE."""
     
     def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None, 
-                 listen_to: str | None = None, **attrs):
+                 listen_to: str | None = None, 
+                 trigger: str | None = None,
+                 trigger_args: dict[str, str] | None = None,
+                 navigate: str | None = None,
+                 redirect: str | None = None,
+                 **attrs):
         # Generate UUID if no id provided
         if id is None:
             id = f"comp-{uuid.uuid4().hex[:8]}"
         self.id = id
         self.cls = cls
+        
+        # Handle action parameters (trigger = POST, navigate = GET, redirect = redirect)
+        if trigger:
+            url = f"/{trigger.lstrip('/')}"
+            if trigger_args:
+                url += "?" + "&".join(f"{k}={v}" for k, v in trigger_args.items())
+            attrs.setdefault('hx-post', url)
+            attrs.setdefault('hx-target', "#hx-target")
+        if navigate:
+            attrs.setdefault('hx-get', f"/{navigate.lstrip('/')}")
+            attrs.setdefault('hx-target', "body")
+        if redirect:
+            attrs.setdefault('hx-redirect', redirect)
+        
         self.attrs = attrs
         get_component_registry()[self.id] = self
         if listen_to:
@@ -77,21 +96,17 @@ class Div(Component):
 
 
 class Button(Component):
-    """HTML button component with HTMX support."""
+    """HTML button component with HTMX support.
+    
+    Use trigger, navigate, or redirect parameters for click actions:
+    - trigger: POST action for partial updates (replaces old on_click)
+    - navigate: GET navigation for full page changes
+    - redirect: Immediate browser redirect
+    """
     
     def __init__(self, *children, id: str | None = None, 
                  cls: str | Callable[[], str] | None = None, 
-                 on_click: str | None = None,
-                 on_click_args: dict[str, str] | None = None, **attrs):
-        # Convert on_click to HTMX attributes with optional query parameters
-        if on_click:
-            if 'hx-post' not in attrs:
-                url = f"/{on_click.lstrip('/')}"
-                if on_click_args:
-                    url += "?" + "&".join(f"{k}={v}" for k, v in on_click_args.items())
-                attrs['hx-post'] = url
-            if 'hx-target' not in attrs:
-                attrs['hx-target'] = "#hx-target"
+                 **attrs):
         super().__init__(id=id, cls=cls, **attrs)
         self.children = list(children)
 
@@ -532,7 +547,7 @@ class Form(Component):
             action="/submit",
             method="POST"
         )
-        Form(on_click="save", children=[...])  # HTMX form
+        Form(Button("Save", trigger="save"), ...)  # HTMX form with trigger
     """
     
     def __init__(self, *children, id: str | None = None, cls: str | Callable[[], str] | None = None,
