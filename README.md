@@ -45,6 +45,67 @@ def increment():
     return update_components(*counter_state.listeners)
 ```
 
+## When to Use: Navigation & Actions
+
+### Decision Guide
+
+| Component/Parameter | Renders | Use When | URL Changes | Native Link Behavior |
+|---------------------|---------|----------|-------------|---------------------|
+| **`A(href="...")`** | `<a href="...">` | Traditional links, SEO, accessibility | ✅ Yes | ✅ Full support |
+| **`navigate="/..."`** | `hx-get`, `hx-target="body"` | SPA-style navigation between related components | ❌ No (add `hx-push-url="true"` to enable) | ❌ No |
+| **`redirect="/..."`** | `hx-redirect` | Immediate full-page redirect | ✅ Yes | ❌ No |
+| **`trigger="..."`** | `hx-post`, `hx-target="#hx-target"` | Form submissions, partial updates | ❌ No | ❌ No |
+
+### Decision Tree
+
+```
+Is this a traditional link that users might:
+   │
+   ├── want to open in a new tab? ──YES──► Use A(href="...")
+   │
+   ├── want to bookmark/share? ───────YES──► Use A(href="...")
+   │
+   └── want SEO to find? ──────────────YES──► Use A(href="...")
+           │
+           NO
+           │
+    Is this navigation between related components
+    (tabs, modals, SPA views)? ──YES──► Use navigate="/..."
+           │
+           NO
+           │
+    Does this need an immediate full redirect? ──YES──► Use redirect="/..."
+           │
+           NO
+           │
+    Is this a form action or partial update? ──YES──► Use trigger="..."
+```
+
+### Common Patterns
+
+```python
+from inguitive import A, Button, Text, Div
+
+# Traditional navigation (SEO, accessibility, bookmarking)
+A("Home", href="/")
+A("Documentation", href="/docs", cls="text-blue-500")
+
+# SPA-style view switching (tabs, modals, stacked components)
+# Example: Toggle between Login, Register, Logout forms
+Div(
+    Text("Login", navigate="/auth?mode=login", cls="cursor-pointer"),
+    Text(" | "),
+    Text("Register", navigate="/auth?mode=register", cls="cursor-pointer"),
+)
+
+# Immediate redirect (logout, etc.)
+Button("Logout", redirect="/logout")
+
+# Partial updates (forms, actions that update specific elements)
+Button("Save", trigger="save_form")
+Button("Like", trigger="like_post", trigger_args={"id": "123"})
+```
+
 ## Project Structure
 
 ```
