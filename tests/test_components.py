@@ -51,16 +51,16 @@ class TestButton:
         assert 'class="bg-blue-500"' in html
         assert "Click me" in html
 
-    def test_on_click_generates_htmx_attrs(self):
-        """Test that on_click generates HTMX attributes."""
-        btn = Button("Click", on_click="test_action")
+    def test_trigger_generates_htmx_attrs(self):
+        """Test that trigger generates HTMX attributes."""
+        btn = Button("Click", trigger="test_action")
         html = btn.render()
         assert 'hx-post="/test_action"' in html
         assert 'hx-target="#hx-target"' in html
 
-    def test_on_click_with_args(self):
-        """Test on_click with query parameters."""
-        btn = Button("Click", on_click="action", on_click_args={"key": "value"})
+    def test_trigger_with_args(self):
+        """Test trigger with query parameters."""
+        btn = Button("Click", trigger="action", trigger_args={"key": "value"})
         html = btn.render()
         assert 'hx-post="/action?key=value"' in html
 

@@ -48,7 +48,7 @@ def Counter() -> Div:
             Div(
                 Button(
                     Icon(lambda: MOON if theme_state.get() == "light" else SUN, cls="w-6 h-6"),
-                    on_click="toggle_theme",
+                    trigger="toggle_theme",
                     id="theme-toggle",
                     cls=f"{BUTTON_SECONDARY_CSS}"
                 ),
@@ -60,8 +60,8 @@ def Counter() -> Div:
                 cls=get_counter_style,
                 listen_to="counter_state"
             ),
-            Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
-            Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
+            Button("+1", trigger="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
+            Button("Reset", trigger="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
             id="counter-card",
             cls="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm"
         ),

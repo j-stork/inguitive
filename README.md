@@ -33,7 +33,7 @@ counter_state = State(0, "counter_state")
 def Counter():
     return Div(
         Label(text=lambda: f"Count: {counter_state.get()}", id="counter-label", listen_to="counter_state"),
-        Button("+1", on_click="increment", cls=BUTTON_PRIMARY_CSS),
+        Button("+1", trigger="increment", cls=BUTTON_PRIMARY_CSS),
     )
 
 # Create FastAPI app
