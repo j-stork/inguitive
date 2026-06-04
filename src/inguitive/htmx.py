@@ -2,7 +2,7 @@
 HTMX helper functions for INGUITIVE.
 """
 
-from inguitive.state import get_component_registry
+from inguitive.session import get_component_registry
 
 
 def update_components(*component_ids: str) -> str:
