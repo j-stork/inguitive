@@ -4,7 +4,7 @@ Component classes for INGUITIVE framework.
 
 import uuid
 from typing import Callable
-from inguitive.state import get_component_registry, get_state_registry
+from inguitive.session import get_component_registry, get_state_registry
 import markdown
 import jinja2
 

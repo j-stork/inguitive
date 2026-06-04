@@ -6,6 +6,14 @@ from inguitive.components import Component, Div, Button, Label, Icon, Input, Tex
 from inguitive.state import State
 from inguitive.htmx import update_components
 from inguitive.fastapi import create_app, run_app
+from inguitive.session import (
+    Session,
+    SessionBackend,
+    MemoryBackend,
+    RedisBackend,
+    set_session_backend,
+    get_session_backend,
+)
 
 # Re-export styling constants for convenience
 from inguitive.css import (
@@ -38,6 +46,13 @@ __all__ = [
     # FastAPI
     "create_app",
     "run_app",
+    # Session
+    "Session",
+    "SessionBackend",
+    "MemoryBackend",
+    "RedisBackend",
+    "set_session_backend",
+    "get_session_backend",
     # Styling
     "BUTTON_BASE_CSS",
     "BUTTON_PRIMARY_CSS",
