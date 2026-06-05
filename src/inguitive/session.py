@@ -195,10 +195,7 @@ _current_session_id: ContextVar[Optional[SessionId]] = ContextVar(
     'current_session_id', default=None
 )
 
-# Fallback global registries for backward compatibility (when no session is active)
-_fallback_component_registry: dict[str, any] = {}
-_fallback_state_registry: dict[str, any] = {}
-_fallback_data_registry: dict[str, any] = {}
+
 
 
 def get_session_backend() -> SessionBackend:
@@ -256,29 +253,17 @@ def clear_current_session() -> None:
     _current_session_id.set(None)
 
 
-# Convenience functions for registries (maintain API compatibility)
+# Convenience functions for registries
 def get_component_registry() -> dict[str, Any]:
-    """Get the component registry for the current session, or fallback global registry."""
-    session = get_current_session()
-    if session is not None:
-        return session.component_registry
-    # Fallback to global registry for backward compatibility
-    return _fallback_component_registry
+    """Get the component registry for the current session."""
+    return get_or_create_current_session().component_registry
 
 
 def get_state_registry() -> dict[str, Any]:
-    """Get the state registry for the current session, or fallback global registry."""
-    session = get_current_session()
-    if session is not None:
-        return session.state_registry
-    # Fallback to global registry for backward compatibility
-    return _fallback_state_registry
+    """Get the state registry for the current session."""
+    return get_or_create_current_session().state_registry
 
 
 def get_data_registry() -> dict[str, Any]:
-    """Get the data registry for the current session, or fallback global registry."""
-    session = get_current_session()
-    if session is not None:
-        return session.data_registry
-    # Fallback to global registry for backward compatibility
-    return _fallback_data_registry
+    """Get the data registry for the current session."""
+    return get_or_create_current_session().data_registry
