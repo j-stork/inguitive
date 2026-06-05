@@ -126,6 +126,37 @@ Button("Like", trigger="like_post", trigger_args={"id": "123"})
 └── README.md
 ```
 
+## Session Backends
+
+INGUITIVE uses session-scoped registries to isolate user state. Choose a backend based on your deployment needs:
+
+| Backend | Use When | Persistence | Multi-Worker |
+|---------|----------|-------------|--------------|
+| **`MemoryBackend`** | Development, single worker | ❌ No (lost on restart) | ❌ No |
+| **`RedisBackend`** | Production, multiple workers | ✅ Yes | ✅ Yes |
+
+**MemoryBackend** (default) stores sessions in RAM - perfect for development. **RedisBackend** stores sessions in Redis for production deployments with multiple workers or persistent sessions.
+
+```python
+from inguitive import create_app, MemoryBackend, RedisBackend
+
+# Development: In-memory sessions (default, no config needed)
+app = create_app()
+
+# Or explicitly:
+app = create_app(session_backend=MemoryBackend())
+
+# Production: Redis-backed sessions for scaling
+app = create_app(
+    session_backend=RedisBackend(
+        redis_url="redis://localhost:6379",
+        ttl_seconds=3600  # Session timeout: 1 hour
+    )
+)
+```
+
+Requires `pip install redis` for RedisBackend.
+
 ## Running the Demo
 
 ```bash
