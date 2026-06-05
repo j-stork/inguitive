@@ -4,12 +4,12 @@ Counter example application using INGUITIVE framework.
 Run with: uvicorn examples.counter_app:app --reload
 """
 
-from fastapi import FastAPI, Request
+from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import State, Div, Button, Label, Icon
+from inguitive import State, Div, Button, Label, Icon, create_app
 from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 from inguitive.htmx import update_components
 from inguitive.svg import MOON, SUN
@@ -19,8 +19,8 @@ counter_state = State(0, "counter_state")
 theme_state = State("light", "theme_state")
 
 # --- App Setup ---
-app = FastAPI()
-templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+app = create_app(template_dir=Path(__file__).parent / "templates")
+templates = app.state.templates
 
 
 # --- Dynamic styling functions ---
