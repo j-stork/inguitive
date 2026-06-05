@@ -6,16 +6,16 @@ Demonstrates the Markdown component for rendering markdown content as HTML.
 Run with: uvicorn examples.markdown_demo:app --reload
 """
 
-from fastapi import FastAPI, Request
+from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import Div, Markdown
+from inguitive import Div, Markdown, create_app
 
 # --- App Setup ---
-app = FastAPI()
-templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+app = create_app(template_dir=Path(__file__).parent / "templates")
+templates = app.state.templates
 
 # --- Markdown Content ---
 MARKDOWN_CONTENT = """
