@@ -3,12 +3,18 @@ Counter example application using INGUITIVE framework.
 
 Run with: uvicorn examples.counter_app:app --reload
 
-Per-session isolation
----------------------
-State values and listener registrations are stored in the per-session
-data_registry, keyed by session cookie. Opening this app in two separate
-browser tabs gives each tab its own independent counter and theme — changes
-in one tab have no effect on the other.
+Per-Session Isolation Demonstration
+-----------------------------------
+This example demonstrates INGUITIVE's per-session state isolation.
+Each browser tab maintains its own independent counter and theme state.
+
+To test:
+1. Open this app in two separate browser tabs
+2. Note the unique Session ID displayed below the counter in each tab
+3. Increment the counter in Tab 1 - Tab 2's counter remains unchanged
+4. Toggle theme in Tab 1 - Tab 2's theme remains unchanged
+
+This proves that State values are fully isolated per user session.
 """
 
 from fastapi import Request
@@ -16,7 +22,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import State, Div, Button, Label, Icon, create_app
+from inguitive import State, Div, Button, Label, Icon, create_app, get_session_id
 from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 from inguitive.htmx import update_components
 from inguitive.svg import MOON, SUN
@@ -65,6 +71,10 @@ def Counter() -> Div:
                 id="counter-label",
                 cls=get_counter_style,
                 listen_to="counter_state"
+            ),
+            Div(
+                f"Session: {get_session_id()}",
+                cls="text-xs text-gray-500 text-center mt-2"
             ),
             Button("+1", trigger="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
             Button("Reset", trigger="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
