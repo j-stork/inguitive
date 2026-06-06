@@ -4,6 +4,7 @@ FastAPI integration for INGUITIVE.
 
 from __future__ import annotations
 
+import inspect
 import uuid
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse
@@ -21,6 +22,44 @@ from inguitive.session import (
     clear_current_session,
     Session,
 )
+
+# Global registry for trigger handlers: {trigger_name: handler_function}
+_trigger_handlers: dict[str, Callable] = {}
+
+
+def register_trigger_handler(trigger_name: str, handler: Callable) -> None:
+    """Register a trigger handler for later route registration."""
+    if trigger_name in _trigger_handlers:
+        raise ValueError(f"Trigger handler '{trigger_name}' already registered")
+    _trigger_handlers[trigger_name] = handler
+
+
+def trigger_handler(trigger_name: str | None | Callable = None):
+    """Decorator to register a function as a trigger handler.
+    
+    Can be used with or without parentheses:
+        @trigger_handler          # uses function name as trigger
+        def increment(): ...
+        
+        @trigger_handler("custom")  # uses explicit trigger name
+        def handle_increment(): ...
+    """
+    # Handle both @trigger_handler and @trigger_handler("name")
+    if callable(trigger_name):
+        # Called as @trigger_handler (without parentheses)
+        # trigger_name is actually the function
+        func = trigger_name
+        actual_trigger_name = func.__name__
+        register_trigger_handler(actual_trigger_name, func)
+        return func
+    else:
+        # Called as @trigger_handler("name") (with parentheses)
+        # trigger_name is the name string
+        def decorator(func: Callable):
+            actual_trigger_name = trigger_name or func.__name__
+            register_trigger_handler(actual_trigger_name, func)
+            return func
+        return decorator
 
 
 class SessionMiddleware:
@@ -121,6 +160,25 @@ def create_app(template_dir: str | Path = "templates",
         session_cookie_secure=session_cookie_secure,
         session_cookie_httponly=session_cookie_httponly,
     )
+    
+    # Auto-register all trigger handlers
+    for trigger_name, handler in _trigger_handlers.items():
+        # Create a wrapper function that captures handler and trigger_name
+        def create_route_wrapper(h: Callable, tn: str):
+            @app.post(f"/{tn}")
+            async def route_wrapper(request: Request):
+                sig = inspect.signature(h)
+                needs_request = 'request' in sig.parameters
+                is_async = inspect.iscoroutinefunction(h)
+                
+                if needs_request:
+                    result = await h(request) if is_async else h(request)
+                else:
+                    result = await h() if is_async else h()
+                return result
+            return route_wrapper
+        
+        create_route_wrapper(handler, trigger_name)
     
     return app, templates
 

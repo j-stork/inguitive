@@ -6,7 +6,6 @@ Demonstrates the Markdown component for rendering markdown content as HTML.
 Run with: uvicorn examples.markdown_demo:app --reload
 """
 
-from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path

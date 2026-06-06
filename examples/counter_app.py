@@ -22,14 +22,34 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import State, Div, Button, Label, Icon, create_app, get_session_id
+from inguitive import State, Div, Button, Label, Icon, create_app, get_session_id, trigger_handler
 from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 from inguitive.htmx import update_components
 from inguitive.svg import MOON, SUN
+from fastapi import Request
 
 # --- State Instances ---
 counter_state = State(0, "counter_state")
 theme_state = State("light", "theme_state")
+
+# --- Trigger Handlers ---
+@trigger_handler
+def increment():
+    counter_state.set(counter_state.get() + 1)
+    return update_components(*counter_state.listeners)
+
+@trigger_handler
+def reset():
+    counter_state.set(0)
+    return update_components(*counter_state.listeners)
+
+@trigger_handler
+def toggle_theme():
+    """Toggle between light and dark theme."""
+    current: str = theme_state.get()
+    new_theme: str = "dark" if current == "light" else "light"
+    theme_state.set(new_theme)
+    return update_components(*theme_state.listeners)
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent / "templates")
@@ -94,27 +114,6 @@ def home(request: Request) -> HTMLResponse:
         "base.html",
         {"request": request, "content": Counter().render()}
     )
-
-
-@app.post("/increment", response_class=HTMLResponse)
-def increment() -> str:
-    counter_state.set(counter_state.get() + 1)
-    return update_components(*counter_state.listeners)
-
-
-@app.post("/reset", response_class=HTMLResponse)
-def reset() -> str:
-    counter_state.set(0)
-    return update_components(*counter_state.listeners)
-
-
-@app.post("/toggle_theme", response_class=HTMLResponse)
-def toggle_theme() -> str:
-    """Toggle between light and dark theme."""
-    current: str = theme_state.get()
-    new_theme: str = "dark" if current == "light" else "light"
-    theme_state.set(new_theme)
-    return update_components(*theme_state.listeners)
 
 
 # --- Start ---

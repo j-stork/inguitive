@@ -11,7 +11,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Text, Div, State, create_app
+from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Text, Div, State, create_app, trigger_handler
 from inguitive.htmx import update_components
 
 # --- State Instances ---
@@ -22,6 +22,35 @@ bio_state = State("", "bio_state")
 country_state = State("us", "country_state")
 terms_state = State(False, "terms_state")
 gender_state = State("male", "gender_state")
+
+# --- Trigger Handlers ---
+@trigger_handler
+async def register(request: Request) -> str:
+    """Handle form submission."""
+    listeners = set()
+    form_data = await request.form()
+    if form_data:
+        # Map all form fields to their states
+        field_states = [
+            ("name", name_state),
+            ("email", email_state),
+            ("password", password_state),
+            ("bio", bio_state),
+            ("country", country_state),
+            ("terms", terms_state),
+            ("gender", gender_state),
+        ]
+        for field, state in field_states:
+            field_value = form_data.get(field, "")
+            # For checkbox, handle boolean value
+            if field == "terms":
+                field_value = field_value == "on"  # Checkboxes send "on" when checked
+            if field_value != state.get():
+                state.set(field_value)
+                listeners.update(state.listeners)
+    if listeners:
+        return update_components(*listeners)
+    return ""
 
 
 # --- App Setup ---
@@ -141,35 +170,6 @@ def home(request: Request) -> HTMLResponse:
         {"request": request, "content": RegistrationForm().render()}
     )
 
-
-@app.post("/register", response_class=HTMLResponse)
-async def register(request: Request) -> str:
-    """Handle form submission."""
-    listeners = set()
-    form_data = await request.form()
-    if form_data:
-        # Map all form fields to their states
-        field_states = [
-            ("name", name_state),
-            ("email", email_state),
-            ("password", password_state),
-            ("bio", bio_state),
-            ("country", country_state),
-            ("terms", terms_state),
-            ("gender", gender_state),
-        ]
-        for field, state in field_states:
-            field_value = form_data.get(field, "")
-            # For checkbox, handle boolean value
-            if field == "terms":
-                field_value = field_value == "on"  # Checkboxes send "on" when checked
-            if field_value != state.get():
-                state.set(field_value)
-                listeners.update(state.listeners)
-    if listeners:
-        return update_components(*listeners)
-    return ""
-            
 
 # --- Start ---
 if __name__ == "__main__":
