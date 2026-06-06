@@ -13,6 +13,7 @@ from inguitive.session import (
     RedisBackend,
     set_session_backend,
     get_session_backend,
+    get_session_id,
 )
 
 # Re-export styling constants for convenience
@@ -53,6 +54,7 @@ __all__ = [
     "RedisBackend",
     "set_session_backend",
     "get_session_backend",
+    "get_session_id",
     # Styling
     "BUTTON_BASE_CSS",
     "BUTTON_PRIMARY_CSS",
