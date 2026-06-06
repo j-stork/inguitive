@@ -87,13 +87,12 @@ class SessionMiddleware:
         
         return response
 
-
 def create_app(template_dir: str | Path = "templates", 
                session_backend: Optional[SessionBackend] = None,
                session_cookie_name: str = "inguitive_session_id",
                session_cookie_max_age: int = 3600,
                session_cookie_secure: bool = False,
-               session_cookie_httponly: bool = True) -> FastAPI:
+               session_cookie_httponly: bool = True):
     """Create and configure a FastAPI application for INGUITIVE.
     
     Args:
@@ -105,7 +104,7 @@ def create_app(template_dir: str | Path = "templates",
         session_cookie_httponly: Whether cookie is HTTP-only
         
     Returns:
-        Configured FastAPI app instance
+        Tuple of (FastAPI app, Jinja2Templates) for use in routes
     """
     app = FastAPI()
     templates = Jinja2Templates(directory=template_dir)
@@ -124,7 +123,7 @@ def create_app(template_dir: str | Path = "templates",
         session_cookie_httponly=session_cookie_httponly,
     )
     
-    return app
+    return app, templates
 
 
 def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True):

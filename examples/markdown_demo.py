@@ -14,8 +14,7 @@ from pathlib import Path
 from inguitive import Div, Markdown, create_app
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent / "templates")
-templates = app.state.templates
+app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 # --- Markdown Content ---
 MARKDOWN_CONTENT = """
