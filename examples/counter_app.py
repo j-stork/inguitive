@@ -19,8 +19,7 @@ counter_state = State(0, "counter_state")
 theme_state = State("light", "theme_state")
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent / "templates")
-templates = app.state.templates
+app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 
 # --- Dynamic styling functions ---

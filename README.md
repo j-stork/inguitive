@@ -37,7 +37,7 @@ def Counter():
     )
 
 # Create FastAPI app
-app = create_app()
+app, templates = create_app()
 
 @app.post("/increment")
 def increment():
@@ -141,13 +141,13 @@ INGUITIVE uses session-scoped registries to isolate user state. Choose a backend
 from inguitive import create_app, MemoryBackend, RedisBackend
 
 # Development: In-memory sessions (default, no config needed)
-app = create_app()
+app, templates = create_app()
 
 # Or explicitly:
-app = create_app(session_backend=MemoryBackend())
+app, templates = create_app(session_backend=MemoryBackend())
 
 # Production: Redis-backed sessions for scaling
-app = create_app(
+app, templates = create_app(
     session_backend=RedisBackend(
         redis_url="redis://localhost:6379",
         ttl_seconds=3600  # Session timeout: 1 hour

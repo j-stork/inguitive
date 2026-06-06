@@ -25,8 +25,7 @@ gender_state = State("male", "gender_state")
 
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent / "templates")
-templates = app.state.templates
+app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 
 # --- Helper Functions ---
