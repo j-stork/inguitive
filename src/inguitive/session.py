@@ -255,6 +255,12 @@ def clear_current_session() -> None:
     _current_session_id.set(None)
 
 
+def get_session_id() -> Optional[str]:
+    """Get the current session ID, or None if no session is active."""
+    session = get_current_session()
+    return session.session_id if session else None
+
+
 # Convenience functions for registries
 def get_component_registry() -> dict[str, Any]:
     """Get the component registry for the current session."""
