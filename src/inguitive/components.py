@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import uuid
 from typing import Callable
-from inguitive.session import get_component_registry, get_state_registry
+from inguitive.session import get_component_registry
 import markdown
 import jinja2
 
@@ -44,10 +44,10 @@ class Component:
         self.attrs = attrs
         get_component_registry()[self.id] = self
         if listen_to:
-            # Register this component as a listener to the state
-            state_registry = get_state_registry()
-            if listen_to in state_registry:
-                state_registry[listen_to].add_listener(self.id)
+            from inguitive.state import get_state_by_name
+            state = get_state_by_name(listen_to)
+            if state is not None:
+                state.add_listener(self.id)
 
     def _resolve(self, value: str | Callable[[], str]) -> str:
         """Resolve a potentially dynamic value (callable or static)."""

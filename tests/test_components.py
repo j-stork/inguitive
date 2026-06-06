@@ -2,18 +2,29 @@
 
 import pytest
 from inguitive.components import Component, Div, Button, Label, Icon
-from inguitive.state import State, get_component_registry, get_state_registry
+from inguitive.state import State
+from inguitive.session import (
+    get_component_registry,
+    get_state_registry,
+    Session,
+    MemoryBackend,
+    set_session_backend,
+    set_current_session,
+    clear_current_session,
+)
 from inguitive.htmx import update_components
 
 
 @pytest.fixture(autouse=True)
 def cleanup_registries():
-    """Clear registries before and after each test."""
-    get_component_registry().clear()
-    get_state_registry().clear()
+    """Provide a clean session with empty registries for each test."""
+    backend = MemoryBackend()
+    set_session_backend(backend)
+    session = Session(session_id="test-session")
+    backend.save_session(session)
+    set_current_session(session)
     yield
-    get_component_registry().clear()
-    get_state_registry().clear()
+    clear_current_session()
 
 
 class TestDiv:

@@ -2,6 +2,13 @@
 Counter example application using INGUITIVE framework.
 
 Run with: uvicorn examples.counter_app:app --reload
+
+Per-session isolation
+---------------------
+State values and listener registrations are stored in the per-session
+data_registry, keyed by session cookie. Opening this app in two separate
+browser tabs gives each tab its own independent counter and theme — changes
+in one tab have no effect on the other.
 """
 
 from fastapi import Request
