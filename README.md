@@ -33,7 +33,7 @@ counter_state = State(0, "counter_state")
 def Counter():
     return Div(
         Label(text=lambda: f"Count: {counter_state.get()}", id="counter-label", listen_to="counter_state"),
-        Button("+1", trigger="increment", cls=BUTTON_PRIMARY_CSS),
+        Button("+1", trigger="increment", css=BUTTON_PRIMARY_CSS),
     )
 
 # Create FastAPI app
@@ -88,14 +88,14 @@ from inguitive import A, Button, Text, Div
 
 # Traditional navigation (SEO, accessibility, bookmarking)
 A("Home", href="/")
-A("Documentation", href="/docs", cls="text-blue-500")
+A("Documentation", href="/docs", css="text-blue-500")
 
 # SPA-style view switching (tabs, modals, stacked components)
 # Example: Toggle between Login, Register, Logout forms
 Div(
-    Text("Login", navigate="/auth?mode=login", cls="cursor-pointer"),
+    Text("Login", navigate="/auth?mode=login", css="cursor-pointer"),
     Text(" | "),
-    Text("Register", navigate="/auth?mode=register", cls="cursor-pointer"),
+    Text("Register", navigate="/auth?mode=register", css="cursor-pointer"),
 )
 
 # Immediate redirect (logout, etc.)
