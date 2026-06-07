@@ -79,30 +79,30 @@ def Counter() -> Div:
         Div(
             Div(
                 Button(
-                    Icon(lambda: MOON if theme_state.get() == "light" else SUN, cls="w-6 h-6"),
+                    Icon(lambda: MOON if theme_state.get() == "light" else SUN, css="w-6 h-6"),
                     trigger="toggle_theme",
                     id="theme-toggle",
-                    cls=f"{BUTTON_SECONDARY_CSS}"
+                    css=f"{BUTTON_SECONDARY_CSS}"
                 ),
-                cls="w-full flex justify-end",
+                css="w-full flex justify-end",
             ),
             Label(
                 text=lambda: f"Count: {counter_state.get()}",
                 id="counter-label",
-                cls=get_counter_style,
+                css=get_counter_style,
                 listen_to="counter_state"
             ),
             Div(
                 f"Session: {get_session_id()}",
-                cls="text-xs text-gray-500 text-center mt-2"
+                css="text-xs text-gray-500 text-center mt-2"
             ),
-            Button("+1", trigger="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
-            Button("Reset", trigger="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
+            Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY_CSS} w-full"),
+            Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY_CSS} w-full"),
             id="counter-card",
-            cls="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm"
+            css="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
         ),
         id="theme-container",
-        cls=lambda: f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center",
+        css=lambda: f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center",
         listen_to="theme_state"
     )
 

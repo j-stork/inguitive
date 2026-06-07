@@ -62,7 +62,7 @@ def GenderRadio(id: str, value: str, label: str) -> Div:
     return Div(
         Radio(id=id, name="gender", value=value),
         Label(label, for_=id),
-        cls="flex items-baseline gap-2"
+        css="flex items-baseline gap-2"
     )
 
 
@@ -75,90 +75,90 @@ def RegistrationForm() -> Div:
             Input(
                 id="name",
                 placeholder="Enter your name",
-                cls="w-full p-2 border border-zinc-500 rounded-md",
+                css="w-full p-2 border border-zinc-500 rounded-md",
             ),
             Input(
                 id="email",
                 type="email",
                 placeholder="Enter your email",
-                cls="w-full p-2 border border-zinc-500 rounded-md"
+                css="w-full p-2 border border-zinc-500 rounded-md"
             ),
             Input(
                 id="password",
                 type="password",
                 placeholder="Enter your password",
-                cls="w-full p-2 border border-zinc-500 rounded-md"
+                css="w-full p-2 border border-zinc-500 rounded-md"
             ),
             Textarea(
                 id="bio",
                 placeholder="Tell us about yourself",
                 rows=3,
-                cls="w-full p-2 border border-zinc-500 rounded-md"
+                css="w-full p-2 border border-zinc-500 rounded-md"
             ),
             Select(
                 id="country",
                 options=[("us", "United States"), ("de", "Germany"), ("fr", "France")],
-                cls="w-full p-2 border border-zinc-500 rounded-md"
+                css="w-full p-2 border border-zinc-500 rounded-md"
             ),
             Div(
                 Checkbox(id="terms", name="terms"),
                 Label("I agree to the terms and conditions", for_="terms"),
-                cls="flex items-baseline gap-2"
+                css="flex items-baseline gap-2"
             ),
             Div(
                 GenderRadio(id="gender-male", value="male", label="Male"),
                 GenderRadio(id="gender-female", value="female", label="Female"),
                 GenderRadio(id="gender-other", value="other", label="Other"),
-                cls="flex items-baseline gap-6"
+                css="flex items-baseline gap-6"
             ),
             Button(
                 "Register",
                 type="submit",
                 trigger="register",
-                cls="w-full bg-blue-500 text-white font-bold p-2 rounded-md hover:bg-blue-600"
+                css="w-full bg-blue-500 text-white font-bold p-2 rounded-md hover:bg-blue-600"
             ),
-            cls="space-y-6 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md"
+            css="space-y-6 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md"
         ),
         # Confirmation display
         Div(
             Text(
                 lambda: f"Name: {name_state.get()}" if name_state.get() else "Name:",
                 listen_to="name_state",
-                cls="text-center"
+                css="text-center"
             ),
             Text(
                 lambda: f"Email: {email_state.get()}" if email_state.get() else "Email:",
                 listen_to="email_state",
-                cls="text-center"
+                css="text-center"
             ),
             Text(
                 lambda: f"Password: {'*' * len(password_state.get())}" if password_state.get() else "Password:",
                 listen_to="password_state",
-                cls="text-center"
+                css="text-center"
             ),
             Text(
                 lambda: f"Bio: {bio_state.get()}" if bio_state.get() else "Bio:",
                 listen_to="bio_state",
-                cls="text-center"
+                css="text-center"
             ),
             Text(
                 lambda: f"Country: {country_state.get()}" if country_state.get() else "Country:",
                 listen_to="country_state",
-                cls="text-center"
+                css="text-center"
             ),
             Text(
                 lambda: f"Terms accepted: {'Yes' if terms_state.get() is not False else 'No'}",
                 listen_to="terms_state",
-                cls="text-center"
+                css="text-center"
             ),
             Text(
                 lambda: f"Gender: {gender_state.get()}" if gender_state.get() else "Gender:",
                 listen_to="gender_state",
-                cls="text-center"
+                css="text-center"
             ),
-            cls="text-xl font-bold mt-6 space-y-3"
+            css="text-xl font-bold mt-6 space-y-3"
         ),
-        cls="w-full min-h-screen flex flex-col items-center justify-center p-6"
+        css="w-full min-h-screen flex flex-col items-center justify-center p-6"
     )
 
 
