@@ -14,7 +14,7 @@ import jinja2
 class Component:
     """Base component class for INGUITIVE."""
     
-    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None, 
+    def __init__(self, id: str | None = None, css: str | Callable[[], str] | None = None, 
                  listen_to: str | None = None, 
                  trigger: str | None = None,
                  trigger_args: dict[str, str] | None = None,
@@ -25,7 +25,7 @@ class Component:
         if id is None:
             id = f"comp-{uuid.uuid4().hex[:8]}"
         self.id = id
-        self.cls = cls
+        self.css = css
         
         # Handle action parameters (trigger = POST, navigate = GET, redirect = redirect)
         if trigger:
@@ -54,14 +54,14 @@ class Component:
         return value() if callable(value) else value
 
     def _get_attrs_str(self) -> str:
-        """Convert attributes to HTML string, handling cls -> class conversion and dynamic values."""
+        """Convert attributes to HTML string, handling css -> class conversion and dynamic values."""
         filtered_attrs = {}
         for k, v in self.attrs.items():
-            if k != 'cls':
+            if k != 'css':
                 filtered_attrs[k] = self._resolve(v)
-        resolved_cls = self._resolve(self.cls) if self.cls else None
-        if resolved_cls:
-            filtered_attrs['class'] = resolved_cls
+        resolved_css = self._resolve(self.css) if self.css else None
+        if resolved_css:
+            filtered_attrs['class'] = resolved_css
         # Add id if present
         if self.id:
             filtered_attrs['id'] = self.id
@@ -74,8 +74,8 @@ class Component:
 class Div(Component):
     """HTML div component."""
     
-    def __init__(self, *children, id: str | None = None, cls: str | Callable[[], str] | None = None, **attrs):
-        super().__init__(id=id, cls=cls, **attrs)
+    def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
+        super().__init__(id=id, css=css, **attrs)
         self.children = list(children)
 
     def render(self) -> str:
@@ -108,9 +108,9 @@ class Button(Component):
     """
     
     def __init__(self, *children, id: str | None = None, 
-                 cls: str | Callable[[], str] | None = None, 
+                 css: str | Callable[[], str] | None = None, 
                  **attrs):
-        super().__init__(id=id, cls=cls, **attrs)
+        super().__init__(id=id, css=css, **attrs)
         self.children = list(children)
 
     def render(self) -> str:
@@ -140,24 +140,24 @@ class Label(Component):
     
     Example:
         Label("Username", for_="username-input")
-        Label("Remember me", for_="remember", cls="text-sm")
+        Label("Remember me", for_="remember", css="text-sm")
     """
     
     def __init__(self, text: str | Callable[[], str], id: str | None = None, 
-                 cls: str | Callable[[], str] | None = None, 
+                 css: str | Callable[[], str] | None = None, 
                  for_: str | None = None, **attrs):
         """Initialize a Label component.
         
         Args:
             text: Label text content
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             for_: ID of the form element this label is for (uses 'for' HTML attribute)
             **attrs: Additional HTML attributes
         """
         if for_ is not None:
             attrs['for'] = for_
-        super().__init__(id=id, cls=cls, **attrs)
+        super().__init__(id=id, css=css, **attrs)
         self.text = text
 
     def render(self) -> str:
@@ -182,12 +182,12 @@ class Link(Component):
     
     Example:
         Link("Home", href="/")
-        Link("Documentation", href="/docs", cls="text-blue-500 hover:underline")
-        Link(Icon(HOME_SVG), href="/", cls="w-6 h-6")
+        Link("Documentation", href="/docs", css="text-blue-500 hover:underline")
+        Link(Icon(HOME_SVG), href="/", css="w-6 h-6")
     """
     
     def __init__(self, text: str | Callable[[], str], href: str,
-                 id: str | None = None, cls: str | Callable[[], str] | None = None,
+                 id: str | None = None, css: str | Callable[[], str] | None = None,
                  **attrs):
         """Initialize a Link component.
         
@@ -195,10 +195,10 @@ class Link(Component):
             text: Link text content (string or callable returning string)
             href: URL to link to
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             **attrs: Additional HTML attributes (target, rel, etc.)
         """
-        super().__init__(id=id, cls=cls, **attrs)
+        super().__init__(id=id, css=css, **attrs)
         if href:
             attrs['href'] = href
         self.text = text
@@ -225,21 +225,21 @@ class Text(Component):
     
     Example:
         Text("Welcome to our application")
-        Text("This is a paragraph", cls="text-gray-600 mt-4")
+        Text("This is a paragraph", css="text-gray-600 mt-4")
         Text(lambda: get_description(), listen_to="desc_state")
     """
     
     def __init__(self, text: str | Callable[[], str], id: str | None = None,
-                 cls: str | Callable[[], str] | None = None, **attrs):
+                 css: str | Callable[[], str] | None = None, **attrs):
         """Initialize a Text component.
         
         Args:
             text: Text content (string or callable returning string)
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             **attrs: Additional HTML attributes
         """
-        super().__init__(id=id, cls=cls, **attrs)
+        super().__init__(id=id, css=css, **attrs)
         self.text = text
 
     def render(self) -> str:
@@ -259,19 +259,19 @@ class Text(Component):
 class Icon(Component):
     """SVG icon component."""
     
-    def __init__(self, svg: str | Callable[[], str], cls: str | Callable[[], str] | None = None, **attrs):
-        super().__init__(cls=cls, **attrs)
+    def __init__(self, svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs):
+        super().__init__(css=css, **attrs)
         self.svg = svg
 
     @staticmethod
-    def _replace_class(svg_str: str, cls_value: str) -> str:
+    def _replace_class(svg_str: str, css_value: str) -> str:
         """Replace or insert class attribute in SVG string.
         
         Preserves all other attributes, quote style, and structure.
         
         Args:
             svg_str: The SVG HTML string
-            cls_value: The new class value (without quotes)
+            css_value: The new class value (without quotes)
             
         Returns:
             SVG string with updated class attribute
@@ -299,20 +299,20 @@ class Icon(Component):
                     if content_end != -1:
                         # Replace the content between quotes
                         return (svg_str[:content_start] +
-                                cls_value +
+                                css_value +
                                 svg_str[content_end:])
         # No class attribute found - insert one
         if svg_str.startswith('<svg'):
             pos = len('<svg')
-            return svg_str[:pos] + f' class="{cls_value}"' + svg_str[pos:]
-        return f'<svg class="{cls_value}">{svg_str}'
+            return svg_str[:pos] + f' class="{css_value}"' + svg_str[pos:]
+        return f'<svg class="{css_value}">{svg_str}'
 
     def render(self) -> str:
         resolved_svg: str = self._resolve(self.svg)
         
-        if self.cls:
-            resolved_cls: str = self._resolve(self.cls)
-            resolved_svg = self._replace_class(resolved_svg, resolved_cls)
+        if self.css:
+            resolved_css: str = self._resolve(self.css)
+            resolved_svg = self._replace_class(resolved_svg, resolved_css)
         
         return resolved_svg
 
@@ -321,18 +321,18 @@ class Input(Component):
     """HTML input component for text, email, password, etc.
     
     Example:
-        Input(id="email", type="email", placeholder="Enter email", cls="border rounded p-2")
+        Input(id="email", type="email", placeholder="Enter email", css="border rounded p-2")
         Input(id="name", value=state, listen_to="name_state")
     """
     
-    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+    def __init__(self, id: str | None = None, css: str | Callable[[], str] | None = None,
                  type: str = "text", value: str | Callable[[], str] | None = None,
                  placeholder: str = "", listen_to: str | None = None, **attrs):
         """Initialize an Input component.
         
         Args:
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             type: Input type (text, email, password, number, etc.)
             value: Initial value (string or callable)
             placeholder: Placeholder text
@@ -349,7 +349,7 @@ class Input(Component):
         # Auto-set name to id if not provided
         if 'name' not in attrs and id is not None:
             attrs['name'] = id
-        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
 
     def render(self) -> str:
         """Render the input element."""
@@ -372,7 +372,7 @@ class Textarea(Component):
         Textarea(id="notes", value=content_state, listen_to="notes_state")
     """
     
-    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+    def __init__(self, id: str | None = None, css: str | Callable[[], str] | None = None,
                  value: str | Callable[[], str] | None = None,
                  placeholder: str = "", rows: int = 3,
                  listen_to: str | None = None, **attrs):
@@ -380,7 +380,7 @@ class Textarea(Component):
         
         Args:
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             value: Initial value (string or callable)
             placeholder: Placeholder text
             rows: Number of visible rows
@@ -394,7 +394,7 @@ class Textarea(Component):
         # Auto-set name to id if not provided
         if 'name' not in attrs and id is not None:
             attrs['name'] = id
-        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
         self.value = value
 
     def render(self) -> str:
@@ -422,7 +422,7 @@ class Select(Component):
                value=lambda: theme_state.get(), listen_to="theme_state")
     """
     
-    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+    def __init__(self, id: str | None = None, css: str | Callable[[], str] | None = None,
                  options: list[tuple[str, str]] | Callable[[], list[tuple[str, str]]] | None = None,
                  value: str | Callable[[], str] | None = None,
                  listen_to: str | None = None, **attrs):
@@ -430,7 +430,7 @@ class Select(Component):
         
         Args:
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             options: List of (value, display_text) tuples, or callable returning such list
             value: Selected value (string or callable)
             listen_to: State name to listen for changes
@@ -439,7 +439,7 @@ class Select(Component):
         # Auto-set name to id if not provided
         if 'name' not in attrs and id is not None:
             attrs['name'] = id
-        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
         self.options = options or []
         self.value = value
 
@@ -478,18 +478,18 @@ class Checkbox(Component):
         Div(
             Checkbox(id="agree", checked=True),
             Label("I agree to terms", for_="agree"),
-            cls="flex items-center gap-2"
+            css="flex items-center gap-2"
         )
     """
     
-    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+    def __init__(self, id: str | None = None, css: str | Callable[[], str] | None = None,
                  checked: bool | Callable[[], bool] = False,
                  listen_to: str | None = None, **attrs):
         """Initialize a Checkbox component.
         
         Args:
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             checked: Checked state (boolean or callable)
             listen_to: State name to listen for changes
             **attrs: Additional HTML attributes (name, required, disabled, etc.)
@@ -501,7 +501,7 @@ class Checkbox(Component):
             attrs['name'] = id
         # Store checked state
         self.checked = checked
-        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
 
     def render(self) -> str:
         """Render the checkbox input element."""
@@ -534,11 +534,11 @@ class Radio(Component):
             Label("Male", for_="male"),
             Radio(id="female", name="gender", value="female"),
             Label("Female", for_="female"),
-            cls="flex gap-4"
+            css="flex gap-4"
         )
     """
     
-    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+    def __init__(self, id: str | None = None, css: str | Callable[[], str] | None = None,
                  value: str = "",
                  checked: bool | Callable[[], bool] = False,
                  listen_to: str | None = None, **attrs):
@@ -546,7 +546,7 @@ class Radio(Component):
         
         Args:
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             value: Value for this radio option
             checked: Checked state (boolean or callable)
             listen_to: State name to listen for changes
@@ -561,7 +561,7 @@ class Radio(Component):
             attrs['name'] = id
         # Store checked state
         self.checked = checked
-        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
 
     def render(self) -> str:
         """Render the radio input element."""
@@ -596,7 +596,7 @@ class Form(Component):
         Form(Button("Save", trigger="save"), ...)  # HTMX form with trigger
     """
     
-    def __init__(self, *children, id: str | None = None, cls: str | Callable[[], str] | None = None,
+    def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None,
                  action: str = "", method: str = "post",
                  listen_to: str | None = None, **attrs):
         """Initialize a Form component.
@@ -604,7 +604,7 @@ class Form(Component):
         Args:
             *children: Form elements (Input, Textarea, Select, Button, etc.)
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             action: Form action URL
             method: HTTP method (get, post, etc.)
             listen_to: State name to listen for changes
@@ -614,7 +614,7 @@ class Form(Component):
             attrs['action'] = action
         if method:
             attrs['method'] = method
-        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
         self.children = list(children)
 
     def render(self) -> str:
@@ -645,26 +645,26 @@ class Markdown(Component):
     
     Example:
         Markdown("# Hello **World**")
-        Markdown(lambda: get_blog_post_content(), cls="prose")
+        Markdown(lambda: get_blog_post_content(), css="prose")
     
     Note: This component renders raw HTML from the Markdown parser.
     If rendering untrusted user input, you should sanitize the output first.
     """
     
     def __init__(self, content: str | Callable[[], str], id: str | None = None,
-                 cls: str | Callable[[], str] | None = None, **attrs):
+                 css: str | Callable[[], str] | None = None, **attrs):
         """Initialize a Markdown component.
         
         Args:
             content: Markdown text (string or callable returning string)
             id: Optional HTML id attribute
-            cls: Optional Tailwind CSS classes (defaults to "prose" for nice typography)
+            css: Optional Tailwind CSS classes (defaults to "prose" for nice typography)
             **attrs: Additional HTML attributes
         """
         # Default to GitHub Markdown CSS for nice styling
-        if cls is None:
-            cls = "markdown-body"
-        super().__init__(id=id, cls=cls, **attrs)
+        if css is None:
+            css = "markdown-body"
+        super().__init__(id=id, css=css, **attrs)
         self.content = content
 
     def render(self) -> str:
@@ -692,9 +692,9 @@ class TemplateComponent(Component):
     Example:
         # Inline template
         TemplateComponent(
-            template='<div class="{{ cls }}">{{ content }}</div>',
+            template='<div class="{{ css }}">{{ content }}</div>',
             content="Hello World",
-            cls="text-red-500"
+            css="text-red-500"
         )
         
         # Template with state
@@ -706,37 +706,37 @@ class TemplateComponent(Component):
     """
     
     def __init__(self, template: str, id: str | None = None,
-                 cls: str | Callable[[], str] | None = None,
+                 css: str | Callable[[], str] | None = None,
                  listen_to: str | None = None, **context):
         """Initialize a TemplateComponent.
         
         Args:
             template: Jinja2 template string with placeholders
             id: HTML id attribute
-            cls: Tailwind CSS classes
+            css: Tailwind CSS classes
             listen_to: State name to listen for changes
             **context: Variables to pass to the template
         """
-        super().__init__(id=id, cls=cls, listen_to=listen_to)
+        super().__init__(id=id, css=css, listen_to=listen_to)
         self.template_str = template
         self.context = context
 
     @classmethod
     def from_file(cls, template_path: str, id: str | None = None,
-                  cls_name: str | Callable[[], str] | None = None,
+                  css_name: str | Callable[[], str] | None = None,
                   listen_to: str | None = None, **context):
         """Create a TemplateComponent from a template file.
         
         Args:
             template_path: Path to the Jinja2 template file
             id: HTML id attribute
-            cls_name: Tailwind CSS classes
+            css_name: Tailwind CSS classes
             listen_to: State name to listen for changes
             **context: Variables to pass to the template
         """
         with open(template_path, 'r') as f:
             template_str = f.read()
-        return cls(template_str, id=id, cls=cls_name, listen_to=listen_to, **context)
+        return cls(template_str, id=id, css=css_name, listen_to=listen_to, **context)
 
     def render(self) -> str:
         """Render the template with context variables."""
@@ -747,8 +747,8 @@ class TemplateComponent(Component):
         
         # Add component attributes to context
         resolved_context['id'] = self.id
-        if self.cls:
-            resolved_context['cls'] = self._resolve(self.cls)
+        if self.css:
+            resolved_context['css'] = self._resolve(self.css)
         
         # Create Jinja2 environment and render
         env = jinja2.Environment(
@@ -765,9 +765,9 @@ class TemplateComponent(Component):
         attrs = f'hx-swap-oob="true"'
         if self.id:
             attrs += f' id="{self.id}"'
-        if self.cls:
-            resolved_cls = self._resolve(self.cls)
-            attrs += f' class="{resolved_cls}"'
+        if self.css:
+            resolved_css = self._resolve(self.css)
+            attrs += f' class="{resolved_css}"'
         # Render template content
         env = jinja2.Environment(
             loader=jinja2.BaseLoader(),
@@ -778,7 +778,7 @@ class TemplateComponent(Component):
         for key, value in self.context.items():
             resolved_context[key] = self._resolve(value) if callable(value) else value
         resolved_context['id'] = self.id
-        if self.cls:
-            resolved_context['cls'] = self._resolve(self.cls)
+        if self.css:
+            resolved_context['css'] = self._resolve(self.css)
         content = template.render(**resolved_context)
         return f"<div {attrs}>{content}</div>"

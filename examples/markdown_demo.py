@@ -39,7 +39,7 @@ from inguitive import Markdown
 Markdown("# Hello **World**")
 
 # With custom styling
-Markdown(content, cls="prose prose-lg dark:prose-invert")
+Markdown(content, css="prose prose-lg dark:prose-invert")
 ```
 
 ## Tables
@@ -66,7 +66,7 @@ def MarkdownDemo() -> Div:
     """Demo component showing Markdown rendering."""
     return Div(
         Markdown(MARKDOWN_CONTENT, id="markdown-content"),
-        cls="w-full max-w-4xl mx-auto p-6"
+        css="w-full max-w-4xl mx-auto p-6"
     )
 
 

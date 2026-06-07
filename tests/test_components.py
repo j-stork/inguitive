@@ -30,7 +30,7 @@ def cleanup_registries():
 class TestDiv:
     def test_basic_render(self):
         """Test basic div rendering."""
-        div = Div("Hello", id="test-div", cls="text-red-500")
+        div = Div("Hello", id="test-div", css="text-red-500")
         html = div.render()
         assert 'id="test-div"' in html
         assert 'class="text-red-500"' in html
@@ -48,7 +48,7 @@ class TestDiv:
 
     def test_callable_cls(self):
         """Test dynamic class via callable."""
-        div = Div(id="test", cls=lambda: "text-blue-500")
+        div = Div(id="test", css=lambda: "text-blue-500")
         html = div.render()
         assert 'class="text-blue-500"' in html
 
@@ -56,7 +56,7 @@ class TestDiv:
 class TestButton:
     def test_basic_render(self):
         """Test basic button rendering."""
-        btn = Button("Click me", id="btn-1", cls="bg-blue-500")
+        btn = Button("Click me", id="btn-1", css="bg-blue-500")
         html = btn.render()
         assert 'id="btn-1"' in html
         assert 'class="bg-blue-500"' in html
@@ -79,7 +79,7 @@ class TestButton:
         """Test button with icon and text children."""
         from inguitive.svg import MOON
         btn = Button(
-            Icon(MOON, cls="w-6 h-6"),
+            Icon(MOON, css="w-6 h-6"),
             "Toggle Theme",
         )
         html = btn.render()
@@ -116,10 +116,10 @@ class TestIcon:
         assert "<svg" in html
         assert "</svg>" in html
 
-    def test_cls_replacement(self):
+    def test_css_replacement(self):
         """Test class attribute replacement in SVG."""
         from inguitive.svg import MOON
-        icon = Icon(MOON, cls="w-8 h-8")
+        icon = Icon(MOON, css="w-8 h-8")
         html = icon.render()
         assert 'class="w-8 h-8' in html
 
