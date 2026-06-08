@@ -19,27 +19,30 @@ This proves that State values are fully isolated per user session.
 
 from pathlib import Path
 
-from inguitive import State, Div, Button, Label, Icon, create_app, get_session_id, trigger_handler, page
+from inguitive import State, Div, Button, Label, Icon, create_app, get_session_id, update_components
 from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 from inguitive.htmx import update_components
 from inguitive.svg import MOON, SUN
+
+# --- App Setup ---
+app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 # --- State Instances ---
 counter_state = State(0, "counter_state")
 theme_state = State("light", "theme_state")
 
 # --- Trigger Handlers ---
-@trigger_handler
+@app.trigger_handler
 def increment():
     counter_state.set(counter_state.get() + 1)
     return update_components(*counter_state.listeners)
 
-@trigger_handler
+@app.trigger_handler
 def reset():
     counter_state.set(0)
     return update_components(*counter_state.listeners)
 
-@trigger_handler
+@app.trigger_handler
 def toggle_theme():
     """Toggle between light and dark theme."""
     current: str = theme_state.get()
@@ -100,13 +103,9 @@ def Counter() -> Div:
 
 
 # --- Routes ---
-@page("/")
+@app.page("/")
 def home():
     return Counter()
-
-
-# --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 
 # --- Start ---

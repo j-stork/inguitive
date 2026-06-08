@@ -8,15 +8,19 @@ Run with: uvicorn examples.registration_form:app --reload
 
 from pathlib import Path
 
-from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Text, Div, State, create_app, trigger_handler, page
+from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Text, Div, State, create_app, update_components
 from inguitive.htmx import update_components
+from pathlib import Path
+
+# --- App Setup ---
+app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 # --- State Instances ---
 # Use collective State for form data (simpler pattern)
 form_state = State({}, "form_state")
 
 # --- Trigger Handlers ---
-@trigger_handler
+@app.trigger_handler
 async def register(form_data: dict) -> str:
     """Handle form submission with auto-injected form_data."""
     current = form_state.get()
@@ -138,13 +142,9 @@ def RegistrationForm() -> Div:
 
 
 # --- Routes ---
-@page("/")
+@app.page("/")
 def home():
     return RegistrationForm()
-
-
-# --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 
 # --- Start ---
