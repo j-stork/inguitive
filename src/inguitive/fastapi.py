@@ -23,52 +23,14 @@ from inguitive.session import (
     Session,
 )
 
-# Global registry for trigger handlers: {trigger_name: handler_function}
-# TODO: Can be removed since we don't need backward compatibility for now.
-_trigger_handlers: dict[str, Callable] = {}
-
-# Global registry for page routes: {path: handler_function}
-# TODO: Can be removed since we don't need backward compatibility for now.
-_page_routes: dict[str, Callable] = {}
-
-
-def register_trigger_handler(trigger_name: str, handler: Callable) -> None:
-    """Register a trigger handler for later route registration."""
-    if trigger_name in _trigger_handlers:
-        raise ValueError(f"Trigger handler '{trigger_name}' already registered")
-    _trigger_handlers[trigger_name] = handler
-
-
-def trigger_handler(trigger_name: str | None | Callable = None):
-    """Decorator to register a function as a trigger handler.
-    
-    Can be used with or without parentheses:
-        @trigger_handler          # uses function name as trigger
-        def increment(): ...
-        
-        @trigger_handler("custom")  # uses explicit trigger name
-        def handle_increment(): ...
-    """
-    # Handle both @trigger_handler and @trigger_handler("name")
-    if callable(trigger_name):
-        # Called as @trigger_handler (without parentheses)
-        # trigger_name is actually the function
-        func = trigger_name
-        actual_trigger_name = func.__name__
-        register_trigger_handler(actual_trigger_name, func)
-        return func
-    else:
-        # Called as @trigger_handler("name") (with parentheses)
-        # trigger_name is the name string
-        def decorator(func: Callable):
-            actual_trigger_name = trigger_name or func.__name__
-            register_trigger_handler(actual_trigger_name, func)
-            return func
-        return decorator
-
-
 def page(path: str = "/"):
-    """Decorator to register a page route.
+    """Decorator to register a page route on the current app.
+    
+    Must be called after create_app() and used with the app object:
+        app = create_app()
+        @app.page("/")
+        def home():
+            return RegistrationForm()
     
     The decorated function should return a Component instance or a string.
     Components are automatically rendered via .render().
@@ -76,20 +38,88 @@ def page(path: str = "/"):
     
     Args:
         path: URL path for the route (default: "/")
-    
-    Example:
-        @page("/")
-        def home():
-            return RegistrationForm()
-            
-        @page("/about")
-        async def about(request: Request):
-            return AboutPage()
     """
     def decorator(func: Callable):
-        _page_routes[path] = func
-        return func
+        # Get the current app from a thread-local or module context
+        # This will be set by the app.page method
+        raise RuntimeError(
+            "Global @page decorator is no longer supported. "
+            "Use @app.page() instead: app = create_app(); @app.page('/') def home(): ..."
+        )
     return decorator
+
+
+def trigger_handler(trigger_name: str | None | Callable = None):
+    """Decorator to register a trigger handler on the current app.
+    
+    Must be called after create_app() and used with the app object:
+        app = create_app()
+        @app.trigger_handler
+        def increment(): ...
+    
+    Can be used with or without parentheses:
+        @app.trigger_handler          # uses function name as trigger
+        def increment(): ...
+        
+        @app.trigger_handler("custom")  # uses explicit trigger name
+        def handle_increment(): ...
+    """
+    raise RuntimeError(
+        "Global @trigger_handler decorator is no longer supported. "
+        "Use @app.trigger_handler() instead: app = create_app(); @app.trigger_handler def increment(): ..."
+    )
+
+
+def _register_page_route(app, path: str, handler: Callable):
+    """Helper to register a page route on an app."""
+    @app.get(path, response_class=HTMLResponse)
+    async def route_wrapper(request: Request, h=handler):
+        sig = inspect.signature(h)
+        needs_request = 'request' in sig.parameters
+        needs_form_data = 'form_data' in sig.parameters
+        is_async = inspect.iscoroutinefunction(h)
+        
+        kwargs = {}
+        if needs_request:
+            kwargs['request'] = request
+        if needs_form_data:
+            form_data_dict = dict(await request.form())
+            kwargs['form_data'] = form_data_dict
+        
+        result = await h(**kwargs) if is_async else h(**kwargs)
+        
+        # Auto-render Components if they have a render method
+        if hasattr(result, 'render') and callable(result.render):
+            content = result.render()
+        else:
+            content = str(result)
+        
+        # Wrap in base template
+        templates = app.state.templates
+        return templates.TemplateResponse(
+            "base.html",
+            {"request": request, "content": content}
+        )
+
+
+def _register_trigger_route(app, trigger_name: str, handler: Callable):
+    """Helper to register a trigger route on an app."""
+    @app.post(f"/{trigger_name}")
+    async def route_wrapper(request: Request, h=handler, tn=trigger_name):
+        sig = inspect.signature(h)
+        needs_request = 'request' in sig.parameters
+        needs_form_data = 'form_data' in sig.parameters
+        is_async = inspect.iscoroutinefunction(h)
+        
+        kwargs = {}
+        if needs_request:
+            kwargs['request'] = request
+        if needs_form_data:
+            form_data_dict = dict(await request.form())
+            kwargs['form_data'] = form_data_dict
+        
+        result = await h(**kwargs) if is_async else h(**kwargs)
+        return result
 
 
 class SessionMiddleware:
@@ -178,9 +208,41 @@ def create_app(template_dir: str | Path = "templates",
     templates = Jinja2Templates(directory=template_dir)
     app.state.templates = templates
     
-    # Initialize per-app storage for handlers (production safety)
+    # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
     app.state.page_routes = {}
+    
+    # Add app-scoped decorator methods
+    def _page_decorator(path: str | None = None):
+        def decorator(func: Callable):
+            actual_path = path if path is not None else "/"
+            app.state.page_routes[actual_path] = func
+            _register_page_route(app, actual_path, func)
+            return func
+        return decorator
+    
+    def _trigger_decorator(trigger_name: str | None | Callable = None):
+        if callable(trigger_name):
+            # Called as @app.trigger_handler (without parentheses)
+            # trigger_name is actually the function
+            func = trigger_name
+            actual_trigger_name = func.__name__
+            app.state.trigger_handlers[actual_trigger_name] = func
+            _register_trigger_route(app, actual_trigger_name, func)
+            return func
+        else:
+            # Called as @app.trigger_handler("name") (with parentheses)
+            # trigger_name is the name string
+            def decorator(func: Callable):
+                actual_trigger_name = trigger_name or func.__name__
+                app.state.trigger_handlers[actual_trigger_name] = func
+                _register_trigger_route(app, actual_trigger_name, func)
+                return func
+            return decorator
+    
+    # Attach decorator methods to app
+    app.page = _page_decorator
+    app.trigger_handler = _trigger_decorator
     
     # Configure session backend
     if session_backend is not None:
@@ -194,69 +256,6 @@ def create_app(template_dir: str | Path = "templates",
         session_cookie_secure=session_cookie_secure,
         session_cookie_httponly=session_cookie_httponly,
     )
-    
-    # Copy global registries to per-app storage (production safety)
-    app.state.trigger_handlers.update(_trigger_handlers)
-    app.state.page_routes.update(_page_routes)
-    
-    # Clear global registries to prevent accumulation across app instances
-    _trigger_handlers.clear()
-    _page_routes.clear()
-    
-    # Auto-register all page routes
-    for path, handler in app.state.page_routes.items():
-        # Use default argument to avoid closure issue
-        @app.get(path, response_class=HTMLResponse)
-        async def route_wrapper(request: Request, h=handler):
-            sig = inspect.signature(h)
-            needs_request = 'request' in sig.parameters
-            needs_form_data = 'form_data' in sig.parameters
-            is_async = inspect.iscoroutinefunction(h)
-            
-            kwargs = {}
-            if needs_request:
-                kwargs['request'] = request
-            if needs_form_data:
-                form_data_dict = dict(await request.form())
-                kwargs['form_data'] = form_data_dict
-            
-            result = await h(**kwargs) if is_async else h(**kwargs)
-            
-            # Auto-render Components if they have a render method
-            if hasattr(result, 'render') and callable(result.render):
-                content = result.render()
-            else:
-                content = str(result)
-            
-            # Wrap in base template
-            return templates.TemplateResponse(
-                "base.html",
-                {"request": request, "content": content}
-            )
-    
-    # Auto-register all trigger handlers
-    for trigger_name, handler in app.state.trigger_handlers.items():
-        # Create a wrapper function that captures handler and trigger_name
-        def create_route_wrapper(h: Callable, tn: str):
-            @app.post(f"/{tn}")
-            async def route_wrapper(request: Request):
-                sig = inspect.signature(h)
-                needs_request = 'request' in sig.parameters
-                needs_form_data = 'form_data' in sig.parameters
-                is_async = inspect.iscoroutinefunction(h)
-                
-                kwargs = {}
-                if needs_request:
-                    kwargs['request'] = request
-                if needs_form_data:
-                    form_data_dict = dict(await request.form())
-                    kwargs['form_data'] = form_data_dict
-                
-                result = await h(**kwargs) if is_async else h(**kwargs)
-                return result
-            return route_wrapper
-        
-        create_route_wrapper(handler, trigger_name)
     
     return app, templates
 
