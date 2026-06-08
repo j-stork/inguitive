@@ -8,7 +8,10 @@ Run with: uvicorn examples.markdown_demo:app --reload
 
 from pathlib import Path
 
-from inguitive import Div, Markdown, create_app, page
+from inguitive import Div, Markdown, create_app
+
+# --- App Setup ---
+app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 # --- Markdown Content ---
 MARKDOWN_CONTENT = """
@@ -66,13 +69,9 @@ def MarkdownDemo() -> Div:
 
 
 # --- Routes ---
-@page("/")
+@app.page("/")
 def home():
     return MarkdownDemo()
-
-
-# --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 
 # --- Start ---
