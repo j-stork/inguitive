@@ -136,12 +136,6 @@ def RegistrationForm() -> Div:
 # --- Routes ---
 @app.page("/")
 def home():
-    # TODO 2: General question: Would a stacked layout also work with this approach? Example:
-    # return Div(
-    #     Header(),
-    #     RegistrationForm(),
-    #     Footer(),
-    # )
     return RegistrationForm()
 
 
