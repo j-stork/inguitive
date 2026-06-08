@@ -96,6 +96,7 @@ def RegistrationForm() -> Div:
         Div(
             Text(
                 lambda: f"Name: {form_state.get().get('name', '')}" if form_state.get().get('name') else "Name:",
+                # TODO: Since the parental Div already listens to form_state, do we need the listen_to parameter here and in the other Text components below? 
                 listen_to="form_state",
                 css="text-center"
             ),
