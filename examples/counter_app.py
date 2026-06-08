@@ -47,10 +47,6 @@ def toggle_theme():
     theme_state.set(new_theme)
     return update_components(*theme_state.listeners)
 
-# --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent / "templates")
-
-
 # --- Dynamic styling functions ---
 def get_counter_style() -> str:
     """Dynamic styling based on counter value."""
@@ -107,6 +103,10 @@ def Counter() -> Div:
 @page("/")
 def home():
     return Counter()
+
+
+# --- App Setup ---
+app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 
 # --- Start ---
