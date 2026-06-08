@@ -17,16 +17,12 @@ To test:
 This proves that State values are fully isolated per user session.
 """
 
-from fastapi import Request
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import State, Div, Button, Label, Icon, create_app, get_session_id, trigger_handler
+from inguitive import State, Div, Button, Label, Icon, create_app, get_session_id, trigger_handler, page
 from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 from inguitive.htmx import update_components
 from inguitive.svg import MOON, SUN
-from fastapi import Request
 
 # --- State Instances ---
 counter_state = State(0, "counter_state")
@@ -108,12 +104,9 @@ def Counter() -> Div:
 
 
 # --- Routes ---
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(
-        "base.html",
-        {"request": request, "content": Counter().render()}
-    )
+@page("/")
+def home():
+    return Counter()
 
 
 # --- Start ---
