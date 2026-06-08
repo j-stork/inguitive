@@ -6,12 +6,9 @@ Demonstrates form components (Form, Input, Button, Label) with reactive state.
 Run with: uvicorn examples.registration_form:app --reload
 """
 
-from fastapi import Request
-from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 from pathlib import Path
 
-from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Text, Div, State, create_app, trigger_handler
+from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Text, Div, State, create_app, trigger_handler, page
 from inguitive.htmx import update_components
 
 # --- State Instances ---
@@ -163,12 +160,9 @@ def RegistrationForm() -> Div:
 
 
 # --- Routes ---
-@app.get("/", response_class=HTMLResponse)
-def home(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(
-        "base.html",
-        {"request": request, "content": RegistrationForm().render()}
-    )
+@page("/")
+def home():
+    return RegistrationForm()
 
 
 # --- Start ---

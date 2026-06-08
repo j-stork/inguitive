@@ -26,6 +26,9 @@ from inguitive.session import (
 # Global registry for trigger handlers: {trigger_name: handler_function}
 _trigger_handlers: dict[str, Callable] = {}
 
+# Global registry for page routes: {path: handler_function}
+_page_routes: dict[str, Callable] = {}
+
 
 def register_trigger_handler(trigger_name: str, handler: Callable) -> None:
     """Register a trigger handler for later route registration."""
@@ -60,6 +63,31 @@ def trigger_handler(trigger_name: str | None | Callable = None):
             register_trigger_handler(actual_trigger_name, func)
             return func
         return decorator
+
+
+def page(path: str = "/"):
+    """Decorator to register a page route.
+    
+    The decorated function should return a Component instance or a string.
+    Components are automatically rendered via .render().
+    Results are wrapped in base.html template.
+    
+    Args:
+        path: URL path for the route (default: "/")
+    
+    Example:
+        @page("/")
+        def home():
+            return RegistrationForm()
+            
+        @page("/about")
+        async def about(request: Request):
+            return AboutPage()
+    """
+    def decorator(func: Callable):
+        _page_routes[path] = func
+        return func
+    return decorator
 
 
 class SessionMiddleware:
@@ -160,6 +188,32 @@ def create_app(template_dir: str | Path = "templates",
         session_cookie_secure=session_cookie_secure,
         session_cookie_httponly=session_cookie_httponly,
     )
+    
+    # Auto-register all page routes
+    for path, handler in _page_routes.items():
+        # Use default argument to avoid closure issue
+        @app.get(path, response_class=HTMLResponse)
+        async def route_wrapper(request: Request, h=handler):
+            sig = inspect.signature(h)
+            needs_request = 'request' in sig.parameters
+            is_async = inspect.iscoroutinefunction(h)
+            
+            if needs_request:
+                result = await h(request) if is_async else h(request)
+            else:
+                result = await h() if is_async else h()
+            
+            # Auto-render Components if they have a render method
+            if hasattr(result, 'render') and callable(result.render):
+                content = result.render()
+            else:
+                content = str(result)
+            
+            # Wrap in base template
+            return templates.TemplateResponse(
+                "base.html",
+                {"request": request, "content": content}
+            )
     
     # Auto-register all trigger handlers
     for trigger_name, handler in _trigger_handlers.items():
