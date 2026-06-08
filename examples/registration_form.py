@@ -9,7 +9,6 @@ Run with: uvicorn examples.registration_form:app --reload
 from pathlib import Path
 
 from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, Label, Text, Div, State, create_app, update_components
-from inguitive.htmx import update_components
 from pathlib import Path
 
 # --- App Setup ---
