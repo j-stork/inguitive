@@ -10,9 +10,6 @@ from pathlib import Path
 
 from inguitive import Div, Markdown, create_app, page
 
-# --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent / "templates")
-
 # --- Markdown Content ---
 MARKDOWN_CONTENT = """
 # Welcome to INGUITIVE Markdown Demo
@@ -72,6 +69,10 @@ def MarkdownDemo() -> Div:
 @page("/")
 def home():
     return MarkdownDemo()
+
+
+# --- App Setup ---
+app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 
 # --- Start ---

@@ -176,6 +176,10 @@ def create_app(template_dir: str | Path = "templates",
     templates = Jinja2Templates(directory=template_dir)
     app.state.templates = templates
     
+    # Initialize per-app storage for handlers (production safety)
+    app.state.trigger_handlers = {}
+    app.state.page_routes = {}
+    
     # Configure session backend
     if session_backend is not None:
         set_session_backend(session_backend)
@@ -189,19 +193,32 @@ def create_app(template_dir: str | Path = "templates",
         session_cookie_httponly=session_cookie_httponly,
     )
     
+    # Copy global registries to per-app storage (production safety)
+    app.state.trigger_handlers.update(_trigger_handlers)
+    app.state.page_routes.update(_page_routes)
+    
+    # Clear global registries to prevent accumulation across app instances
+    _trigger_handlers.clear()
+    _page_routes.clear()
+    
     # Auto-register all page routes
-    for path, handler in _page_routes.items():
+    for path, handler in app.state.page_routes.items():
         # Use default argument to avoid closure issue
         @app.get(path, response_class=HTMLResponse)
         async def route_wrapper(request: Request, h=handler):
             sig = inspect.signature(h)
             needs_request = 'request' in sig.parameters
+            needs_form_data = 'form_data' in sig.parameters
             is_async = inspect.iscoroutinefunction(h)
             
+            kwargs = {}
             if needs_request:
-                result = await h(request) if is_async else h(request)
-            else:
-                result = await h() if is_async else h()
+                kwargs['request'] = request
+            if needs_form_data:
+                form_data_dict = dict(await request.form())
+                kwargs['form_data'] = form_data_dict
+            
+            result = await h(**kwargs) if is_async else h(**kwargs)
             
             # Auto-render Components if they have a render method
             if hasattr(result, 'render') and callable(result.render):
@@ -216,19 +233,24 @@ def create_app(template_dir: str | Path = "templates",
             )
     
     # Auto-register all trigger handlers
-    for trigger_name, handler in _trigger_handlers.items():
+    for trigger_name, handler in app.state.trigger_handlers.items():
         # Create a wrapper function that captures handler and trigger_name
         def create_route_wrapper(h: Callable, tn: str):
             @app.post(f"/{tn}")
             async def route_wrapper(request: Request):
                 sig = inspect.signature(h)
                 needs_request = 'request' in sig.parameters
+                needs_form_data = 'form_data' in sig.parameters
                 is_async = inspect.iscoroutinefunction(h)
                 
+                kwargs = {}
                 if needs_request:
-                    result = await h(request) if is_async else h(request)
-                else:
-                    result = await h() if is_async else h()
+                    kwargs['request'] = request
+                if needs_form_data:
+                    form_data_dict = dict(await request.form())
+                    kwargs['form_data'] = form_data_dict
+                
+                result = await h(**kwargs) if is_async else h(**kwargs)
                 return result
             return route_wrapper
         
