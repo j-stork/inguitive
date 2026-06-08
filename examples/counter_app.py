@@ -22,7 +22,6 @@ from pathlib import Path
 # TODO: update_components is imported twice, once from inguitive and once from inguitive.htmx. Please explain why.
 from inguitive import State, Div, Button, Label, Icon, create_app, get_session_id, update_components
 from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
-from inguitive.htmx import update_components
 from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
