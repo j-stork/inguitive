@@ -12,46 +12,22 @@ from inguitive import Form, Input, Textarea, Select, Checkbox, Radio, Button, La
 from inguitive.htmx import update_components
 
 # --- State Instances ---
-name_state = State("", "name_state")
-email_state = State("", "email_state")
-password_state = State("", "password_state")
-bio_state = State("", "bio_state")
-country_state = State("us", "country_state")
-terms_state = State(False, "terms_state")
-gender_state = State("male", "gender_state")
+# Use collective State for form data (simpler pattern)
+form_state = State({}, "form_state")
 
 # --- Trigger Handlers ---
 @trigger_handler
-async def register(request: Request) -> str:
-    """Handle form submission."""
-    listeners = set()
-    form_data = await request.form()
-    if form_data:
-        # Map all form fields to their states
-        field_states = [
-            ("name", name_state),
-            ("email", email_state),
-            ("password", password_state),
-            ("bio", bio_state),
-            ("country", country_state),
-            ("terms", terms_state),
-            ("gender", gender_state),
-        ]
-        for field, state in field_states:
-            field_value = form_data.get(field, "")
-            # For checkbox, handle boolean value
-            if field == "terms":
-                field_value = field_value == "on"  # Checkboxes send "on" when checked
-            if field_value != state.get():
-                state.set(field_value)
-                listeners.update(state.listeners)
-    if listeners:
-        return update_components(*listeners)
-    return ""
-
-
-# --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent / "templates")
+async def register(form_data: dict) -> str:
+    """Handle form submission with auto-injected form_data."""
+    current = form_state.get()
+    new_data = {**current, **form_data}
+    
+    # Handle checkboxes: "on" -> True
+    if "terms" in new_data:
+        new_data["terms"] = new_data["terms"] == "on"
+    
+    form_state.set(new_data)
+    return update_components("form_display")
 
 
 # --- Helper Functions ---
@@ -119,40 +95,41 @@ def RegistrationForm() -> Div:
         # Confirmation display
         Div(
             Text(
-                lambda: f"Name: {name_state.get()}" if name_state.get() else "Name:",
-                listen_to="name_state",
+                lambda: f"Name: {form_state.get().get('name', '')}" if form_state.get().get('name') else "Name:",
+                listen_to="form_state",
                 css="text-center"
             ),
             Text(
-                lambda: f"Email: {email_state.get()}" if email_state.get() else "Email:",
-                listen_to="email_state",
+                lambda: f"Email: {form_state.get().get('email', '')}" if form_state.get().get('email') else "Email:",
+                listen_to="form_state",
                 css="text-center"
             ),
             Text(
-                lambda: f"Password: {'*' * len(password_state.get())}" if password_state.get() else "Password:",
-                listen_to="password_state",
+                lambda: f"Password: {'*' * len(form_state.get().get('password', ''))}" if form_state.get().get('password') else "Password:",
+                listen_to="form_state",
                 css="text-center"
             ),
             Text(
-                lambda: f"Bio: {bio_state.get()}" if bio_state.get() else "Bio:",
-                listen_to="bio_state",
+                lambda: f"Bio: {form_state.get().get('bio', '')}" if form_state.get().get('bio') else "Bio:",
+                listen_to="form_state",
                 css="text-center"
             ),
             Text(
-                lambda: f"Country: {country_state.get()}" if country_state.get() else "Country:",
-                listen_to="country_state",
+                lambda: f"Country: {form_state.get().get('country', '')}" if form_state.get().get('country') else "Country:",
+                listen_to="form_state",
                 css="text-center"
             ),
             Text(
-                lambda: f"Terms accepted: {'Yes' if terms_state.get() is not False else 'No'}",
-                listen_to="terms_state",
+                lambda: f"Terms accepted: {'Yes' if form_state.get().get('terms') else 'No'}",
+                listen_to="form_state",
                 css="text-center"
             ),
             Text(
-                lambda: f"Gender: {gender_state.get()}" if gender_state.get() else "Gender:",
-                listen_to="gender_state",
+                lambda: f"Gender: {form_state.get().get('gender', '')}" if form_state.get().get('gender') else "Gender:",
+                listen_to="form_state",
                 css="text-center"
             ),
+            id="form_display",
             css="text-xl font-bold mt-6 space-y-3"
         ),
         css="w-full min-h-screen flex flex-col items-center justify-center p-6"
@@ -163,6 +140,10 @@ def RegistrationForm() -> Div:
 @page("/")
 def home():
     return RegistrationForm()
+
+
+# --- App Setup ---
+app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
 
 # --- Start ---
