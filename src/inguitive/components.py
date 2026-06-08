@@ -133,7 +133,6 @@ class Button(Component):
         return f"<button {attrs}>{children_html}</button>"
 
 
-# TODO: Could this be removed because it's the same as Text? 
 class Label(Component):
     """HTML label component.
     
