@@ -24,9 +24,11 @@ from inguitive.session import (
 )
 
 # Global registry for trigger handlers: {trigger_name: handler_function}
+# TODO: Can be removed since we don't need backward compatibility for now.
 _trigger_handlers: dict[str, Callable] = {}
 
 # Global registry for page routes: {path: handler_function}
+# TODO: Can be removed since we don't need backward compatibility for now.
 _page_routes: dict[str, Callable] = {}
 
 
