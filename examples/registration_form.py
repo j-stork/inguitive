@@ -100,7 +100,7 @@ def RegistrationForm() -> Div:
         Div(
             Text(
                 lambda: f"Name: {form_state.get().get('name', '')}" if form_state.get().get('name') else "Name:",
-                # TODO: Since the parental Div already listens to form_state, do we need the listen_to parameter here and in the other Text components below? 
+                # TODO 1: Since the parental Div already listens to form_state, do we need the listen_to parameter here and in the other Text components below? 
                 listen_to="form_state",
                 css="text-center"
             ),
@@ -144,6 +144,12 @@ def RegistrationForm() -> Div:
 # --- Routes ---
 @app.page("/")
 def home():
+    # TODO 2: General question: Would a stacked layout also work with this approach? Example:
+    # return Div(
+    #     Header(),
+    #     RegistrationForm(),
+    #     Footer(),
+    # )
     return RegistrationForm()
 
 
