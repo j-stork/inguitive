@@ -23,53 +23,6 @@ from inguitive.session import (
     Session,
 )
 
-def page(path: str = "/"):
-    """Decorator to register a page route on the current app.
-    
-    Must be called after create_app() and used with the app object:
-        app = create_app()
-        @app.page("/")
-        def home():
-            return RegistrationForm()
-    
-    The decorated function should return a Component instance or a string.
-    Components are automatically rendered via .render().
-    Results are wrapped in base.html template.
-    
-    Args:
-        path: URL path for the route (default: "/")
-    """
-    def decorator(func: Callable):
-        # Get the current app from a thread-local or module context
-        # This will be set by the app.page method
-        raise RuntimeError(
-            "Global @page decorator is no longer supported. "
-            "Use @app.page() instead: app = create_app(); @app.page('/') def home(): ..."
-        )
-    return decorator
-
-
-def trigger_handler(trigger_name: str | None | Callable = None):
-    """Decorator to register a trigger handler on the current app.
-    
-    Must be called after create_app() and used with the app object:
-        app = create_app()
-        @app.trigger_handler
-        def increment(): ...
-    
-    Can be used with or without parentheses:
-        @app.trigger_handler          # uses function name as trigger
-        def increment(): ...
-        
-        @app.trigger_handler("custom")  # uses explicit trigger name
-        def handle_increment(): ...
-    """
-    raise RuntimeError(
-        "Global @trigger_handler decorator is no longer supported. "
-        "Use @app.trigger_handler() instead: app = create_app(); @app.trigger_handler def increment(): ..."
-    )
-
-
 def _register_page_route(app, path: str, handler: Callable):
     """Helper to register a page route on an app."""
     @app.get(path, response_class=HTMLResponse)
