@@ -6,87 +6,91 @@ from __future__ import annotations
 
 import inspect
 import uuid
-from fastapi import FastAPI, Request, Response
+from pathlib import Path
+from typing import Callable, Optional
+
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from typing import Callable, Optional
-from pathlib import Path
+
 from inguitive.session import (
-    get_session_backend, 
-    set_session_backend, 
-    SessionBackend, 
-    MemoryBackend,
-    RedisBackend,
-    get_or_create_current_session,
-    set_current_session,
-    clear_current_session,
     Session,
+    SessionBackend,
+    clear_current_session,
+    get_session_backend,
+    set_current_session,
+    set_session_backend,
 )
+
 
 def _register_page_route(app, path: str, handler: Callable):
     """Helper to register a page route on an app."""
+
     @app.get(path, response_class=HTMLResponse)
     async def route_wrapper(request: Request, h=handler):
         sig = inspect.signature(h)
-        needs_request = 'request' in sig.parameters
-        needs_form_data = 'form_data' in sig.parameters
+        needs_request = "request" in sig.parameters
+        needs_form_data = "form_data" in sig.parameters
         is_async = inspect.iscoroutinefunction(h)
-        
+
         kwargs = {}
         if needs_request:
-            kwargs['request'] = request
+            kwargs["request"] = request
         if needs_form_data:
             form_data_dict = dict(await request.form())
-            kwargs['form_data'] = form_data_dict
-        
+            kwargs["form_data"] = form_data_dict
+
         result = await h(**kwargs) if is_async else h(**kwargs)
-        
+
         # Auto-render Components if they have a render method
-        if hasattr(result, 'render') and callable(result.render):
+        if hasattr(result, "render") and callable(result.render):
             content = result.render()
         else:
             content = str(result)
-        
+
         # Wrap in base template
         templates = app.state.templates
-        return templates.TemplateResponse(
-            "base.html",
-            {"request": request, "content": content}
-        )
+        return templates.TemplateResponse("base.html", {"request": request, "content": content})
 
 
 def _register_trigger_route(app, trigger_name: str, handler: Callable):
     """Helper to register a trigger route on an app."""
+
     @app.post(f"/_trigger/{trigger_name.lstrip('/')}")
     async def route_wrapper(request: Request, h=handler, tn=trigger_name):
         sig = inspect.signature(h)
-        needs_request = 'request' in sig.parameters
-        needs_form_data = 'form_data' in sig.parameters
+        needs_request = "request" in sig.parameters
+        needs_form_data = "form_data" in sig.parameters
         is_async = inspect.iscoroutinefunction(h)
-        
+
         kwargs = {}
         if needs_request:
-            kwargs['request'] = request
+            kwargs["request"] = request
         if needs_form_data:
             form_data_dict = dict(await request.form())
-            kwargs['form_data'] = form_data_dict
-        
+            kwargs["form_data"] = form_data_dict
+
         result = await h(**kwargs) if is_async else h(**kwargs)
         return result
 
 
 class SessionMiddleware:
     """FastAPI/Starlette ASGI middleware for session management."""
-    
-    def __init__(self, app, session_cookie_name: str = "inguitive_session_id", 
-                 session_cookie_max_age: int = 3600, session_cookie_secure: bool = False,
-                 session_cookie_httponly: bool = True):
+
+    def __init__(
+        self,
+        app,
+        session_cookie_name: str = "inguitive_session_id",
+        session_cookie_max_age: int = 3600,
+        session_cookie_secure: bool = False,
+        session_cookie_httponly: bool = True,
+    ):
         self.app = app
         self.session_cookie_name = session_cookie_name
         self.session_cookie_max_age = session_cookie_max_age
         self.session_cookie_secure = session_cookie_secure
         self.session_cookie_httponly = session_cookie_httponly
-    
+
     async def __call__(self, scope, receive, send):
         """Process ASGI request with session management."""
         if scope["type"] not in ("http", "websocket"):
@@ -138,14 +142,17 @@ class SessionMiddleware:
             backend.save_session(session)
             clear_current_session()
 
-def create_app(template_dir: str | Path = "templates", 
-               session_backend: Optional[SessionBackend] = None,
-               session_cookie_name: str = "inguitive_session_id",
-               session_cookie_max_age: int = 3600,
-               session_cookie_secure: bool = False,
-               session_cookie_httponly: bool = True):
+
+def create_app(
+    template_dir: str | Path = "templates",
+    session_backend: Optional[SessionBackend] = None,
+    session_cookie_name: str = "inguitive_session_id",
+    session_cookie_max_age: int = 3600,
+    session_cookie_secure: bool = False,
+    session_cookie_httponly: bool = True,
+):
     """Create and configure a FastAPI application for INGUITIVE.
-    
+
     Args:
         template_dir: Directory containing Jinja2 templates
         session_backend: Session backend to use (defaults to MemoryBackend)
@@ -153,18 +160,18 @@ def create_app(template_dir: str | Path = "templates",
         session_cookie_max_age: Cookie max age in seconds
         session_cookie_secure: Whether cookie is secure (HTTPS only)
         session_cookie_httponly: Whether cookie is HTTP-only
-        
+
     Returns:
         Tuple of (FastAPI app, Jinja2Templates) for use in routes
     """
     app = FastAPI()
     templates = Jinja2Templates(directory=template_dir)
     app.state.templates = templates
-    
+
     # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
     app.state.page_routes = {}
-    
+
     # Add app-scoped decorator methods
     def _page_decorator(path: str | None = None):
         def decorator(func: Callable):
@@ -172,8 +179,9 @@ def create_app(template_dir: str | Path = "templates",
             app.state.page_routes[actual_path] = func
             _register_page_route(app, actual_path, func)
             return func
+
         return decorator
-    
+
     def _trigger_decorator(trigger_name: str | None | Callable = None):
         if callable(trigger_name):
             # Called as @app.trigger_handler (without parentheses)
@@ -191,16 +199,17 @@ def create_app(template_dir: str | Path = "templates",
                 app.state.trigger_handlers[actual_trigger_name] = func
                 _register_trigger_route(app, actual_trigger_name, func)
                 return func
+
             return decorator
-    
+
     # Attach decorator methods to app
     app.page = _page_decorator
     app.trigger_handler = _trigger_decorator
-    
+
     # Configure session backend
     if session_backend is not None:
         set_session_backend(session_backend)
-    
+
     # Add session middleware
     app.add_middleware(
         SessionMiddleware,
@@ -209,13 +218,13 @@ def create_app(template_dir: str | Path = "templates",
         session_cookie_secure=session_cookie_secure,
         session_cookie_httponly=session_cookie_httponly,
     )
-    
+
     return app, templates
 
 
 def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True):
     """Run the FastAPI application using Uvicorn.
-    
+
     Args:
         app_module: Uvicorn app module string (e.g., "app:app")
         host: Host to bind to
@@ -223,4 +232,5 @@ def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000
         reload: Enable auto-reload in development
     """
     import uvicorn
+
     uvicorn.run(app_module, host=host, port=port, reload=reload)
