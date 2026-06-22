@@ -39,7 +39,7 @@ class TestSessionIsolation:
         assert "Count: 0" in response1.text
 
         # User 1 increments counter
-        client1.post("/increment", cookies=cookies1)
+        client1.post("/_trigger/increment", cookies=cookies1)
         response1 = client1.get("/", cookies=cookies1)
         assert "Count: 1" in response1.text
 
@@ -51,7 +51,7 @@ class TestSessionIsolation:
         assert "Count: 0" in response2.text
 
         # User 2 increments their counter
-        client2.post("/increment", cookies=cookies2)
+        client2.post("/_trigger/increment", cookies=cookies2)
         response2 = client2.get("/", cookies=cookies2)
         assert "Count: 1" in response2.text
 
@@ -67,7 +67,7 @@ class TestSessionIsolation:
         cookies1 = response1.cookies
 
         # User 1 toggles to dark theme
-        client1.post("/toggle_theme", cookies=cookies1)
+        client1.post("/_trigger/toggle_theme", cookies=cookies1)
         response1 = client1.get("/", cookies=cookies1)
         # Dark theme should be active (bg-slate-800)
         assert "bg-slate-800" in response1.text
@@ -79,7 +79,7 @@ class TestSessionIsolation:
         assert "bg-slate-100" in response2.text
 
         # User 2 toggles to dark theme
-        client2.post("/toggle_theme", cookies=cookies2)
+        client2.post("/_trigger/toggle_theme", cookies=cookies2)
         response2 = client2.get("/", cookies=cookies2)
         assert "bg-slate-800" in response2.text
 
@@ -97,13 +97,13 @@ class TestSessionIsolation:
 
         # User increments multiple times
         for _ in range(3):
-            client.post("/increment", cookies=cookies)
+            client.post("/_trigger/increment", cookies=cookies)
 
         response2 = client.get("/", cookies=cookies)
         assert "Count: 3" in response2.text
 
         # Reset counter
-        client.post("/reset", cookies=cookies)
+        client.post("/_trigger/reset", cookies=cookies)
         response3 = client.get("/", cookies=cookies)
         assert "Count: 0" in response3.text
 
