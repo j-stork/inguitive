@@ -157,6 +157,27 @@ app, templates = create_app(
 
 Requires `pip install redis` for RedisBackend.
 
+## Production Deployment
+
+Before deploying your INGUITIVE app to production, configure these security settings:
+
+```python
+from inguitive import create_app, RedisBackend
+
+app, templates = create_app(
+    session_backend=RedisBackend(redis_url="redis://localhost:6379"),
+    session_cookie_secure=True,      # Cookies only over HTTPS
+    session_cookie_httponly=True,    # Prevent JavaScript access (default)
+    session_cookie_max_age=86400,    # 24-hour session timeout
+)
+```
+
+**Checklist:**
+- ✅ Use `RedisBackend` (not `MemoryBackend`) for persistence across workers
+- ✅ Set `session_cookie_secure=True` when using HTTPS
+- ✅ Verify `session_cookie_httponly=True` (enabled by default)
+- ✅ Deploy with HTTPS (required for secure cookies)
+
 ## Running the Demo
 
 ```bash
