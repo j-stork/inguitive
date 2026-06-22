@@ -1,12 +1,13 @@
 """Tests for per-session state value and listener isolation."""
 
 import pytest
+
 from inguitive.session import (
-    Session,
     MemoryBackend,
-    set_session_backend,
-    set_current_session,
+    Session,
     clear_current_session,
+    set_current_session,
+    set_session_backend,
 )
 from inguitive.state import State, get_state_by_name
 
@@ -107,9 +108,7 @@ class TestListenerIsolation:
         state.remove_listener("shared-comp")
 
         set_current_session(session_a)
-        assert "shared-comp" in state.listeners, (
-            "Removing listener in Session B should not affect Session A"
-        )
+        assert "shared-comp" in state.listeners, "Removing listener in Session B should not affect Session A"
 
 
 class TestGlobalNameRegistry:

@@ -1,6 +1,5 @@
 """Tests for session isolation in INGUITIVE."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 # Import after setting up path
