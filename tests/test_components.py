@@ -66,14 +66,14 @@ class TestButton:
         """Test that trigger generates HTMX attributes."""
         btn = Button("Click", trigger="test_action")
         html = btn.render()
-        assert 'hx-post="/test_action"' in html
+        assert 'hx-post="/_trigger/test_action"' in html
         assert 'hx-target="#hx-target"' in html
 
     def test_trigger_with_args(self):
         """Test trigger with query parameters."""
         btn = Button("Click", trigger="action", trigger_args={"key": "value"})
         html = btn.render()
-        assert 'hx-post="/action?key=value"' in html
+        assert 'hx-post="/_trigger/action?key=value"' in html
 
     def test_children_with_icon(self):
         """Test button with icon and text children."""

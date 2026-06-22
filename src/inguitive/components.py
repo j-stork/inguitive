@@ -29,7 +29,7 @@ class Component:
         
         # Handle action parameters (trigger = POST, navigate = GET, redirect = redirect)
         if trigger:
-            url = f"/{trigger.lstrip('/')}"
+            url = f"/_trigger/{trigger.lstrip('/')}"
             if trigger_args:
                 url += "?" + "&".join(f"{k}={v}" for k, v in trigger_args.items())
             attrs.setdefault('hx-post', url)
