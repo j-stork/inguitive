@@ -7,10 +7,10 @@ from inguitive.session import get_component_registry
 
 def update_components(*component_ids: str) -> str:
     """Render multiple components as OOB HTML for HTMX updates.
-    
+
     Args:
         *component_ids: Component IDs to update
-        
+
     Returns:
         Concatenated HTML string with hx-swap-oob attributes
     """

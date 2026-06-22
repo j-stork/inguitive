@@ -1,18 +1,16 @@
 """Tests for INGUITIVE component classes."""
 
 import pytest
-from inguitive.components import Component, Div, Button, Label, Icon
-from inguitive.state import State
+
+from inguitive.components import Button, Div, Icon, Label
 from inguitive.session import (
-    get_component_registry,
-    get_state_registry,
-    Session,
     MemoryBackend,
-    set_session_backend,
-    set_current_session,
+    Session,
     clear_current_session,
+    set_current_session,
+    set_session_backend,
 )
-from inguitive.htmx import update_components
+from inguitive.state import State
 
 
 @pytest.fixture(autouse=True)
@@ -78,6 +76,7 @@ class TestButton:
     def test_children_with_icon(self):
         """Test button with icon and text children."""
         from inguitive.svg import MOON
+
         btn = Button(
             Icon(MOON, css="w-6 h-6"),
             "Toggle Theme",
@@ -111,6 +110,7 @@ class TestIcon:
     def test_basic_render(self):
         """Test basic icon rendering."""
         from inguitive.svg import MOON
+
         icon = Icon(MOON)
         html = icon.render()
         assert "<svg" in html
@@ -119,6 +119,7 @@ class TestIcon:
     def test_css_replacement(self):
         """Test class attribute replacement in SVG."""
         from inguitive.svg import MOON
+
         icon = Icon(MOON, css="w-8 h-8")
         html = icon.render()
         assert 'class="w-8 h-8' in html
@@ -126,12 +127,13 @@ class TestIcon:
     def test_callable_svg(self):
         """Test dynamic SVG via callable."""
         from inguitive.svg import MOON, SUN
+
         state = State("light")
         icon = Icon(lambda: MOON if state.get() == "light" else SUN)
-        
+
         html = icon.render()
         assert "MOON" in html or "w-6 h-6 text-gray-800" in html
-        
+
         state.set("dark")
         html = icon.render()
         assert "SUN" in html or "w-6 h-6 text-gray-800" in html
@@ -142,7 +144,7 @@ class TestState:
         """Test basic state get/set."""
         state = State("initial", "test_state")
         assert state.get() == "initial"
-        
+
         state.set("updated")
         assert state.get() == "updated"
 
@@ -151,9 +153,9 @@ class TestState:
         state = State(0, "counter")
         state.add_listener("component-1")
         state.add_listener("component-2")
-        
+
         assert "component-1" in state.listeners
         assert "component-2" in state.listeners
-        
+
         state.remove_listener("component-1")
         assert "component-1" not in state.listeners

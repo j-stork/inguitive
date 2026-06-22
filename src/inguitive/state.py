@@ -5,14 +5,13 @@ Reactive state management for INGUITIVE.
 from __future__ import annotations
 
 import uuid
-from typing import TypeVar, Generic, Set
+from typing import Generic, Set, TypeVar
+
 from inguitive.session import (
     get_data_registry,
-    get_component_registry,
-    get_state_registry,
 )
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 _LISTENERS_PREFIX = "__listeners__"
 
