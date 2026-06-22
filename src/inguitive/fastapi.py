@@ -57,7 +57,7 @@ def _register_page_route(app, path: str, handler: Callable):
 
 def _register_trigger_route(app, trigger_name: str, handler: Callable):
     """Helper to register a trigger route on an app."""
-    @app.post(f"/{trigger_name}")
+    @app.post(f"/_trigger/{trigger_name.lstrip('/')}")
     async def route_wrapper(request: Request, h=handler, tn=trigger_name):
         sig = inspect.signature(h)
         needs_request = 'request' in sig.parameters
