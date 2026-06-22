@@ -5,7 +5,7 @@ INGUITIVE - A pure Python web framework combining intuitive syntax with HTMX and
 from inguitive.components import Component, Div, Button, Label, Icon, Input, Textarea, Select, Checkbox, Radio, Form, Markdown, Text, Link, TemplateComponent
 from inguitive.state import State
 from inguitive.htmx import update_components
-from inguitive.fastapi import create_app, run_app, trigger_handler, page
+from inguitive.fastapi import create_app, run_app
 from inguitive.session import (
     Session,
     SessionBackend,
@@ -47,8 +47,6 @@ __all__ = [
     # FastAPI
     "create_app",
     "run_app",
-    "trigger_handler",
-    "page",
     # Session
     "Session",
     "SessionBackend",
