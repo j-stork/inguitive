@@ -62,10 +62,7 @@ Visit [INGUITIVE on GitHub](https://github.com) for more information.
 # --- Demo Component ---
 def MarkdownDemo() -> Div:
     """Demo component showing Markdown rendering."""
-    return Div(
-        Markdown(MARKDOWN_CONTENT, id="markdown-content"),
-        css="w-full max-w-4xl mx-auto p-6"
-    )
+    return Div(Markdown(MARKDOWN_CONTENT, id="markdown-content"), css="w-full max-w-4xl mx-auto p-6")
 
 
 # --- Routes ---
@@ -77,4 +74,5 @@ def home():
 # --- Start ---
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("examples.markdown_demo:app", host="0.0.0.0", port=8000, reload=True)

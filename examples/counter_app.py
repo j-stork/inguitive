@@ -20,7 +20,7 @@ This proves that State values are fully isolated per user session.
 from pathlib import Path
 
 # TODO: update_components is imported twice, once from inguitive and once from inguitive.htmx. Please explain why.
-from inguitive import State, Div, Button, Label, Icon, create_app, get_session_id, update_components
+from inguitive import Button, Div, Icon, Label, State, create_app, get_session_id, update_components
 from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 from inguitive.svg import MOON, SUN
 
@@ -31,16 +31,19 @@ app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 counter_state = State(0, "counter_state")
 theme_state = State("light", "theme_state")
 
+
 # --- Trigger Handlers ---
 @app.trigger_handler
 def increment():
     counter_state.set(counter_state.get() + 1)
     return update_components(*counter_state.listeners)
 
+
 @app.trigger_handler
 def reset():
     counter_state.set(0)
     return update_components(*counter_state.listeners)
+
 
 @app.trigger_handler
 def toggle_theme():
@@ -49,6 +52,7 @@ def toggle_theme():
     new_theme: str = "dark" if current == "light" else "light"
     theme_state.set(new_theme)
     return update_components(*theme_state.listeners)
+
 
 # --- Dynamic styling functions ---
 def get_counter_style() -> str:
@@ -77,7 +81,7 @@ def Counter() -> Div:
                     Icon(lambda: MOON if theme_state.get() == "light" else SUN, css="w-6 h-6"),
                     trigger="toggle_theme",
                     id="theme-toggle",
-                    css=f"{BUTTON_SECONDARY_CSS}"
+                    css=f"{BUTTON_SECONDARY_CSS}",
                 ),
                 css="w-full flex justify-end",
             ),
@@ -85,12 +89,9 @@ def Counter() -> Div:
                 text=lambda: f"Count: {counter_state.get()}",
                 id="counter-label",
                 css=get_counter_style,
-                listen_to="counter_state"
+                listen_to="counter_state",
             ),
-            Div(
-                f"Session: {get_session_id()}",
-                css="text-xs text-gray-500 text-center mt-2"
-            ),
+            Div(f"Session: {get_session_id()}", css="text-xs text-gray-500 text-center mt-2"),
             Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY_CSS} w-full"),
             Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY_CSS} w-full"),
             id="counter-card",
@@ -98,7 +99,7 @@ def Counter() -> Div:
         ),
         id="theme-container",
         css=lambda: f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center",
-        listen_to="theme_state"
+        listen_to="theme_state",
     )
 
 
@@ -111,4 +112,5 @@ def home():
 # --- Start ---
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("examples.counter_app:app", host="0.0.0.0", port=8000, reload=True)
