@@ -74,16 +74,9 @@ class MemoryBackend(SessionBackend):
 
     # Class-level storage shared across all instances
     _sessions: dict[SessionId, Session] = {}
-    _ttl_seconds: int = 3600  # 1 hour default TTL
 
-    def __init__(self, ttl_seconds: int = 3600):
-        """
-        Initialize memory backend.
-
-        Args:
-            ttl_seconds: Session timeout in seconds (default: 3600 = 1 hour)
-        """
-        self._ttl_seconds = ttl_seconds
+    def __init__(self):
+        """Initialize memory backend."""
 
     def get_session(self, session_id: SessionId) -> Session | None:
         """Retrieve session from memory."""
