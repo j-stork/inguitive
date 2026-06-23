@@ -7,7 +7,7 @@ from __future__ import annotations
 import inspect
 import uuid
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -145,7 +145,7 @@ class SessionMiddleware:
 
 def create_app(
     template_dir: str | Path = "templates",
-    session_backend: Optional[SessionBackend] = None,
+    session_backend: SessionBackend | None = None,
     session_cookie_name: str = "inguitive_session_id",
     session_cookie_max_age: int = 3600,
     session_cookie_secure: bool = False,
@@ -203,8 +203,8 @@ def create_app(
             return decorator
 
     # Attach decorator methods to app
-    app.page = _page_decorator
-    app.trigger_handler = _trigger_decorator
+    app.page = _page_decorator # type: ignore
+    app.trigger_handler = _trigger_decorator # type: ignore
 
     # Configure session backend
     if session_backend is not None:
