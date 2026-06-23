@@ -101,22 +101,13 @@ class MemoryBackend(SessionBackend):
         self._sessions.pop(session_id, None)
 
     def cleanup_expired(self) -> int:
-        """Clean up expired sessions. Simple implementation - clear all for now."""
-        # For production, implement proper TTL tracking
-        # For now, just clear sessions older than TTL
-        import time
+        """Clean up expired sessions.
 
-        deleted = 0
-        current_time = time.time()
-
-        # We need to track creation time. For simplicity, we'll just clear all.
-        # In a real implementation, store creation timestamp with each session.
-        keys_to_delete = []
-        for session_id, session in self._sessions.items():
-            # For now, skip cleanup - memory backend is for dev only
-            pass
-
-        return deleted
+        Note: MemoryBackend is for development only. Sessions are stored
+        in memory and lost on server restart, so explicit TTL-based cleanup
+        is not necessary. This method returns 0 and performs no action.
+        """
+        return 0
 
 
 class RedisBackend(SessionBackend):
