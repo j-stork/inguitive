@@ -5,7 +5,7 @@ Reactive state management for INGUITIVE.
 from __future__ import annotations
 
 import uuid
-from typing import Generic, Set, TypeVar
+from typing import Generic, TypeVar
 
 from inguitive.session import (
     get_data_registry,
@@ -52,7 +52,7 @@ class State(Generic[T]):
         get_data_registry()[self._key] = new_value
 
     @property
-    def listeners(self) -> Set[str]:
+    def listeners(self) -> set[str]:
         """Return the set of component IDs listening to this state in the active session."""
         listeners_key = f"{_LISTENERS_PREFIX}{self._key}"
         data = get_data_registry()
