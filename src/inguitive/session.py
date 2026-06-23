@@ -9,7 +9,7 @@ import uuid
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 # Type aliases
 SessionId = str
@@ -49,7 +49,7 @@ class SessionBackend(ABC):
     """Abstract base class for session backends."""
 
     @abstractmethod
-    def get_session(self, session_id: SessionId) -> Optional[Session]:
+    def get_session(self, session_id: SessionId) -> Session | None:
         """Retrieve a session by ID. Returns None if not found."""
         ...
 
@@ -85,7 +85,7 @@ class MemoryBackend(SessionBackend):
         """
         self._ttl_seconds = ttl_seconds
 
-    def get_session(self, session_id: SessionId) -> Optional[Session]:
+    def get_session(self, session_id: SessionId) -> Session | None:
         """Retrieve session from memory."""
         session = self._sessions.get(session_id)
         if session is None:
@@ -151,7 +151,7 @@ class RedisBackend(SessionBackend):
         """Create Redis key for session."""
         return f"inguitive:session:{session_id}"
 
-    def get_session(self, session_id: SessionId) -> Optional[Session]:
+    def get_session(self, session_id: SessionId) -> Session | None:
         """Retrieve session from Redis."""
         client = self._get_client()
         key = self._make_key(session_id)
@@ -184,10 +184,10 @@ class RedisBackend(SessionBackend):
 
 
 # Global session backend instance
-_session_backend: Optional[SessionBackend] = None
+_session_backend: SessionBackend | None = None
 
 # Context variable for current session ID
-_current_session_id: ContextVar[Optional[SessionId]] = ContextVar("current_session_id", default=None)
+_current_session_id: ContextVar[SessionId | None] = ContextVar("current_session_id", default=None)
 
 
 def get_session_backend() -> SessionBackend:
@@ -210,7 +210,7 @@ def create_session() -> Session:
     return Session(session_id=session_id)
 
 
-def get_current_session() -> Optional[Session]:
+def get_current_session() -> Session | None:
     """Get the current session for this request/context."""
     session_id = _current_session_id.get()
     if session_id is None:
@@ -245,7 +245,7 @@ def clear_current_session() -> None:
     _current_session_id.set(None)
 
 
-def get_session_id() -> Optional[str]:
+def get_session_id() -> str | None:
     """Get the current session ID, or None if no session is active."""
     session = get_current_session()
     return session.session_id if session else None
