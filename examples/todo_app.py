@@ -148,11 +148,11 @@ def TodoForm() -> Form:
             Button(
                 "Add",
                 type="submit",
-                trigger="add_todo",
                 css=f"{BUTTON_PRIMARY_CSS} rounded-l-none",
             ),
             css="flex gap-0",
         ),
+        trigger="add_todo",
         css="mb-4",
     )
 
