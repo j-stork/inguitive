@@ -54,7 +54,6 @@ async def add_todo(form_data: dict) -> str:
     if new_todo["title"]:
         current["todos"].append(new_todo)
         todo_state.set(current)
-        print(todo_state.get())
         return update_components(*todo_state.listeners)
     return ""
 
@@ -174,6 +173,7 @@ def TodoList() -> Div:
         return Div(
             "No todos found.",
             id="todo_list",
+            listen_to="todo_state",
             css="text-gray-500 p-4 text-center",
         )
 
