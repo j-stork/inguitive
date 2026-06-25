@@ -31,7 +31,6 @@ from inguitive import (
 )
 from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 
-
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 
@@ -55,7 +54,8 @@ async def add_todo(form_data: dict) -> str:
     if new_todo["title"]:
         current["todos"].append(new_todo)
         todo_state.set(current)
-        return update_components("todo_list", "todo_count")
+        print(todo_state.get())
+        return update_components(*todo_state.listeners)
     return ""
 
 
@@ -70,7 +70,7 @@ async def toggle_todo(form_data: dict) -> str:
                 todo["completed"] = not todo["completed"]
                 break
         todo_state.set(current)
-        return update_components("todo_list", "todo_count")
+        return update_components(*todo_state.listeners)
     return ""
 
 
@@ -82,7 +82,7 @@ async def delete_todo(form_data: dict) -> str:
     if todo_id:
         current["todos"] = [t for t in current["todos"] if t["id"] != todo_id]
         todo_state.set(current)
-        return update_components("todo_list", "todo_count")
+        return update_components(*todo_state.listeners)
     return ""
 
 
@@ -94,7 +94,7 @@ async def set_filter(form_data: dict) -> str:
     if new_filter in ("all", "active", "completed"):
         current["filter"] = new_filter
         todo_state.set(current)
-        return update_components("todo_list")
+        return update_components(*todo_state.listeners)
     return ""
 
 
@@ -104,10 +104,11 @@ async def clear_completed(form_data: dict) -> str:
     current = todo_state.get()
     current["todos"] = [t for t in current["todos"] if not t["completed"]]
     todo_state.set(current)
-    return update_components("todo_list", "todo_count")
+    return update_components(*todo_state.listeners)
 
 
 # --- Component Functions ---
+
 
 def TodoItem(todo: dict) -> Div:
     """Render a single todo item with checkbox, title, and delete button."""
@@ -179,6 +180,7 @@ def TodoList() -> Div:
     return Div(
         *[TodoItem(todo) for todo in filtered_todos],
         id="todo_list",
+        listen_to="todo_state",
         css="border border-gray-200 rounded-md overflow-hidden",
     )
 
@@ -218,6 +220,7 @@ def TodoFilters() -> Div:
         ),
         css="flex gap-2 mb-4",
         id="filter_buttons",
+        listen_to="todo_state",
     )
 
 
