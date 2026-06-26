@@ -90,9 +90,21 @@ class Div(Component):
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
-        children_html = "".join(
-            child.render() if hasattr(child, "render") else self._resolve(child) for child in self.children
-        )
+        children_html_parts = []
+        for child in self.children:
+            if hasattr(child, "render"):
+                children_html_parts.append(child.render())
+            else:
+                resolved = self._resolve(child)
+                if isinstance(resolved, list):
+                    for item in resolved:
+                        if hasattr(item, "render"):
+                            children_html_parts.append(item.render())
+                        else:
+                            children_html_parts.append(str(item))
+                else:
+                    children_html_parts.append(str(resolved))
+        children_html = "".join(children_html_parts)
         return f"<div {attrs}>{children_html}</div>"
 
     def update(self) -> str:
@@ -100,9 +112,21 @@ class Div(Component):
         if not self.id:
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        children_html = "".join(
-            child.render() if hasattr(child, "render") else self._resolve(child) for child in self.children
-        )
+        children_html_parts = []
+        for child in self.children:
+            if hasattr(child, "render"):
+                children_html_parts.append(child.render())
+            else:
+                resolved = self._resolve(child)
+                if isinstance(resolved, list):
+                    for item in resolved:
+                        if hasattr(item, "render"):
+                            children_html_parts.append(item.render())
+                        else:
+                            children_html_parts.append(str(item))
+                else:
+                    children_html_parts.append(str(resolved))
+        children_html = "".join(children_html_parts)
         return f"<div {attrs}>{children_html}</div>"
 
 
@@ -125,9 +149,21 @@ class Button(Component):
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
-        children_html = "".join(
-            child.render() if hasattr(child, "render") else self._resolve(child) for child in self.children
-        )
+        children_html_parts = []
+        for child in self.children:
+            if hasattr(child, "render"):
+                children_html_parts.append(child.render())
+            else:
+                resolved = self._resolve(child)
+                if isinstance(resolved, list):
+                    for item in resolved:
+                        if hasattr(item, "render"):
+                            children_html_parts.append(item.render())
+                        else:
+                            children_html_parts.append(str(item))
+                else:
+                    children_html_parts.append(str(resolved))
+        children_html = "".join(children_html_parts)
         return f"<button {attrs}>{children_html}</button>"
 
     def update(self) -> str:
@@ -135,9 +171,21 @@ class Button(Component):
         if not self.id:
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        children_html = "".join(
-            child.render() if hasattr(child, "render") else self._resolve(child) for child in self.children
-        )
+        children_html_parts = []
+        for child in self.children:
+            if hasattr(child, "render"):
+                children_html_parts.append(child.render())
+            else:
+                resolved = self._resolve(child)
+                if isinstance(resolved, list):
+                    for item in resolved:
+                        if hasattr(item, "render"):
+                            children_html_parts.append(item.render())
+                        else:
+                            children_html_parts.append(str(item))
+                else:
+                    children_html_parts.append(str(resolved))
+        children_html = "".join(children_html_parts)
         return f"<button {attrs}>{children_html}</button>"
 
 
@@ -676,9 +724,21 @@ class Form(Component):
     def render(self) -> str:
         """Render the form with children."""
         attrs = self._get_attrs_str()
-        children_html = "".join(
-            child.render() if hasattr(child, "render") else self._resolve(child) for child in self.children
-        )
+        children_html_parts = []
+        for child in self.children:
+            if hasattr(child, "render"):
+                children_html_parts.append(child.render())
+            else:
+                resolved = self._resolve(child)
+                if isinstance(resolved, list):
+                    for item in resolved:
+                        if hasattr(item, "render"):
+                            children_html_parts.append(item.render())
+                        else:
+                            children_html_parts.append(str(item))
+                else:
+                    children_html_parts.append(str(resolved))
+        children_html = "".join(children_html_parts)
         return f"<form {attrs}>{children_html}</form>"
 
     def update(self) -> str:
@@ -686,9 +746,21 @@ class Form(Component):
         if not self.id:
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        children_html = "".join(
-            child.render() if hasattr(child, "render") else self._resolve(child) for child in self.children
-        )
+        children_html_parts = []
+        for child in self.children:
+            if hasattr(child, "render"):
+                children_html_parts.append(child.render())
+            else:
+                resolved = self._resolve(child)
+                if isinstance(resolved, list):
+                    for item in resolved:
+                        if hasattr(item, "render"):
+                            children_html_parts.append(item.render())
+                        else:
+                            children_html_parts.append(str(item))
+                else:
+                    children_html_parts.append(str(resolved))
+        children_html = "".join(children_html_parts)
         return f"<form {attrs}>{children_html}</form>"
 
 
