@@ -122,7 +122,7 @@ def TodoItem(todo: dict) -> Div:
         ),
         Text(
             todo["title"],
-            css="flex-1 " + ("line-through text-gray-400" if todo["completed"] else "text-gray-800"),
+            css=lambda: "flex-1 " + ("line-through text-gray-400" if todo["completed"] else "text-gray-800"),
         ),
         Button(
             "×",
