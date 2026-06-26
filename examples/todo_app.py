@@ -41,10 +41,10 @@ todo_state = State({"todos": [], "filter": "all"}, "todo_state")
 
 
 # --- CSS ---
-color_primary = "amber-500"
-color_secondary = "slate-300"
-button_primary_css = f"px-3 py-2 rounded-md font-semibold text-black/80 bg-{color_primary} cursor-pointer"
-button_secondary_css = button_primary_css.replace(color_primary, color_secondary)
+color_primary_css = "slate-600"
+color_secondary_css = "slate-300"
+color_active_css = "amber-300"
+button_shape_css = "px-3 py-2 rounded-md font-semibold cursor-pointer"
 
 
 # --- Trigger Handlers ---
@@ -148,15 +148,15 @@ def TodoForm() -> Form:  # noqa: N802
             id="todo-input",
             name="title",
             placeholder="What needs to be done?",
-            css="flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500",
+            css="flex-1 p-2 border border-gray-300 rounded-md",
         ),
         Button(
             "Add",
             type="submit",
-            css=f"{BUTTON_PRIMARY_CSS} rounded-l-none",
+            css=f"{button_shape_css} bg-{color_primary_css} text-white",
         ),
         trigger="add_todo",
-        css="mb-4 flex gap-0",
+        css="mb-4 flex gap-3",
     )
 
 
@@ -196,8 +196,8 @@ def TodoFilters() -> Div:  # noqa: N802
         """Return CSS classes for filter button with active state."""
         current_filter = todo_state.get()["filter"]
         if current_filter == filter_name:
-            return button_primary_css
-        return button_secondary_css
+            return f"{button_shape_css} bg-{color_active_css}"
+        return f"{button_shape_css} bg-{color_secondary_css}"
 
     return Div(
         Button(
@@ -257,7 +257,7 @@ def TodoApp() -> Div:  # noqa: N802
                 Button(
                     "Clear Completed",
                     trigger="clear_completed",
-                    css=button_secondary_css,
+                    css=f"{button_shape_css} bg-{color_secondary_css}",
                 ),
                 css="mt-4 flex justify-center",
             ),
