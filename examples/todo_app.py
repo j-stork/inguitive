@@ -114,7 +114,7 @@ def TodoItem(todo: dict) -> Div:
     return Div(
         Checkbox(
             id=f"todo-{todo['id']}",
-            checked=todo["completed"],
+            checked=lambda: todo["completed"],
             trigger="toggle_todo",
             trigger_args={"id": todo["id"]},
             name="completed",
