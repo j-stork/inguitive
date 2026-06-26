@@ -158,8 +158,8 @@ def TodoForm() -> Form:
 
 def TodoList() -> Div:
     """Render the list of todos based on the current filter."""
-    def render_todos() -> str:
-        """Dynamically render todo items based on current state."""
+    def render_todos() -> list:
+        """Return list of todo item components based on current state."""
         data = todo_state.get()
         todos = data["todos"]
         filter_type = data["filter"]
@@ -172,12 +172,12 @@ def TodoList() -> Div:
         }.get(filter_type, todos)
 
         if not filtered_todos:
-            return '<div class="text-gray-500 p-4 text-center">No todos found.</div>'
+            return [Text("No todos found.", css="text-gray-500 p-4 text-center")]
 
-        return "".join(TodoItem(todo).render() for todo in filtered_todos)
+        return [TodoItem(todo) for todo in filtered_todos]
 
     return Div(
-        render_todos,  # Callable that re-evaluates on each render
+        render_todos,
         id="todo_list",
         listen_to="todo_state",
         css="border border-gray-200 rounded-md overflow-hidden",
