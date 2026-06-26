@@ -118,6 +118,13 @@ async def clear_completed(form_data: dict) -> str:
 
 def TodoItem(todo: dict) -> Div:  # noqa: N802
     """Render a single todo item with checkbox, title, and delete button."""
+
+    def dynamic_div_css():
+        base = f"flex items-center gap-3 p-3 border-b border-{color_secondary_css} last:border-b-0"
+        if todo["completed"]:
+            return f"{base} bg-green-300"
+        return base
+        
     return Div(
         Checkbox(
             id=f"todo-{todo['id']}",
@@ -129,15 +136,15 @@ def TodoItem(todo: dict) -> Div:  # noqa: N802
         ),
         Text(
             lambda: todo["title"],
-            css=lambda: "flex-1 " + ("line-through text-gray-400" if todo["completed"] else "text-gray-800"),
+            css=lambda: "flex-1" + (" line-through" if todo["completed"] else ""),
         ),
         Button(
             "Delete",
             trigger="delete_todo",
             trigger_args={"id": todo["id"]},
-            css="cursor-pointer",
+            css="underline cursor-pointer",
         ),
-        css="flex items-center gap-3 p-2 border-b border-gray-200 last:border-b-0",
+        css=lambda: dynamic_div_css(),
     )
 
 
@@ -148,7 +155,7 @@ def TodoForm() -> Form:  # noqa: N802
             id="todo-input",
             name="title",
             placeholder="What needs to be done?",
-            css="flex-1 p-2 border border-gray-300 rounded-md",
+            css=f"flex-1 p-2 border border-{color_secondary_css} rounded-md",
         ),
         Button(
             "Add",
@@ -177,7 +184,7 @@ def TodoList() -> Div:  # noqa: N802
         }.get(filter_type, todos)
 
         if not filtered_todos:
-            return [Text("No todos found.", css="text-gray-500 p-4 text-center")]
+            return [Text("No todos found.", css="p-3 text-center")]
 
         return [TodoItem(todo) for todo in filtered_todos]
 
@@ -234,12 +241,11 @@ def TodoCount() -> Text:  # noqa: N802
         todos = todo_state.get()["todos"]
         active_count = sum(1 for t in todos if not t["completed"])
         item_word = "item" if active_count == 1 else "items"
-        return f"{active_count} {item_word} left"
+        return f"{active_count} {item_word} active"
 
     return Text(
         lambda: dynamic_text(),
         id="todo_count",
-        css="text-sm text-gray-500",
         listen_to="todo_state",
     )
 
@@ -259,12 +265,12 @@ def TodoApp() -> Div:  # noqa: N802
                     trigger="clear_completed",
                     css=f"{button_shape_css} bg-{color_secondary_css}",
                 ),
-                css="mt-4 flex justify-center",
+                css="flex justify-center",
             ),
             id="todo_container",
-            css="max-w-md mx-auto p-6 bg-white rounded-xl shadow-md space-y-4 w-full",
+            css="max-w-md mx-auto p-6 bg-white rounded-xl shadow-md space-y-6 w-full",
         ),
-        css="w-full min-h-screen flex items-center justify-center p-4 bg-gray-50",
+        css="w-full min-h-screen flex items-center justify-center bg-gray-50",
     )
 
 
