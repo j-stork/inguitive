@@ -40,6 +40,13 @@ app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 todo_state = State({"todos": [], "filter": "all"}, "todo_state")
 
 
+# --- CSS ---
+color_primary = "amber-500"
+color_secondary = "slate-300"
+button_primary_css = f"px-3 py-2 rounded-md font-semibold text-black/80 bg-{color_primary} cursor-pointer"
+button_secondary_css = button_primary_css.replace(color_primary, color_secondary)
+
+
 # --- Trigger Handlers ---
 @app.trigger_handler
 async def add_todo(form_data: dict) -> str:
@@ -109,7 +116,7 @@ async def clear_completed(form_data: dict) -> str:
 # --- Component Functions ---
 
 
-def TodoItem(todo: dict) -> Div:
+def TodoItem(todo: dict) -> Div:  # noqa: N802
     """Render a single todo item with checkbox, title, and delete button."""
     return Div(
         Checkbox(
@@ -125,40 +132,38 @@ def TodoItem(todo: dict) -> Div:
             css=lambda: "flex-1 " + ("line-through text-gray-400" if todo["completed"] else "text-gray-800"),
         ),
         Button(
-            "×",
+            "Delete",
             trigger="delete_todo",
             trigger_args={"id": todo["id"]},
-            css="text-red-500 hover:text-red-700 px-2 py-1",
+            css="cursor-pointer",
         ),
         css="flex items-center gap-3 p-2 border-b border-gray-200 last:border-b-0",
     )
 
 
-def TodoForm() -> Form:
+def TodoForm() -> Form:  # noqa: N802
     """Form for adding new todos."""
     return Form(
-        Div(
-            Input(
-                id="todo-input",
-                name="title",
-                placeholder="What needs to be done?",
-                css="flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500",
-            ),
-            Button(
-                "Add",
-                type="submit",
-                css=f"{BUTTON_PRIMARY_CSS} rounded-l-none",
-            ),
-            css="flex gap-0",
+        Input(
+            id="todo-input",
+            name="title",
+            placeholder="What needs to be done?",
+            css="flex-1 p-2 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500",
+        ),
+        Button(
+            "Add",
+            type="submit",
+            css=f"{BUTTON_PRIMARY_CSS} rounded-l-none",
         ),
         trigger="add_todo",
-        css="mb-4",
+        css="mb-4 flex gap-0",
     )
 
 
-def TodoList() -> Div:
+def TodoList() -> Div:  # noqa: N802
     """Render the list of todos based on the current filter."""
-    def render_todos() -> list:
+
+    def dynamic_content() -> list:
         """Return list of todo item components based on current state."""
         data = todo_state.get()
         todos = data["todos"]
@@ -177,30 +182,29 @@ def TodoList() -> Div:
         return [TodoItem(todo) for todo in filtered_todos]
 
     return Div(
-        lambda: render_todos(),
+        lambda: dynamic_content(),
         id="todo_list",
         listen_to="todo_state",
         css="border border-gray-200 rounded-md overflow-hidden",
     )
 
 
-def TodoFilters() -> Div:
+def TodoFilters() -> Div:  # noqa: N802
     """Filter controls for the todo list."""
-    
-    def get_filter_button_css(filter_name: str) -> str:
+
+    def dynamic_css(filter_name: str) -> str:
         """Return CSS classes for filter button with active state."""
         current_filter = todo_state.get()["filter"]
-        base = f"{BUTTON_SECONDARY_CSS} px-4 py-2"
         if current_filter == filter_name:
-            return f"{base} ring-2 ring-blue-500"
-        return base
+            return button_primary_css
+        return button_secondary_css
 
     return Div(
         Button(
             "All",
             trigger="set_filter",
             trigger_args={"filter": "all"},
-            css=lambda: get_filter_button_css("all"),
+            css=lambda: dynamic_css("all"),
             listen_to="todo_state",
         ),
         Button(
@@ -208,35 +212,39 @@ def TodoFilters() -> Div:
             id="active_filter_button",
             trigger="set_filter",
             trigger_args={"filter": "active"},
-            css=lambda: get_filter_button_css("active"),
+            css=lambda: dynamic_css("active"),
             listen_to="todo_state",
         ),
         Button(
             "Completed",
             trigger="set_filter",
             trigger_args={"filter": "completed"},
-            css=lambda: get_filter_button_css("completed"),
+            css=lambda: dynamic_css("completed"),
             listen_to="todo_state",
         ),
-        css="flex gap-2 mb-4",
+        css="grid grid-cols-3 gap-x-3",
         id="filter_buttons",
     )
 
 
-def TodoCount() -> Text:
+def TodoCount() -> Text:  # noqa: N802
     """Display the count of remaining active todos."""
-    todos = todo_state.get()["todos"]
-    active_count = sum(1 for t in todos if not t["completed"])
-    item_word = "item" if active_count == 1 else "items"
+
+    def dynamic_text() -> str:
+        todos = todo_state.get()["todos"]
+        active_count = sum(1 for t in todos if not t["completed"])
+        item_word = "item" if active_count == 1 else "items"
+        return f"{active_count} {item_word} left"
+
     return Text(
-        f"{active_count} {item_word} left",
+        lambda: dynamic_text(),
         id="todo_count",
         css="text-sm text-gray-500",
         listen_to="todo_state",
     )
 
 
-def TodoApp() -> Div:
+def TodoApp() -> Div:  # noqa: N802
     """Main todo application component."""
     return Div(
         Div(
@@ -249,7 +257,7 @@ def TodoApp() -> Div:
                 Button(
                     "Clear Completed",
                     trigger="clear_completed",
-                    css=BUTTON_SECONDARY_CSS,
+                    css=button_secondary_css,
                 ),
                 css="mt-4 flex justify-center",
             ),
