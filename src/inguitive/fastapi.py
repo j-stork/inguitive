@@ -68,6 +68,9 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
             kwargs["request"] = request
         if needs_form_data:
             form_data_dict = dict(await request.form())
+            # Merge query parameters (from trigger_args) into form_data
+            query_params = dict(request.query_params)
+            form_data_dict.update(query_params)
             kwargs["form_data"] = form_data_dict
 
         result = await h(**kwargs) if is_async else h(**kwargs)
