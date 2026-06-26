@@ -121,7 +121,7 @@ def TodoItem(todo: dict) -> Div:
             css="h-5 w-5 cursor-pointer",
         ),
         Text(
-            todo["title"],
+            lambda: todo["title"],
             css=lambda: "flex-1 " + ("line-through text-gray-400" if todo["completed"] else "text-gray-800"),
         ),
         Button(
