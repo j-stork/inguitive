@@ -82,7 +82,11 @@ class Div(Component):
 
     def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
         super().__init__(id=id, css=css, **attrs)
-        self.children = list(children)
+        # Support both: Div(a, b) and Div([a, b])
+        if len(children) == 1 and isinstance(children[0], list):
+            self.children = list(children[0])
+        else:
+            self.children = list(children)
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
@@ -113,7 +117,11 @@ class Button(Component):
 
     def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
         super().__init__(id=id, css=css, **attrs)
-        self.children = list(children)
+        # Support both: Button(a, b) and Button([a, b])
+        if len(children) == 1 and isinstance(children[0], list):
+            self.children = list(children[0])
+        else:
+            self.children = list(children)
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
@@ -659,7 +667,11 @@ class Form(Component):
         if method:
             attrs["method"] = method
         super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
-        self.children = list(children)
+        # Support both: Form(a, b) and Form([a, b])
+        if len(children) == 1 and isinstance(children[0], list):
+            self.children = list(children[0])
+        else:
+            self.children = list(children)
 
     def render(self) -> str:
         """Render the form with children."""
