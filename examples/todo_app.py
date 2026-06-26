@@ -186,10 +186,10 @@ def TodoList() -> Div:
 
 def TodoFilters() -> Div:
     """Filter controls for the todo list."""
-    current_filter = todo_state.get()["filter"]
-
+    
     def get_filter_button_css(filter_name: str) -> str:
         """Return CSS classes for filter button with active state."""
+        current_filter = todo_state.get()["filter"]
         base = f"{BUTTON_SECONDARY_CSS} px-4 py-2"
         if current_filter == filter_name:
             return f"{base} ring-2 ring-blue-500"
@@ -200,26 +200,26 @@ def TodoFilters() -> Div:
             "All",
             trigger="set_filter",
             trigger_args={"filter": "all"},
-            css=get_filter_button_css("all"),
+            css=lambda: get_filter_button_css("all"),
             listen_to="todo_state",
         ),
         Button(
             "Active",
+            id="active_filter_button",
             trigger="set_filter",
             trigger_args={"filter": "active"},
-            css=get_filter_button_css("active"),
+            css=lambda: get_filter_button_css("active"),
             listen_to="todo_state",
         ),
         Button(
             "Completed",
             trigger="set_filter",
             trigger_args={"filter": "completed"},
-            css=get_filter_button_css("completed"),
+            css=lambda: get_filter_button_css("completed"),
             listen_to="todo_state",
         ),
         css="flex gap-2 mb-4",
         id="filter_buttons",
-        listen_to="todo_state",
     )
 
 
