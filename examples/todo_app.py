@@ -177,7 +177,7 @@ def TodoList() -> Div:
         return [TodoItem(todo) for todo in filtered_todos]
 
     return Div(
-        render_todos,
+        lambda: render_todos(),
         id="todo_list",
         listen_to="todo_state",
         css="border border-gray-200 rounded-md overflow-hidden",
