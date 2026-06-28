@@ -29,7 +29,6 @@ from inguitive import (
     create_app,
     update_components,
 )
-from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent / "templates")
@@ -48,7 +47,7 @@ button_shape_css = "px-3 py-2 rounded-md font-semibold cursor-pointer"
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@app.trigger_handler # type: ignore
 async def add_todo(form_data: dict) -> str:
     """Add a new todo item to the list."""
     current = todo_state.get()
@@ -65,7 +64,7 @@ async def add_todo(form_data: dict) -> str:
     return ""
 
 
-@app.trigger_handler
+@app.trigger_handler # type: ignore
 async def toggle_todo(form_data: dict) -> str:
     """Toggle the completed status of a todo."""
     current = todo_state.get()
@@ -80,7 +79,7 @@ async def toggle_todo(form_data: dict) -> str:
     return ""
 
 
-@app.trigger_handler
+@app.trigger_handler # type: ignore
 async def delete_todo(form_data: dict) -> str:
     """Delete a todo item from the list."""
     current = todo_state.get()
@@ -92,7 +91,7 @@ async def delete_todo(form_data: dict) -> str:
     return ""
 
 
-@app.trigger_handler
+@app.trigger_handler # type: ignore
 async def set_filter(form_data: dict) -> str:
     """Set the filter for the todo list (all/active/completed)."""
     current = todo_state.get()
@@ -104,7 +103,7 @@ async def set_filter(form_data: dict) -> str:
     return ""
 
 
-@app.trigger_handler
+@app.trigger_handler # type: ignore
 async def clear_completed(form_data: dict) -> str:
     """Remove all completed todos from the list."""
     current = todo_state.get()
@@ -124,7 +123,7 @@ def TodoItem(todo: dict) -> Div:  # noqa: N802
         if todo["completed"]:
             return f"{base} bg-green-300"
         return base
-        
+
     return Div(
         Checkbox(
             id=f"todo-{todo['id']}",
@@ -163,7 +162,7 @@ def TodoForm() -> Form:  # noqa: N802
             css=f"{button_shape_css} bg-{color_primary_css} text-white",
         ),
         trigger="add_todo",
-        css="mb-4 flex gap-3",
+        css="flex gap-3",
     )
 
 
@@ -192,7 +191,7 @@ def TodoList() -> Div:  # noqa: N802
         lambda: dynamic_content(),
         id="todo_list",
         listen_to="todo_state",
-        css="border border-gray-200 rounded-md overflow-hidden",
+        css=f"border border-{color_secondary_css} rounded-md overflow-hidden",
     )
 
 
@@ -270,12 +269,12 @@ def TodoApp() -> Div:  # noqa: N802
             id="todo_container",
             css="max-w-md mx-auto p-6 bg-white rounded-xl shadow-md space-y-6 w-full",
         ),
-        css="w-full min-h-screen flex items-center justify-center bg-gray-50",
+        css="w-full min-h-screen flex items-center justify-center bg-slate-100",
     )
 
 
 # --- Routes ---
-@app.page("/")
+@app.page("/") # type: ignore
 def home():
     return TodoApp()
 
