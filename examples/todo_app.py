@@ -47,7 +47,7 @@ button_shape_css = "px-3 py-2 rounded-md font-semibold cursor-pointer"
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler # type: ignore
+@app.trigger_handler
 async def add_todo(form_data: dict) -> str:
     """Add a new todo item to the list."""
     current = todo_state.get()
@@ -64,7 +64,7 @@ async def add_todo(form_data: dict) -> str:
     return ""
 
 
-@app.trigger_handler # type: ignore
+@app.trigger_handler
 async def toggle_todo(form_data: dict) -> str:
     """Toggle the completed status of a todo."""
     current = todo_state.get()
@@ -79,7 +79,7 @@ async def toggle_todo(form_data: dict) -> str:
     return ""
 
 
-@app.trigger_handler # type: ignore
+@app.trigger_handler
 async def delete_todo(form_data: dict) -> str:
     """Delete a todo item from the list."""
     current = todo_state.get()
@@ -91,7 +91,7 @@ async def delete_todo(form_data: dict) -> str:
     return ""
 
 
-@app.trigger_handler # type: ignore
+@app.trigger_handler
 async def set_filter(form_data: dict) -> str:
     """Set the filter for the todo list (all/active/completed)."""
     current = todo_state.get()
@@ -103,7 +103,7 @@ async def set_filter(form_data: dict) -> str:
     return ""
 
 
-@app.trigger_handler # type: ignore
+@app.trigger_handler
 async def clear_completed(form_data: dict) -> str:
     """Remove all completed todos from the list."""
     current = todo_state.get()
@@ -274,7 +274,7 @@ def TodoApp() -> Div:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/") # type: ignore
+@app.page("/")
 def home():
     return TodoApp()
 

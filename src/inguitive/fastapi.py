@@ -7,7 +7,7 @@ from __future__ import annotations
 import inspect
 import uuid
 from pathlib import Path
-from typing import Callable
+from typing import Callable, TypeVar, ParamSpec, Protocol, Any, runtime_checkable
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -22,8 +22,29 @@ from inguitive.session import (
     set_session_backend,
 )
 
+# Type variables for decorator type annotations
+P = ParamSpec("P")
+T = TypeVar("T")
 
-def _register_page_route(app, path: str, handler: Callable):
+# Type aliases for decorator return types
+TriggerDecorator = Callable[[Callable[P, T]], Callable[P, T]]
+PageDecorator = Callable[[str | None], Callable[[Callable[P, T]], Callable[P, T]]]
+
+
+@runtime_checkable
+class InguitiveApp(Protocol[P, T]):
+    """Protocol describing an INGUITIVE application with custom decorators.
+    
+    This Protocol extends the FastAPI instance with INGUITIVE-specific decorators.
+    Type checkers will recognize these custom attributes on objects of this type.
+    """
+    
+    # Custom decorators
+    trigger_handler: TriggerDecorator[P, T]
+    page: PageDecorator[P, T]
+
+
+def _register_page_route(app, path: str, handler: Callable[P, T]):
     """Helper to register a page route on an app."""
 
     @app.get(path, response_class=HTMLResponse)
@@ -153,7 +174,7 @@ def create_app(
     session_cookie_max_age: int = 3600,
     session_cookie_secure: bool = False,
     session_cookie_httponly: bool = True,
-):
+) -> tuple[InguitiveApp[P, T], Jinja2Templates]:
     """Create and configure a FastAPI application for INGUITIVE.
 
     Args:
@@ -165,7 +186,8 @@ def create_app(
         session_cookie_httponly: Whether cookie is HTTP-only
 
     Returns:
-        Tuple of (FastAPI app, Jinja2Templates) for use in routes
+        Tuple of (InguitiveApp, Jinja2Templates) - the app has custom decorators
+        trigger_handler and page for defining handlers and routes
     """
     app = FastAPI()
     templates = Jinja2Templates(directory=template_dir)
