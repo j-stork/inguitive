@@ -40,10 +40,10 @@ todo_state = State({"todos": [], "filter": "all"}, "todo_state")
 
 
 # --- CSS ---
-color_primary_css = "slate-600"
-color_secondary_css = "slate-300"
-color_active_css = "amber-300"
-button_shape_css = "px-3 py-2 rounded-md font-semibold cursor-pointer"
+COLOR_PRIMARY = "slate-600"
+COLOR_SECONDARY = "slate-300"
+COLOR_ACTIVE = "amber-300"
+BUTTON_SHAPE = "px-3 py-2 rounded-md font-semibold cursor-pointer"
 
 
 # --- Trigger Handlers ---
@@ -119,7 +119,7 @@ def TodoItem(todo: dict) -> Div:  # noqa: N802
     """Render a single todo item with checkbox, title, and delete button."""
 
     def dynamic_div_css():
-        base = f"flex items-center gap-3 p-3 border-b border-{color_secondary_css} last:border-b-0"
+        base = f"flex items-center gap-3 p-3 border-b border-{COLOR_SECONDARY} last:border-b-0"
         if todo["completed"]:
             return f"{base} bg-green-300"
         return base
@@ -154,12 +154,12 @@ def TodoForm() -> Form:  # noqa: N802
             id="todo-input",
             name="title",
             placeholder="What needs to be done?",
-            css=f"flex-1 p-2 border border-{color_secondary_css} rounded-md",
+            css=f"flex-1 p-2 border border-{COLOR_SECONDARY} rounded-md",
         ),
         Button(
             "Add",
             type="submit",
-            css=f"{button_shape_css} bg-{color_primary_css} text-white",
+            css=f"{BUTTON_SHAPE} bg-{COLOR_PRIMARY} text-white",
         ),
         trigger="add_todo",
         css="flex gap-3",
@@ -191,7 +191,7 @@ def TodoList() -> Div:  # noqa: N802
         lambda: dynamic_content(),
         id="todo_list",
         listen_to="todo_state",
-        css=f"border border-{color_secondary_css} rounded-md overflow-hidden",
+        css=f"border border-{COLOR_SECONDARY} rounded-md overflow-hidden",
     )
 
 
@@ -202,8 +202,8 @@ def TodoFilters() -> Div:  # noqa: N802
         """Return CSS classes for filter button with active state."""
         current_filter = todo_state.get()["filter"]
         if current_filter == filter_name:
-            return f"{button_shape_css} bg-{color_active_css}"
-        return f"{button_shape_css} bg-{color_secondary_css}"
+            return f"{BUTTON_SHAPE} bg-{COLOR_ACTIVE}"
+        return f"{BUTTON_SHAPE} bg-{COLOR_SECONDARY}"
 
     return Div(
         Button(
@@ -262,7 +262,7 @@ def TodoApp() -> Div:  # noqa: N802
                 Button(
                     "Clear Completed",
                     trigger="clear_completed",
-                    css=f"{button_shape_css} bg-{color_secondary_css}",
+                    css=f"{BUTTON_SHAPE} bg-{COLOR_SECONDARY}",
                 ),
                 css="flex justify-center",
             ),
