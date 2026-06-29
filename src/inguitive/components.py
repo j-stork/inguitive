@@ -266,7 +266,7 @@ class Link(Component):
         """
         super().__init__(id=id, css=css, **attrs)
         if href:
-            attrs["href"] = href
+            self.attrs["href"] = href
         self.text = text
 
     def render(self) -> str:
