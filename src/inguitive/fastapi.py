@@ -259,3 +259,18 @@ def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000
     import uvicorn
 
     uvicorn.run(app_module, host=host, port=port, reload=reload)
+
+
+def redirect(url: str, status_code: int = 302):
+    """Perform an HTTP redirect to the specified URL.
+
+    Args:
+        url: The URL to redirect to
+        status_code: HTTP status code (302 for temporary redirect, 301 for permanent)
+
+    Returns:
+        RedirectResponse: FastAPI redirect response
+    """
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url=url, status_code=status_code)
