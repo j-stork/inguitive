@@ -63,6 +63,11 @@ def _register_page_route(app, path: str, handler: Callable[P, T]):
 
         result = await h(**kwargs) if is_async else h(**kwargs)
 
+        # If result is a Response object (e.g., RedirectResponse), return it directly
+        from starlette.responses import Response
+        if isinstance(result, Response):
+            return result
+
         # Auto-render Components if they have a render method
         if hasattr(result, "render") and callable(result.render):
             content = result.render()
