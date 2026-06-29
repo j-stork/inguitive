@@ -99,7 +99,7 @@ class Div(Component):
                 if isinstance(resolved, list):
                     for item in resolved:
                         if hasattr(item, "render"):
-                            children_html_parts.append(item.render())
+                            children_html_parts.append(item.render()) # type: ignore
                         else:
                             children_html_parts.append(str(item))
                 else:
@@ -121,7 +121,7 @@ class Div(Component):
                 if isinstance(resolved, list):
                     for item in resolved:
                         if hasattr(item, "render"):
-                            children_html_parts.append(item.render())
+                            children_html_parts.append(item.render()) # type: ignore
                         else:
                             children_html_parts.append(str(item))
                 else:
@@ -166,7 +166,7 @@ class Button(Component):
                 if isinstance(resolved, list):
                     for item in resolved:
                         if hasattr(item, "render"):
-                            children_html_parts.append(item.render())
+                            children_html_parts.append(item.render()) # type: ignore
                         else:
                             children_html_parts.append(str(item))
                 else:
@@ -188,7 +188,7 @@ class Button(Component):
                 if isinstance(resolved, list):
                     for item in resolved:
                         if hasattr(item, "render"):
-                            children_html_parts.append(item.render())
+                            children_html_parts.append(item.render()) # type: ignore
                         else:
                             children_html_parts.append(str(item))
                 else:
@@ -536,7 +536,7 @@ class Select(Component):
 
     def _render_options(self) -> str:
         """Render all option elements."""
-        resolved_options = self._resolve(self.options) if self.options else []
+        resolved_options = self._resolve(self.options) if self.options else [] # type: ignore
         resolved_value = self._resolve(self.value) if self.value else None
         option_tags = []
         for val, text in resolved_options:
@@ -602,7 +602,7 @@ class Checkbox(Component):
     def render(self) -> str:
         """Render the checkbox input element."""
         attrs = self._get_attrs_str()
-        resolved_checked = self._resolve(self.checked) if self.checked else False
+        resolved_checked = self._resolve(self.checked) if self.checked else False # type: ignore
         if resolved_checked:
             attrs += " checked"
         return f"<input {attrs}>"
@@ -612,7 +612,7 @@ class Checkbox(Component):
         if not self.id:
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        resolved_checked = self._resolve(self.checked) if self.checked else False
+        resolved_checked = self._resolve(self.checked) if self.checked else False # type: ignore
         if resolved_checked:
             attrs += " checked"
         return f"<input {attrs}>"
@@ -667,7 +667,7 @@ class Radio(Component):
     def render(self) -> str:
         """Render the radio input element."""
         attrs = self._get_attrs_str()
-        resolved_checked = self._resolve(self.checked) if self.checked else False
+        resolved_checked = self._resolve(self.checked) if self.checked else False # type: ignore
         if resolved_checked:
             attrs += " checked"
         return f"<input {attrs}>"
@@ -677,7 +677,7 @@ class Radio(Component):
         if not self.id:
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        resolved_checked = self._resolve(self.checked) if self.checked else False
+        resolved_checked = self._resolve(self.checked) if self.checked else False # type: ignore
         if resolved_checked:
             attrs += " checked"
         return f"<input {attrs}>"
@@ -741,7 +741,7 @@ class Form(Component):
                 if isinstance(resolved, list):
                     for item in resolved:
                         if hasattr(item, "render"):
-                            children_html_parts.append(item.render())
+                            children_html_parts.append(item.render()) # type: ignore
                         else:
                             children_html_parts.append(str(item))
                 else:
@@ -763,7 +763,7 @@ class Form(Component):
                 if isinstance(resolved, list):
                     for item in resolved:
                         if hasattr(item, "render"):
-                            children_html_parts.append(item.render())
+                            children_html_parts.append(item.render()) # type: ignore
                         else:
                             children_html_parts.append(str(item))
                 else:
@@ -892,7 +892,7 @@ class TemplateComponent(Component):
         # Resolve all context values
         resolved_context = {}
         for key, value in self.context.items():
-            resolved_context[key] = self._resolve(value) if callable(value) else value
+            resolved_context[key] = self._resolve(value) if callable(value) else value # type: ignore
 
         # Add component attributes to context
         resolved_context["id"] = self.id
@@ -919,7 +919,7 @@ class TemplateComponent(Component):
         template = env.from_string(self.template_str)
         resolved_context = {}
         for key, value in self.context.items():
-            resolved_context[key] = self._resolve(value) if callable(value) else value
+            resolved_context[key] = self._resolve(value) if callable(value) else value # type: ignore
         resolved_context["id"] = self.id
         if self.css:
             resolved_context["css"] = self._resolve(self.css)
