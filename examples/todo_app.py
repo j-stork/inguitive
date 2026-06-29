@@ -240,7 +240,7 @@ def TodoCount() -> Text:  # noqa: N802
         todos = todo_state.get()["todos"]
         active_count = sum(1 for t in todos if not t["completed"])
         item_word = "item" if active_count == 1 else "items"
-        return f"{active_count} {item_word} active"
+        return f"{active_count} {item_word} left"
 
     return Text(
         lambda: dynamic_text(),
