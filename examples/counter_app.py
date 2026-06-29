@@ -19,9 +19,7 @@ This proves that State values are fully isolated per user session.
 
 from pathlib import Path
 
-# TODO: update_components is imported twice, once from inguitive and once from inguitive.htmx. Please explain why.
 from inguitive import Button, Div, Icon, Label, State, create_app, get_session_id, update_components
-from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
@@ -31,6 +29,19 @@ app, templates = create_app(template_dir=Path(__file__).parent / "templates")
 counter_state = State(0, "counter_state")
 theme_state = State("light", "theme_state")
 
+
+# --- CSS ---
+COLOR_BASE = "slate"
+COLOR_100 = f"{COLOR_BASE}-100"
+COLOR_300 = f"{COLOR_BASE}-300"
+COLOR_400 = f"{COLOR_BASE}-400"
+COLOR_700 = f"{COLOR_BASE}-700"
+COLOR_900 = f"{COLOR_BASE}-900"
+COLOR_BRAND_1 = "blue-700"
+COLOR_BRAND_2 = "fuchsia-600"
+BUTTON_SHAPE = "p-3 rounded-md font-semibold cursor-pointer shadow-lg"
+BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:shadow-{COLOR_BRAND_1}/50"
+BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:shadow-{COLOR_400}/50"
 
 # --- Trigger Handlers ---
 @app.trigger_handler
@@ -47,10 +58,12 @@ def reset():
 
 @app.trigger_handler
 def toggle_theme():
+    print("toggle_theme was triggered.")
     """Toggle between light and dark theme."""
     current: str = theme_state.get()
     new_theme: str = "dark" if current == "light" else "light"
     theme_state.set(new_theme)
+    print(f"*theme_state.listeners = {theme_state.listeners}")
     return update_components(*theme_state.listeners)
 
 
@@ -68,12 +81,13 @@ def get_counter_style() -> str:
 
 def get_theme_bg() -> str:
     """Dynamic background based on theme state."""
-    return "bg-slate-100" if theme_state.get() == "light" else "bg-slate-800"
+    return COLOR_100 if theme_state.get() == "light" else COLOR_900
 
 
 # --- Counter Component ---
 def Counter() -> Div:
     """Main counter component demonstrating INGUITIVE features."""
+    print(f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center")
     return Div(
         Div(
             Div(
@@ -81,19 +95,19 @@ def Counter() -> Div:
                     Icon(lambda: MOON if theme_state.get() == "light" else SUN, css="w-6 h-6"),
                     trigger="toggle_theme",
                     id="theme-toggle",
-                    css=f"{BUTTON_SECONDARY_CSS}",
+                    css=BUTTON_PRIMARY,
                 ),
                 css="w-full flex justify-end",
             ),
             Label(
                 text=lambda: f"Count: {counter_state.get()}",
                 id="counter-label",
-                css=get_counter_style,
+                css=lambda: get_counter_style(),
                 listen_to="counter_state",
             ),
             Div(f"Session: {get_session_id()}", css="text-xs text-gray-500 text-center mt-2"),
-            Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY_CSS} w-full"),
-            Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY_CSS} w-full"),
+            Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY} w-full"),
+            Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY} w-full"),
             id="counter-card",
             css="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
         ),
