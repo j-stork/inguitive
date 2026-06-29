@@ -10,7 +10,7 @@ Each browser session maintains its own independent counter and theme state.
 
 To test:
 1. Open this app in one regular browser window and one incognito/private window
-2. Note the unique Session ID displayed below the counter in each window
+2. Note the unique Session ID displayed in each window
 3. Increment the counter in Window 1 - Window 2's counter remains unchanged
 4. Toggle theme in Window 1 - Window 2's theme remains unchanged
 
@@ -19,11 +19,12 @@ This proves that State values are fully isolated per user session.
 
 from pathlib import Path
 
-from inguitive import Button, Div, Icon, Label, State, Text, create_app, get_session_id, update_components
+from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
 from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent / "templates")
+
 
 # --- State Instances ---
 counter_state = State(0, "counter_state")
@@ -35,13 +36,14 @@ COLOR_BASE = "slate"
 COLOR_100 = f"{COLOR_BASE}-100"
 COLOR_300 = f"{COLOR_BASE}-300"
 COLOR_400 = f"{COLOR_BASE}-400"
-COLOR_700 = f"{COLOR_BASE}-700"
+COLOR_600 = f"{COLOR_BASE}-600"
 COLOR_900 = f"{COLOR_BASE}-900"
 COLOR_BRAND_1 = "blue-700"
 COLOR_BRAND_2 = "fuchsia-600"
 BUTTON_SHAPE = "p-3 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
 BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100}"
 BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900}"
+
 
 # --- Trigger Handlers ---
 @app.trigger_handler
@@ -83,7 +85,7 @@ def get_theme_bg() -> str:
 
 
 # --- Counter Component ---
-def Counter() -> Div:
+def Counter() -> Div:  # noqa: N802
     """Main counter component demonstrating INGUITIVE features."""
     print(f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center")
     return Div(
@@ -105,7 +107,7 @@ def Counter() -> Div:
             ),
             Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY} w-full"),
             Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY} w-full"),
-            Text(f"Session: {get_session_id()}", css="text-xs text-gray-500 text-center"),
+            Text(f"Session: {get_session_id()}", css=f"text-sm text-center text-{COLOR_600}"),
             id="counter-card",
             css="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
         ),
