@@ -137,15 +137,23 @@ class Button(Component):
     - trigger: POST action for partial updates (replaces old on_click)
     - navigate: GET navigation for full page changes
     - redirect: Immediate browser redirect
+    
+    Note: Submit buttons with triggers automatically reset their parent form after submission.
     """
 
     def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
         super().__init__(id=id, css=css, **attrs)
+        
         # Support both: Button(a, b) and Button([a, b])
         if len(children) == 1 and isinstance(children[0], list):
             self.children = list(children[0])
         else:
             self.children = list(children)
+        
+        # Auto-add hx-reset for submit buttons with HTMX triggers
+        # This clears the form after successful submission
+        if self.attrs.get("type") == "submit" and self.attrs.get("hx-post") and "hx-reset" not in self.attrs:
+            self.attrs["hx-reset"] = "true"
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
