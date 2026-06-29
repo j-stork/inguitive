@@ -48,12 +48,12 @@ async def register(form_data: dict) -> str:
 
 
 # --- Helper Functions ---
-def GenderRadio(id: str, value: str, label: str) -> Div:
+def GenderRadio(id: str, value: str, label: str) -> Div:  # noqa: N802
     return Div(Radio(id=id, name="gender", value=value), Label(label, for_=id), css="flex items-baseline gap-2")
 
 
 # --- Registration Form Component ---
-def RegistrationForm() -> Div:
+def RegistrationForm() -> Div:  # noqa: N802
     """Registration form with reactive state updates."""
     return Div(
         # Form
