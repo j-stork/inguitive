@@ -137,8 +137,6 @@ class Button(Component):
     - trigger: POST action for partial updates (replaces old on_click)
     - navigate: GET navigation for full page changes
     - redirect: Immediate browser redirect
-
-    Note: Submit buttons with triggers automatically reset their parent form after submission.
     """
 
     def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
@@ -149,11 +147,6 @@ class Button(Component):
             self.children = list(children[0])
         else:
             self.children = list(children)
-
-        # Auto-add hx-reset for submit buttons with HTMX triggers
-        # This clears the form after successful submission
-        if self.attrs.get("type") == "submit" and self.attrs.get("hx-post") and "hx-reset" not in self.attrs:
-            self.attrs["hx-reset"] = "true"
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
@@ -695,6 +688,8 @@ class Form(Component):
             method="POST"
         )
         Form(Button("Save", trigger="save"), ...)  # HTMX form with trigger
+    
+    Note: Forms with triggers automatically reset after successful submission.
     """
 
     def __init__(
@@ -728,6 +723,11 @@ class Form(Component):
             self.children = list(children[0])
         else:
             self.children = list(children)
+        
+        # Auto-add form reset handler for HTMX forms
+        # This clears the form after successful submission
+        if self.attrs.get("hx-post") and "hx-on::after-request" not in self.attrs:
+            self.attrs["hx-on::after-request"] = "if(event.detail.successful) this.reset()"
 
     def render(self) -> str:
         """Render the form with children."""
