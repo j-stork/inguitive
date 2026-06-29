@@ -19,7 +19,7 @@ This proves that State values are fully isolated per user session.
 
 from pathlib import Path
 
-from inguitive import Button, Div, Icon, Label, State, create_app, get_session_id, update_components
+from inguitive import Button, Div, Icon, Label, State, Text, create_app, get_session_id, update_components
 from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
@@ -39,9 +39,9 @@ COLOR_700 = f"{COLOR_BASE}-700"
 COLOR_900 = f"{COLOR_BASE}-900"
 COLOR_BRAND_1 = "blue-700"
 COLOR_BRAND_2 = "fuchsia-600"
-BUTTON_SHAPE = "p-3 rounded-md font-semibold cursor-pointer shadow-lg"
-BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:shadow-{COLOR_BRAND_1}/50"
-BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:shadow-{COLOR_400}/50"
+BUTTON_SHAPE = "p-3 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
+BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100}"
+BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900}"
 
 # --- Trigger Handlers ---
 @app.trigger_handler
@@ -74,14 +74,12 @@ def get_counter_style() -> str:
     base = "text-xl text-center"
     if count > 5:
         return f"{base} text-red-500 font-bold"
-    elif count < 0:
-        return f"{base} text-blue-500"
-    return base
+    return f"{base} text-{COLOR_900}"
 
 
 def get_theme_bg() -> str:
     """Dynamic background based on theme state."""
-    return COLOR_100 if theme_state.get() == "light" else COLOR_900
+    return f"bg-{COLOR_100}" if theme_state.get() == "light" else f"bg-{COLOR_900}"
 
 
 # --- Counter Component ---
@@ -99,15 +97,15 @@ def Counter() -> Div:
                 ),
                 css="w-full flex justify-end",
             ),
-            Label(
+            Text(
                 text=lambda: f"Count: {counter_state.get()}",
                 id="counter-label",
                 css=lambda: get_counter_style(),
                 listen_to="counter_state",
             ),
-            Div(f"Session: {get_session_id()}", css="text-xs text-gray-500 text-center mt-2"),
             Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY} w-full"),
             Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY} w-full"),
+            Text(f"Session: {get_session_id()}", css="text-xs text-gray-500 text-center"),
             id="counter-card",
             css="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
         ),
