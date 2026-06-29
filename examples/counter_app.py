@@ -6,13 +6,13 @@ Run with: uvicorn examples.counter_app:app --reload
 Per-Session Isolation Demonstration
 -----------------------------------
 This example demonstrates INGUITIVE's per-session state isolation.
-Each browser tab maintains its own independent counter and theme state.
+Each browser session maintains its own independent counter and theme state.
 
 To test:
-1. Open this app in two separate browser tabs
-2. Note the unique Session ID displayed below the counter in each tab
-3. Increment the counter in Tab 1 - Tab 2's counter remains unchanged
-4. Toggle theme in Tab 1 - Tab 2's theme remains unchanged
+1. Open this app in one regular browser window and one incognito/private window
+2. Note the unique Session ID displayed below the counter in each window
+3. Increment the counter in Window 1 - Window 2's counter remains unchanged
+4. Toggle theme in Window 1 - Window 2's theme remains unchanged
 
 This proves that State values are fully isolated per user session.
 """
