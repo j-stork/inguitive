@@ -10,7 +10,7 @@ Run with: uvicorn examples.navigation_demo:app --reload
 
 from pathlib import Path
 
-from inguitive import Button, Div, Link, State, Text, create_app, update_components
+from inguitive import Button, Div, Link, State, Text, create_app, redirect, update_components
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent / "templates")
@@ -183,7 +183,7 @@ def Page2():
 @app.page("/")
 def index():
     """Redirect to Page 1."""
-    return Page1()
+    return redirect("/page1")
 
 
 @app.page("/page1")
