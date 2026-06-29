@@ -10,7 +10,7 @@ Run with: uvicorn examples.navigation_demo:app --reload
 
 from pathlib import Path
 
-from inguitive import Button, Div, State, Text, create_app, update_components
+from inguitive import Button, Div, Link, State, Text, create_app, update_components
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent / "templates")
@@ -93,11 +93,11 @@ def Page1():
             css="mb-4 text-gray-700",
         ),
         
-        # Button for traditional navigation (URL changes)
-        Button(
+        # Link for traditional navigation (URL changes)
+        Link(
             "Go to Page 2",
-            navigate="page2",
-            css="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-6",
+            href="/page2",
+            css="block w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-6 text-center no-underline",
         ),
         
         Div(
@@ -142,11 +142,11 @@ def Page2():
             css="mb-4 text-gray-700",
         ),
         
-        # Button for traditional navigation (URL changes)
-        Button(
+        # Link for traditional navigation (URL changes)
+        Link(
             "Go to Page 1",
-            navigate="page1",
-            css="w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-6",
+            href="/page1",
+            css="block w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-6 text-center no-underline",
         ),
         
         Div(
