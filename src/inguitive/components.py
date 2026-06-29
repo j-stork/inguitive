@@ -8,7 +8,6 @@ import uuid
 from typing import Callable
 
 import jinja2
-import markdown
 
 from inguitive.session import get_component_registry
 
@@ -770,57 +769,6 @@ class Form(Component):
                     children_html_parts.append(str(resolved))
         children_html = "".join(children_html_parts)
         return f"<form {attrs}>{children_html}</form>"
-
-
-class Markdown(Component):
-    """A component that renders Markdown content as HTML.
-
-    Uses the Python-Markdown library to convert Markdown to HTML.
-
-    Example:
-        Markdown("# Hello **World**")
-        Markdown(lambda: get_blog_post_content(), css="prose")
-
-    Note: This component renders raw HTML from the Markdown parser.
-    If rendering untrusted user input, you should sanitize the output first.
-    """
-
-    def __init__(
-        self,
-        content: str | Callable[[], str],
-        id: str | None = None,
-        css: str | Callable[[], str] | None = None,
-        **attrs,
-    ):
-        """Initialize a Markdown component.
-
-        Args:
-            content: Markdown text (string or callable returning string)
-            id: Optional HTML id attribute
-            css: Optional Tailwind CSS classes (defaults to "prose" for nice typography)
-            **attrs: Additional HTML attributes
-        """
-        # Default to GitHub Markdown CSS for nice styling
-        if css is None:
-            css = "markdown-body"
-        super().__init__(id=id, css=css, **attrs)
-        self.content = content
-
-    def render(self) -> str:
-        """Render the Markdown content as HTML."""
-        resolved_content = self._resolve(self.content)
-        html_content = markdown.markdown(resolved_content)
-        attrs = self._get_attrs_str()
-        return f"<div {attrs}>{html_content}</div>"
-
-    def update(self) -> str:
-        """Render with hx-swap-oob for HTMX out-of-band updates."""
-        if not self.id:
-            return self.render()
-        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        resolved_content = self._resolve(self.content)
-        html_content = markdown.markdown(resolved_content)
-        return f"<div {attrs}>{html_content}</div>"
 
 
 class TemplateComponent(Component):
