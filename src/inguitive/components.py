@@ -102,7 +102,10 @@ class Div(Component):
                         else:
                             children_html_parts.append(str(item))
                 else:
-                    children_html_parts.append(str(resolved))
+                    if hasattr(resolved, "render") and callable(resolved.render):
+                        children_html_parts.append(resolved.render())
+                    else:
+                        children_html_parts.append(str(resolved))
         children_html = "".join(children_html_parts)
         return f"<div {attrs}>{children_html}</div>"
 
@@ -124,7 +127,10 @@ class Div(Component):
                         else:
                             children_html_parts.append(str(item))
                 else:
-                    children_html_parts.append(str(resolved))
+                    if hasattr(resolved, "render") and callable(resolved.render):
+                        children_html_parts.append(resolved.render())
+                    else:
+                        children_html_parts.append(str(resolved))
         children_html = "".join(children_html_parts)
         return f"<div {attrs}>{children_html}</div>"
 
@@ -162,7 +168,10 @@ class Button(Component):
                         else:
                             children_html_parts.append(str(item))
                 else:
-                    children_html_parts.append(str(resolved))
+                    if hasattr(resolved, "render") and callable(resolved.render):
+                        children_html_parts.append(resolved.render())
+                    else:
+                        children_html_parts.append(str(resolved))
         children_html = "".join(children_html_parts)
         return f"<button {attrs}>{children_html}</button>"
 
@@ -184,7 +193,10 @@ class Button(Component):
                         else:
                             children_html_parts.append(str(item))
                 else:
-                    children_html_parts.append(str(resolved))
+                    if hasattr(resolved, "render") and callable(resolved.render):
+                        children_html_parts.append(resolved.render())
+                    else:
+                        children_html_parts.append(str(resolved))
         children_html = "".join(children_html_parts)
         return f"<button {attrs}>{children_html}</button>"
 
@@ -744,7 +756,10 @@ class Form(Component):
                         else:
                             children_html_parts.append(str(item))
                 else:
-                    children_html_parts.append(str(resolved))
+                    if hasattr(resolved, "render") and callable(resolved.render):
+                        children_html_parts.append(resolved.render())
+                    else:
+                        children_html_parts.append(str(resolved))
         children_html = "".join(children_html_parts)
         return f"<form {attrs}>{children_html}</form>"
 
@@ -766,7 +781,10 @@ class Form(Component):
                         else:
                             children_html_parts.append(str(item))
                 else:
-                    children_html_parts.append(str(resolved))
+                    if hasattr(resolved, "render") and callable(resolved.render):
+                        children_html_parts.append(resolved.render())
+                    else:
+                        children_html_parts.append(str(resolved))
         children_html = "".join(children_html_parts)
         return f"<form {attrs}>{children_html}</form>"
 
