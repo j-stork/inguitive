@@ -110,18 +110,9 @@ def Page2():
             Link(
                 "Go to Page 1",
                 href="/page1",
-                css="block w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-6 text-center no-underline",
+                css="block w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center no-underline",
             ),
-            Div(
-                Text("OR", css="text-center font-semibold text-gray-500 mb-6"),
-            ),
-            # Hint for SPA content switching
-            Text(
-                "Click 'Switch Content' below to change the content on this page. "
-                "Notice how the content changes but the URL stays the same.",
-                css="mb-4 text-gray-700",
-            ),
-            css="max-w-2xl mx-auto p-8 bg-white rounded-xl shadow-md",
+            css="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-md",
         ),
         css="min-h-screen flex justify-center items-center bg-slate-900"
     )
