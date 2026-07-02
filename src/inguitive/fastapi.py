@@ -7,7 +7,7 @@ from __future__ import annotations
 import inspect
 import uuid
 from pathlib import Path
-from typing import Callable, TypeVar, ParamSpec, Protocol, Any, runtime_checkable
+from typing import Callable, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
@@ -34,11 +34,11 @@ PageDecorator = Callable[[str | None], Callable[[Callable[P, T]], Callable[P, T]
 @runtime_checkable
 class InguitiveApp(Protocol[P, T]):
     """Protocol describing an INGUITIVE application with custom decorators.
-    
+
     This Protocol extends the FastAPI instance with INGUITIVE-specific decorators.
     Type checkers will recognize these custom attributes on objects of this type.
     """
-    
+
     # Custom decorators
     trigger_handler: TriggerDecorator[P, T]
     page: PageDecorator[P, T]
@@ -65,6 +65,7 @@ def _register_page_route(app, path: str, handler: Callable[P, T]):
 
         # If result is a Response object (e.g., RedirectResponse), return it directly
         from starlette.responses import Response
+
         if isinstance(result, Response):
             return result
 
@@ -233,8 +234,8 @@ def create_app(
             return decorator
 
     # Attach decorator methods to app
-    app.page = _page_decorator # type: ignore
-    app.trigger_handler = _trigger_decorator # type: ignore
+    app.page = _page_decorator  # type: ignore
+    app.trigger_handler = _trigger_decorator  # type: ignore
 
     # Configure session backend
     if session_backend is not None:
