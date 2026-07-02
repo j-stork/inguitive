@@ -23,7 +23,7 @@ from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id
 from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent / "templates")
+app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
 
 
 # --- State Instances ---
