@@ -253,15 +253,19 @@ class Link(Component):
     Renders a standard <a> tag. Use for traditional links where semantic
     HTML matters (SEO, accessibility, browser behavior).
 
+    Supports children like Div and Button, allowing nested components.
+
     Example:
         Link("Home", href="/")
-        Link("Documentation", href="/docs", css="text-blue-500 hover:underline")
+        Link(Text("Documentation"), href="/docs", css="text-blue-500 hover:underline")
         Link(Icon(HOME_SVG), href="/", css="w-6 h-6")
+        Link(Button("Click"), href="/page1")
+        Link([Text("A"), Text("B")], href="/")
     """
 
     def __init__(
         self,
-        text: str | Callable[[], str],
+        *children,
         href: str,
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
@@ -270,7 +274,7 @@ class Link(Component):
         """Initialize a Link component.
 
         Args:
-            text: Link text content (string or callable returning string)
+            *children: Link content (strings, Components, or callables)
             href: URL to link to
             id: HTML id attribute
             css: Tailwind CSS classes
@@ -279,20 +283,58 @@ class Link(Component):
         super().__init__(id=id, css=css, **attrs)
         if href:
             self.attrs["href"] = href
-        self.text = text
+        # Support both: Link(a, b) and Link([a, b])
+        if len(children) == 1 and isinstance(children[0], list):
+            self.children = list(children[0])
+        else:
+            self.children = list(children)
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
-        resolved_text = self._resolve(self.text)
-        return f"<a {attrs}>{resolved_text}</a>"
+        children_html_parts = []
+        for child in self.children:
+            if hasattr(child, "render"):
+                children_html_parts.append(child.render())
+            else:
+                resolved = self._resolve(child)
+                if isinstance(resolved, list):
+                    for item in resolved:
+                        if hasattr(item, "render"):
+                            children_html_parts.append(item.render())
+                        else:
+                            children_html_parts.append(str(item))
+                else:
+                    if hasattr(resolved, "render") and callable(resolved.render):
+                        children_html_parts.append(resolved.render())
+                    else:
+                        children_html_parts.append(str(resolved))
+        children_html = "".join(children_html_parts)
+        return f"<a {attrs}>{children_html}</a>"
 
     def update(self) -> str:
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
         attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
-        resolved_text = self._resolve(self.text)
-        return f"<a {attrs}>{resolved_text}</a>"
+        children_html_parts = []
+        for child in self.children:
+            if hasattr(child, "render"):
+                children_html_parts.append(child.render())
+            else:
+                resolved = self._resolve(child)
+                if isinstance(resolved, list):
+                    for item in resolved:
+                        if hasattr(item, "render"):
+                            children_html_parts.append(item.render())
+                        else:
+                            children_html_parts.append(str(item))
+                else:
+                    if hasattr(resolved, "render") and callable(resolved.render):
+                        children_html_parts.append(resolved.render())
+                    else:
+                        children_html_parts.append(str(resolved))
+        children_html = "".join(children_html_parts)
+        return f"<a {attrs}>{children_html}</a>"
 
 
 class Text(Component):
