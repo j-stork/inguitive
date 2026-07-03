@@ -22,8 +22,6 @@ class Component:
         listen_to: str | None = None,
         trigger: str | None = None,
         trigger_args: dict[str, str] | None = None,
-        navigate: str | None = None,
-        redirect: str | None = None,
         **attrs,
     ):
         # Generate UUID if no id provided
@@ -32,18 +30,13 @@ class Component:
         self.id = id
         self.css = css
 
-        # Handle action parameters (trigger = POST, navigate = GET, redirect = redirect)
+        # Handle action parameters (trigger = POST)
         if trigger:
             url = f"/_trigger/{trigger.lstrip('/')}"
             if trigger_args:
                 url += "?" + "&".join(f"{k}={v}" for k, v in trigger_args.items())
             attrs.setdefault("hx-post", url)
             attrs.setdefault("hx-target", "#hx-target")
-        if navigate:
-            attrs.setdefault("hx-get", f"/{navigate.lstrip('/')}")
-            attrs.setdefault("hx-target", "body")
-        if redirect:
-            attrs.setdefault("hx-redirect", f"{redirect.lstrip('/')}")
 
         self.attrs = attrs
         get_component_registry()[self.id] = self
