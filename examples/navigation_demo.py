@@ -67,9 +67,12 @@ def Divider(color: str) -> Div:  # noqa: N802
 def SwitchPageButton(href: str, label: str):  # noqa: N802
     """Return a button that navigates to a different page."""
     return Link(
-        label,
+        Button(
+            label,
+            css=f"{BUTTON_PRIMARY} w-full",
+        ),
         href=href,
-        css=f"block {BUTTON_PRIMARY} text-center",
+        css="block w-full",
     )
 
 
