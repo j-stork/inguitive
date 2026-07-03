@@ -31,71 +31,101 @@ def switch_content():
     return update_components(*content_state.listeners)
 
 
-# --- Helper Function for Content Variants ---
-def get_content():
-    """Return the content area based on current state."""
-    variant = content_state.get()
-    css_text = "text-lg font-medium text-center"
-    css_div = "w-full p-6 rounded-lg border-2"
-    if variant == "a":
-        return Div(
-            Text("This is Content Variant A", css=f"{css_text} text-blue-800"),
-            css=f"{css_div} bg-blue-100 border-blue-300",
-        )
-    else:
-        return Div(
-            Text("This is Content Variant B", css=f"{css_text} text-green-800"),
-            css=f"{css_div} bg-green-100 border-green-300",
-        )
+# --- Component Functions ---
+def PageHeader(title: str, color: str = "black") -> Text:  # noqa: N802
+    """Return a page header with the given title."""
+    return Text(title, css=f"text-3xl font-bold mb-6 text-center text-{color}")
 
 
-# --- Page Component Functions ---
-def Page1():
-    """Page 1 demonstrating traditional navigation and SPA content switching."""
+def Divider(color: str) -> Div:  # noqa: N802
+    """Return a horizontal divider."""
     return Div(
-        Div(
-            Text("Page 1", css="text-3xl font-bold mb-6 text-center"),
-            # Hint for traditional navigation
-            Text(
-                "Click 'Go to Page 2' below to navigate to Page 2. "
-                "Watch how the URL in your browser's address bar changes.",
-                css="mb-4 text-gray-700",
-            ),
-            # Link for traditional navigation (URL changes)
-            Link(
-                "Go to Page 2",
-                href="/page2",
-                css="block w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mb-6 text-center no-underline",
-            ),
-            Div(
-                Text("OR", css="text-center font-semibold text-gray-500 mb-6"),
-            ),
-            # Hint for SPA content switching
-            Text(
-                "Click 'Switch Content' below to change the content on this page. "
-                "Notice how the content changes but the URL stays the same.",
-                css="mb-4 text-gray-700",
-            ),
-            # Content area that will change
-            Div(
-                lambda: get_content(),
-                id="content_state",
-                listen_to="content_state",
-                css="mb-6",
-            ),
-            # Button for SPA content switching (URL stays)
-            Button(
-                "Switch Content",
-                trigger="switch_content",
-                css="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors",
-            ),
-            css="max-w-2xl mx-auto p-8 bg-white rounded-xl shadow-md",
-        ),
-        css="min-h-screen flex justify-center items-center bg-slate-900"
+        Div("", css=f"border-t border-{color}/20 flex-1"),
+        Text("OR", css=f"text-center font-semibold text-{color}"),
+        Div("", css=f"border-t border-{color}/20 flex-1"),
+        css="w-full flex flex-row items-center gap-3",
     )
 
 
-def Page2():
+def SwitchPageButton(href: str, label: str):  # noqa: N802
+    """Return a button that navigates to a different page."""
+    return Link(
+        label,
+        href=href,
+        css="block w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center no-underline",
+    )
+
+
+def SwitchContentButton():  # noqa: N802
+    """Return a button that switches content on the same page."""
+    return Button(
+        "Switch Content",
+        trigger="switch_content",
+        css="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer",
+    )
+
+
+def ContentA():  # noqa: N802
+    """Return content variant A."""
+    return Div(
+        PageHeader("Page 1 - Content A"),
+        # Hint for traditional navigation
+        Text(
+            "Click 'Go to Page 2' below to navigate to Page 2. "
+            "Watch how the URL in your browser's address bar changes.",
+            css="",
+        ),
+        # Link for traditional navigation (URL changes)
+        SwitchPageButton(href="/page2", label="Go to Page 2"),
+        Divider(color="black"),
+        # Hint for SPA content switching
+        Text(
+            "Click 'Switch Content' below to change the content on this page. "
+            "Notice how the content changes but the URL stays the same.",
+            css="",
+        ),
+        # Button for SPA content switching (URL stays)
+        SwitchContentButton(),
+        css="max-w-2xl mx-auto p-6 space-y-6 bg-white rounded-xl shadow-md",
+    )
+
+
+def ContentB():  # noqa: N802
+    """Return content variant B."""
+    return Div(
+        PageHeader("Page 1 - Content B", color="white"),
+        Div(SwitchPageButton(href="/page2", label="Go to Page 2"), SwitchContentButton(), css="grid grid-cols-2 gap-6"),
+        Div(
+            Text(
+                "Click 'Go to Page 2' to navigate to Page 2. Watch how the URL in your browser's address bar changes.",
+                css="text-center",
+            ),
+            css="w-full flex flex-grow p-6 rounded-lg bg-white justify-center items-center",
+        ),
+        Divider(color="white"),
+        Div(
+            Text(
+                "Click 'Switch Content' to change the content on this page. "
+                "Notice how the content changes but the URL stays the same.",
+                css="text-center",
+            ),
+            css="w-full flex flex-grow p-6 rounded-lg bg-white justify-center items-center",
+        ),
+        css="max-w-6xl min-h-screen mx-auto p-6 space-y-6 flex flex-col",
+    )
+
+
+# --- Page Component Functions ---
+def Page1():  # noqa: N802
+    """Page 1 demonstrating traditional navigation and SPA content switching."""
+    return Div(
+        lambda: ContentA() if content_state.get() == "a" else ContentB(),
+        css="min-h-screen bg-slate-900 flex justify-center items-center",
+        listen_to="content_state",
+    )
+
+
+def Page2():  # noqa: N802
     """Page 2 demonstrating traditional navigation and SPA content switching."""
     return Div(
         Div(
@@ -114,7 +144,7 @@ def Page2():
             ),
             css="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-md",
         ),
-        css="min-h-screen flex justify-center items-center bg-slate-900"
+        css="min-h-screen flex justify-center items-center bg-slate-900",
     )
 
 
