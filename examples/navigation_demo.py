@@ -22,7 +22,6 @@ COLOR_100 = f"{COLOR_BASE}-100"
 COLOR_200 = f"{COLOR_BASE}-200"
 COLOR_300 = f"{COLOR_BASE}-300"
 COLOR_400 = f"{COLOR_BASE}-400"
-# COLOR_600 = f"{COLOR_BASE}-600"
 COLOR_900 = f"{COLOR_BASE}-900"
 COLOR_BRAND_1 = "blue-700"
 COLOR_BRAND_2 = "fuchsia-600"
@@ -74,7 +73,7 @@ def SwitchPageButton(href: str, label: str):  # noqa: N802
             css=f"{BUTTON_PRIMARY} w-full",
         ),
         href=href,
-        css="block w-full",
+        css="block",
     )
 
 
