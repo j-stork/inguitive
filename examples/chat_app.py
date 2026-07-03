@@ -1,9 +1,23 @@
-# TODO: Add a docstring to explain the purpose of this file and how to run it.
+"""
+Chat App example using INGUITIVE framework.
+
+Demonstrates:
+- Real-time chat interface with bot responses
+- State management for chat history
+- Form handling with trigger handlers
+
+Features:
+- User can type questions
+- Bot responds with funny answers
+- Chat history persists during the session
+
+Run with: uvicorn examples.chat_app:app --reload
+"""
 
 from pathlib import Path
 import random
 
-from inguitive import Button, Div, Link, State, Text, Form, Input, Icon, create_app, redirect, update_components
+from inguitive import Button, Div, State, Text, Form, Input, Icon, create_app, update_components
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
@@ -60,12 +74,24 @@ answers = [
     "I don't think there's anyone out there who can answer that."
 ]
 
+# State to store chat history as list of [speaker, message] pairs
 chat_history_state = State([["bot", "Ask me anything!"]], "chat_history_state")
 
 
 @app.trigger_handler
-def generate_bot_response(user_message: str):
-    """Generate a bot response based on the user's message."""
+def generate_bot_response(form_data: dict):
+    """Generate a bot response based on the user's message.
+    
+    Args:
+        form_data: Dictionary containing form submission data with 'message' key
+    
+    Returns:
+        str: HTMX update response for component listeners
+    """
+    user_message = form_data.get("message", "").strip()
+    if not user_message:
+        return ""
+    
     chat_history = chat_history_state.get()
     chat_history.append(["user", user_message])
     if "?" in user_message:
@@ -78,7 +104,15 @@ def generate_bot_response(user_message: str):
 
 
 def ChatBubble(speaker: str, message: str) -> Div:
-    """Create a chat bubble for the given speaker and message."""
+    """Create a chat bubble for the given speaker and message.
+    
+    Args:
+        speaker: Either 'user' or 'bot' to determine bubble styling
+        message: The text content of the chat message
+        
+    Returns:
+        Div: A styled chat bubble component with icon and message text
+    """
     if speaker == "user":
         return Div(
             Div(
@@ -100,6 +134,14 @@ def ChatBubble(speaker: str, message: str) -> Div:
 
 
 def ChatHistory() -> Div:
+    """Create the chat history display component.
+    
+    Renders all chat bubbles from the chat history state and updates
+    when new messages are added.
+    
+    Returns:
+        Div: A container with all chat bubble components
+    """
     chat_history = chat_history_state.get()
     children = [ChatBubble(speaker, message) for speaker, message in chat_history]
     return Div(
@@ -109,8 +151,14 @@ def ChatHistory() -> Div:
     )
 
 def MessageInput() -> Form:
+    """Create the chat message input form.
+    
+    Returns:
+        Form: A form component with input field and submit button
+    """
     return Form(
         Input(
+            name="message",
             placeholder="Type your question here...",
             css="flex-grow p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500",
         ),
@@ -124,8 +172,18 @@ def MessageInput() -> Form:
 
 @app.page("/")
 def index():
+    """Render the main chat application page.
+    
+    Returns:
+        Div: The complete chat interface with history and input
+    """
     return Div(
         ChatHistory(),
         MessageInput(),
         css=PAGE,
     )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("examples.chat_app:app", host="0.0.0.0", port=8000, reload=True)
