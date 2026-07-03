@@ -16,6 +16,23 @@ from inguitive import Button, Div, Link, State, Text, create_app, redirect, upda
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
 
 
+# --- CSS ---
+COLOR_BASE = "slate"
+COLOR_100 = f"{COLOR_BASE}-100"
+COLOR_300 = f"{COLOR_BASE}-300"
+COLOR_400 = f"{COLOR_BASE}-400"
+COLOR_600 = f"{COLOR_BASE}-600"
+COLOR_900 = f"{COLOR_BASE}-900"
+COLOR_BRAND_1 = "blue-700"
+COLOR_BRAND_2 = "fuchsia-600"
+BUTTON_SHAPE = "p-3 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
+BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100}"
+BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900}"
+PAGE = f"min-h-screen bg-{COLOR_900} flex justify-center items-center"
+CARD = "max-w-2xl mx-auto p-6 space-y-6 bg-white rounded-xl shadow-md"
+TEXT_CONTAINER = "w-full flex flex-grow p-6 rounded-lg bg-white justify-center items-center"
+
+
 # --- State Instances ---
 # State to track which content variant is shown on page 1
 content_state = State("a", "content_state")
@@ -52,7 +69,7 @@ def SwitchPageButton(href: str, label: str):  # noqa: N802
     return Link(
         label,
         href=href,
-        css="block w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center no-underline",
+        css=f"block {BUTTON_PRIMARY} text-center",
     )
 
 
@@ -61,7 +78,7 @@ def SwitchContentButton():  # noqa: N802
     return Button(
         "Switch Content",
         trigger="switch_content",
-        css="w-full p-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors cursor-pointer",
+        css=f"{BUTTON_SECONDARY} w-full",
     )
 
 
@@ -72,8 +89,7 @@ def ContentA():  # noqa: N802
         # Hint for traditional navigation
         Text(
             "Click 'Go to Page 2' below to navigate to Page 2. "
-            "Watch how the URL in your browser's address bar changes.",
-            css="",
+            "Watch how the URL in your browser's address bar changes."
         ),
         # Link for traditional navigation (URL changes)
         SwitchPageButton(href="/page2", label="Go to Page 2"),
@@ -81,12 +97,11 @@ def ContentA():  # noqa: N802
         # Hint for SPA content switching
         Text(
             "Click 'Switch Content' below to change the content on this page. "
-            "Notice how the content changes but the URL stays the same.",
-            css="",
+            "Notice how the content changes but the URL stays the same."
         ),
         # Button for SPA content switching (URL stays)
         SwitchContentButton(),
-        css="max-w-2xl mx-auto p-6 space-y-6 bg-white rounded-xl shadow-md",
+        css=CARD,
     )
 
 
@@ -100,7 +115,7 @@ def ContentB():  # noqa: N802
                 "Click 'Go to Page 2' to navigate to Page 2. Watch how the URL in your browser's address bar changes.",
                 css="text-center",
             ),
-            css="w-full flex flex-grow p-6 rounded-lg bg-white justify-center items-center",
+            css=TEXT_CONTAINER,
         ),
         Divider(color="white"),
         Div(
@@ -109,7 +124,7 @@ def ContentB():  # noqa: N802
                 "Notice how the content changes but the URL stays the same.",
                 css="text-center",
             ),
-            css="w-full flex flex-grow p-6 rounded-lg bg-white justify-center items-center",
+            css=TEXT_CONTAINER,
         ),
         css="max-w-6xl min-h-screen mx-auto p-6 space-y-6 flex flex-col",
     )
@@ -120,7 +135,7 @@ def Page1():  # noqa: N802
     """Page 1 demonstrating traditional navigation and SPA content switching."""
     return Div(
         lambda: ContentA() if content_state.get() == "a" else ContentB(),
-        css="min-h-screen bg-slate-900 flex justify-center items-center",
+        css=PAGE,
         listen_to="content_state",
     )
 
@@ -129,22 +144,17 @@ def Page2():  # noqa: N802
     """Page 2 demonstrating traditional navigation and SPA content switching."""
     return Div(
         Div(
-            Text("Page 2", css="text-3xl font-bold mb-6 text-center"),
+            PageHeader("Page 2"),
             # Hint for traditional navigation
             Text(
                 "Click 'Go to Page 1' below to navigate to Page 1. "
-                "Watch how the URL in your browser's address bar changes.",
-                css="mb-4 text-gray-700",
+                "Watch how the URL in your browser's address bar changes."
             ),
             # Link for traditional navigation (URL changes)
-            Link(
-                "Go to Page 1",
-                href="/page1",
-                css="block w-full p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-center no-underline",
-            ),
-            css="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-md",
+            SwitchPageButton(href="/page1", label="Go to Page 1"),
+            css=CARD,
         ),
-        css="min-h-screen flex justify-center items-center bg-slate-900",
+        css=PAGE,
     )
 
 
