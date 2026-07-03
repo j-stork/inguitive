@@ -51,9 +51,7 @@ def increment():
 
 | Component/Parameter | Renders | Use When | URL Changes | Native Link Behavior |
 |---------------------|---------|----------|-------------|---------------------|
-| **`A(href="...")`** | `<a href="...">` | Traditional links, SEO, accessibility | ✅ Yes | ✅ Full support |
-| **`navigate="/..."`** | `hx-get`, `hx-target="body"` | SPA-style navigation between related components | ❌ No (add `hx-push-url="true"` to enable) | ❌ No |
-| **`redirect="/..."`** | `hx-redirect` | Immediate full-page redirect | ✅ Yes | ❌ No |
+| **`Link(href="...")`** | `<a href="...">` | Traditional links, SEO, accessibility | ✅ Yes | ✅ Full support |
 | **`trigger="..."`** | `hx-post`, `hx-target="#hx-target"` | Form submissions, partial updates | ❌ No | ❌ No |
 
 ### Decision Tree
@@ -61,20 +59,11 @@ def increment():
 ```
 Is this a traditional link that users might:
    │
-   ├── want to open in a new tab? ──YES──► Use A(href="...")
+   ├── want to open in a new tab? ──YES──► Use Link(href="...")
    │
-   ├── want to bookmark/share? ───────YES──► Use A(href="...")
+   ├── want to bookmark/share? ───────YES──► Use Link(href="...")
    │
-   └── want SEO to find? ──────────────YES──► Use A(href="...")
-           │
-           NO
-           │
-    Is this navigation between related components
-    (tabs, modals, SPA views)? ──YES──► Use navigate="/..."
-           │
-           NO
-           │
-    Does this need an immediate full redirect? ──YES──► Use redirect="/..."
+   └── want SEO to find? ──────────────YES──► Use Link(href="...")
            │
            NO
            │
@@ -84,22 +73,11 @@ Is this a traditional link that users might:
 ### Common Patterns
 
 ```python
-from inguitive import A, Button, Text, Div
+from inguitive import Link, Button, Text, Div
 
 # Traditional navigation (SEO, accessibility, bookmarking)
-A("Home", href="/")
-A("Documentation", href="/docs", css="text-blue-500")
-
-# SPA-style view switching (tabs, modals, stacked components)
-# Example: Toggle between Login, Register, Logout forms
-Div(
-    Text("Login", navigate="/auth?mode=login", css="cursor-pointer"),
-    Text(" | "),
-    Text("Register", navigate="/auth?mode=register", css="cursor-pointer"),
-)
-
-# Immediate redirect (logout, etc.)
-Button("Logout", redirect="/logout")
+Link("Home", href="/")
+Link("Documentation", href="/docs", css="text-blue-500")
 
 # Partial updates (forms, actions that update specific elements)
 Button("Save", trigger="save_form")
