@@ -44,19 +44,19 @@ TEXT_CONTAINER = "w-full flex flex-grow p-6 rounded-lg bg-white justify-center i
 
 # --- Icons ---
 ARROW_UP_ICON = f"""
-<svg class="w-5 h-5 text-{COLOR_100}" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+<svg class="w-6 h-6 text-{COLOR_100}" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
   <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v13m0-13 4 4m-4-4-4 4"/>
 </svg>
 """
 
 USER_ICON = f"""
-<svg class="w-5 h-5 text-{COLOR_100}" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+<svg class="w-6 h-6 text-{COLOR_100}" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
   <path stroke="currentColor" stroke-width="2" d="M7 17v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3Zm8-9a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
 </svg>
 """
 
 LIGHTBULB_ICON = f"""
-<svg class="w-5 h-5 text-{COLOR_100}" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+<svg class="w-6 h-6 text-{COLOR_100}" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
   <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9a3 3 0 0 1 3-3m-2 15h4m0-3c0-4.1 4-4.9 4-9A6 6 0 1 0 6 9c0 4 4 5 4 9h4Z"/>
 </svg>
 """
@@ -66,7 +66,7 @@ answers = [
     "I have no idea.",
     "Sorry, I don't know.",
     "Who knows, who knows...",
-    "Great question! Can we talk about something else?",
+    "Great question! But can we talk about something else?",
     "I'm not sure. Maybe you should ask your neighbor.",
     "How am I supposed to know that?",
     "I always say, 'There are no stupid questions, only stupid answers.' But right now, I'm not so sure about that anymore...",
@@ -114,21 +114,34 @@ def ChatBubble(speaker: str, message: str) -> Div:  # noqa: N802
     Returns:
         Div: A styled chat bubble component with icon and message text
     """
+    text_css = f"bg-{COLOR_100} rounded-lg p-3"
     if speaker == "user":
         return Div(
             Div(
-                Icon(USER_ICON, css="w-5 h-5 mr-2"),
-                Text(message, css="text-white"),
-                css="flex justify-end",
+                Div(
+                    Icon(USER_ICON),
+                    css=f"rounded-full bg-{COLOR_BRAND_2} p-3"
+                ),
+                Text(
+                    message, 
+                    css=text_css
+                ),
+                css="flex justify-end items-start gap-3",
             ),
             css="w-full",
         )
     else:
         return Div(
             Div(
-                Icon(LIGHTBULB_ICON, css="w-5 h-5 mr-2"),
-                Text(message, css="text-white"),
-                css="flex justify-start",
+                Div(
+                    Icon(LIGHTBULB_ICON),
+                    css=f"rounded-full bg-{COLOR_BRAND_1} p-3"
+                ),
+                Text(
+                    message, 
+                    css=text_css
+                ),
+                css="flex justify-start items-start gap-3",
             ),
             css="w-full",
         )
@@ -143,28 +156,38 @@ def ChatHistory() -> Div:  # noqa: N802
     Returns:
         Div: A container with all chat bubble components
     """
+    def chat_bubbles():
+        return [ChatBubble(speaker, message) for speaker, message in chat_history_state.get()]
+    
     return Div(
-        dynamic([ChatBubble(speaker, message) for speaker, message in chat_history_state.get()]),
-        css="flex flex-col gap-3 overflow-y-auto",
+        chat_bubbles,
+        css="w-full max-w-4xl mx-auto overflow-y-auto space-y-6 mb-19",
         listen_to="chat_history_state",
     )
 
 
-def MessageForm() -> Form:  # noqa: N802
+def MessageForm() -> Div:  # noqa: N802
     """Create the chat message input form.
 
     Returns:
         Form: A form component with input field and submit button
     """
-    return Form(
-        Input(
-            name="message",
-            placeholder="Type your question here...",
-            css="flex-grow p-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500",
+    return Div(
+        Form(
+            Input(
+                name="message",
+                placeholder="Type your question here...",
+                css="flex-grow p-3 bg-white rounded-md border",
+            ),
+            Button(
+                Icon(ARROW_UP_ICON), 
+                type="submit",
+                css=BUTTON_PRIMARY
+            ),
+            trigger="generate_bot_response",
+            css="w-full max-w-4xl mx-auto flex flex-row gap-3",
         ),
-        Button(Icon(ARROW_UP_ICON, css="w-5 h-5"), type="submit"),
-        trigger="generate_bot_response",
-        css="w-full flex flex-row gap-3",
+        css="fixed bottom-0 left-0 right-0 p-6"
     )
 
 
@@ -178,7 +201,7 @@ def index():
     return Div(
         ChatHistory(),
         MessageForm(),
-        css="w-full min-h-screen p-6 space-y-12 bg-slate-900",
+        css="w-full min-h-screen p-6 bg-slate-900 flex items-end",
     )
 
 
