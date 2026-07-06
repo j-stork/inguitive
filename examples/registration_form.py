@@ -22,6 +22,7 @@ from inguitive import (
     Textarea,
     create_app,
     update_components,
+    dynamic,
 )
 
 # --- App Setup ---
@@ -108,36 +109,28 @@ def RegistrationForm() -> Div:  # noqa: N802
         # Confirmation display
         Div(
             Text(
-                lambda: f"Name: {form_state.get().get('name', '')}" if form_state.get().get("name") else "Name:",
+                dynamic(f"Name: {form_state.get().get('name', '')}" if form_state.get().get("name") else "Name:"),
                 css="text-center",
             ),
             Text(
-                lambda: f"Email: {form_state.get().get('email', '')}" if form_state.get().get("email") else "Email:",
+                dynamic(f"Email: {form_state.get().get('email', '')}" if form_state.get().get("email") else "Email:"),
                 css="text-center",
             ),
             Text(
-                lambda: (
-                    f"Password: {'*' * len(form_state.get().get('password', ''))}"
-                    if form_state.get().get("password")
-                    else "Password:"
-                ),
+                dynamic(f"Password: {'*' * len(form_state.get().get('password', ''))}" if form_state.get().get("password") else "Password:"),
                 css="text-center",
             ),
             Text(
-                lambda: f"Bio: {form_state.get().get('bio', '')}" if form_state.get().get("bio") else "Bio:",
+                dynamic(f"Bio: {form_state.get().get('bio', '')}" if form_state.get().get("bio") else "Bio:"),
                 css="text-center",
             ),
             Text(
-                lambda: (
-                    f"Country: {form_state.get().get('country', '')}" if form_state.get().get("country") else "Country:"
-                ),
+                dynamic(f"Country: {form_state.get().get('country', '')}" if form_state.get().get("country") else "Country:"),
                 css="text-center",
             ),
-            Text(lambda: f"Terms accepted: {'Yes' if form_state.get().get('terms') else 'No'}", css="text-center"),
+            Text(dynamic(f"Terms accepted: {'Yes' if form_state.get().get('terms') else 'No'}"), css="text-center"),
             Text(
-                lambda: (
-                    f"Gender: {form_state.get().get('gender', '')}" if form_state.get().get("gender") else "Gender:"
-                ),
+                dynamic(f"Gender: {form_state.get().get('gender', '')}" if form_state.get().get("gender") else "Gender:"),
                 css="text-center",
             ),
             id="form_display",
