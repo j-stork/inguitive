@@ -17,7 +17,7 @@ Run with: uvicorn examples.chat_app:app --reload
 import random
 from pathlib import Path
 
-from inguitive import Button, Div, Form, Icon, Input, State, Text, create_app, update_components
+from inguitive import Button, Div, Form, Icon, Input, State, Text, create_app, update_components, dynamic
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
@@ -38,7 +38,6 @@ BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR
 BUTTON_SECONDARY = (
     f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200}"
 )
-PAGE = f"min-h-screen bg-{COLOR_900} flex justify-center items-end"
 CARD = "max-w-2xl mx-auto p-6 space-y-6 bg-white rounded-xl shadow-md"
 TEXT_CONTAINER = "w-full flex flex-grow p-6 rounded-lg bg-white justify-center items-center"
 
@@ -120,18 +119,18 @@ def ChatBubble(speaker: str, message: str) -> Div:  # noqa: N802
             Div(
                 Icon(USER_ICON, css="w-5 h-5 mr-2"),
                 Text(message, css="text-white"),
-                css="flex items-center justify-end gap-2",
+                css="flex justify-end",
             ),
-            css="bg-blue-500 p-3 rounded-lg max-w-xs self-end",
+            css="w-full",
         )
     else:
         return Div(
             Div(
                 Icon(LIGHTBULB_ICON, css="w-5 h-5 mr-2"),
                 Text(message, css="text-white"),
-                css="flex items-center justify-start gap-2",
+                css="flex justify-start",
             ),
-            css="bg-gray-500 p-3 rounded-lg max-w-xs self-start",
+            css="w-full",
         )
 
 
@@ -144,10 +143,8 @@ def ChatHistory() -> Div:  # noqa: N802
     Returns:
         Div: A container with all chat bubble components
     """
-    chat_history = chat_history_state.get()
-    children = [ChatBubble(speaker, message) for speaker, message in chat_history]
     return Div(
-        children,
+        dynamic([ChatBubble(speaker, message) for speaker, message in chat_history_state.get()]),
         css="flex flex-col gap-3 overflow-y-auto",
         listen_to="chat_history_state",
     )
@@ -163,7 +160,7 @@ def MessageForm() -> Form:  # noqa: N802
         Input(
             name="message",
             placeholder="Type your question here...",
-            css="flex-grow p-3 rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500",
+            css="flex-grow p-3 bg-white rounded-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500",
         ),
         Button(Icon(ARROW_UP_ICON, css="w-5 h-5"), type="submit"),
         trigger="generate_bot_response",
@@ -181,7 +178,7 @@ def index():
     return Div(
         ChatHistory(),
         MessageForm(),
-        css=PAGE,
+        css="w-full min-h-screen p-6 space-y-12 bg-slate-900",
     )
 
 

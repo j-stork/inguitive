@@ -28,6 +28,7 @@ from inguitive import (
     Text,
     create_app,
     update_components,
+    dynamic,
 )
 
 # --- App Setup ---
@@ -127,15 +128,15 @@ def TodoItem(todo: dict) -> Div:  # noqa: N802
     return Div(
         Checkbox(
             id=f"todo-{todo['id']}",
-            checked=lambda: todo["completed"],
+            checked=dynamic(todo["completed"]),
             trigger="toggle_todo",
             trigger_args={"id": todo["id"]},
             name="completed",
             css="h-5 w-5 cursor-pointer",
         ),
         Text(
-            lambda: todo["title"],
-            css=lambda: "flex-1" + (" line-through" if todo["completed"] else ""),
+            dynamic(todo["title"]),
+            css=dynamic("flex-1" + (" line-through" if todo["completed"] else "")),
         ),
         Button(
             "Delete",
@@ -143,7 +144,7 @@ def TodoItem(todo: dict) -> Div:  # noqa: N802
             trigger_args={"id": todo["id"]},
             css="underline cursor-pointer",
         ),
-        css=lambda: dynamic_div_css(),
+        css=dynamic(dynamic_div_css()),
     )
 
 
@@ -188,7 +189,7 @@ def TodoList() -> Div:  # noqa: N802
         return [TodoItem(todo) for todo in filtered_todos]
 
     return Div(
-        lambda: dynamic_content(),
+        dynamic(dynamic_content()),
         id="todo_list",
         listen_to="todo_state",
         css=f"border border-{COLOR_SECONDARY} rounded-md overflow-hidden",
@@ -210,7 +211,7 @@ def TodoFilters() -> Div:  # noqa: N802
             "All",
             trigger="set_filter",
             trigger_args={"filter": "all"},
-            css=lambda: dynamic_css("all"),
+            css=dynamic(dynamic_css("all")),
             listen_to="todo_state",
         ),
         Button(
@@ -218,14 +219,14 @@ def TodoFilters() -> Div:  # noqa: N802
             id="active_filter_button",
             trigger="set_filter",
             trigger_args={"filter": "active"},
-            css=lambda: dynamic_css("active"),
+            css=dynamic(dynamic_css("active")),
             listen_to="todo_state",
         ),
         Button(
             "Completed",
             trigger="set_filter",
             trigger_args={"filter": "completed"},
-            css=lambda: dynamic_css("completed"),
+            css=dynamic(dynamic_css("completed")),
             listen_to="todo_state",
         ),
         css="grid grid-cols-3 gap-x-3",
@@ -243,7 +244,7 @@ def TodoCount() -> Text:  # noqa: N802
         return f"{active_count} {item_word} left"
 
     return Text(
-        lambda: dynamic_text(),
+        dynamic(dynamic_text()),
         id="todo_count",
         listen_to="todo_state",
     )
