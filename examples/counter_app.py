@@ -19,7 +19,7 @@ This proves that State values are fully isolated per user session.
 
 from pathlib import Path
 
-from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
+from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components, dynamic
 from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
@@ -92,7 +92,7 @@ def Counter() -> Div:  # noqa: N802
         Div(
             Div(
                 Button(
-                    Icon(lambda: MOON if theme_state.get() == "light" else SUN, css="w-6 h-6"),
+                    Icon(dynamic(MOON if theme_state.get() == "light" else SUN), css="w-6 h-6"),
                     trigger="toggle_theme",
                     id="theme-toggle",
                     css=BUTTON_PRIMARY,
@@ -100,9 +100,9 @@ def Counter() -> Div:  # noqa: N802
                 css="w-full flex justify-end",
             ),
             Text(
-                text=lambda: f"Count: {counter_state.get()}",
+                text=dynamic(f"Count: {counter_state.get()}"),
                 id="counter-label",
-                css=lambda: get_counter_style(),
+                css=dynamic(get_counter_style()),
                 listen_to="counter_state",
             ),
             Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY} w-full"),
@@ -112,7 +112,7 @@ def Counter() -> Div:  # noqa: N802
             css="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
         ),
         id="theme-container",
-        css=lambda: f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center",
+        css=dynamic(f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center"),
         listen_to="theme_state",
     )
 
