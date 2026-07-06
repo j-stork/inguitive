@@ -128,7 +128,7 @@ def ChatBubble(speaker: str, message: str) -> Div:  # noqa: N802
                 ),
                 css="flex justify-end items-start gap-3",
             ),
-            css="w-full",
+            css="w-full pl-30",
         )
     else:
         return Div(
@@ -143,7 +143,7 @@ def ChatBubble(speaker: str, message: str) -> Div:  # noqa: N802
                 ),
                 css="flex justify-start items-start gap-3",
             ),
-            css="w-full",
+            css="w-full pr-30",
         )
 
 
@@ -161,35 +161,32 @@ def ChatHistory() -> Div:  # noqa: N802
     
     return Div(
         chat_bubbles,
-        css="w-full max-w-4xl mx-auto overflow-y-auto space-y-6 mb-19",
         listen_to="chat_history_state",
+        css="w-full flex flex-col grow justify-end gap-6 overflow-y-auto",
     )
 
 
-def MessageForm() -> Div:  # noqa: N802
+def MessageForm() -> Form:  # noqa: N802
     """Create the chat message input form.
 
     Returns:
         Form: A form component with input field and submit button
     """
-    return Div(
-        Form(
-            Input(
-                name="message",
-                placeholder="Type your question here...",
-                css="flex-grow p-3 bg-white rounded-md border",
-            ),
-            Button(
-                Icon(ARROW_UP_ICON), 
-                type="submit",
-                css=BUTTON_PRIMARY
-            ),
-            trigger="generate_bot_response",
-            css="w-full max-w-4xl mx-auto flex flex-row gap-3",
+    return Form(
+        Input(
+            name="message",
+            placeholder="Type your question here...",
+            css="flex-grow p-3 bg-white rounded-md border",
         ),
-        css="fixed bottom-0 left-0 right-0 p-6"
+        Button(
+            Icon(ARROW_UP_ICON), 
+            type="submit",
+            css=BUTTON_PRIMARY
+        ),
+        trigger="generate_bot_response",
+        css="w-full flex flex-row gap-3"
     )
-
+   
 
 @app.page("/")
 def index():
@@ -199,9 +196,16 @@ def index():
         Div: The complete chat interface with history and input
     """
     return Div(
-        ChatHistory(),
-        MessageForm(),
-        css="w-full min-h-screen p-6 bg-slate-900 flex items-end",
+        Div(
+            Text(
+                "Welcome to the Chat App!", 
+                css="text-2xl font-bold text-white"
+            ),
+            ChatHistory(),
+            MessageForm(),
+            css="w-full max-w-4xl h-screen mx-auto p-6 flex flex-col gap-6"
+        ),
+        css=f"w-full bg-{COLOR_900}",
     )
 
 
