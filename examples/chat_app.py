@@ -89,12 +89,12 @@ def generate_bot_response(form_data: dict):
         return ""
 
     chat_history = chat_history_state.get()
-    chat_history.insert(0, ["user", user_message])  # The latest message is the first of the list for reverse display
+    chat_history.append(["user", user_message])
     if "?" in user_message:
         answer = random.choice(answers)
     else:
         answer = "I don't think that's a question... Could you ask me a question?"
-    chat_history.insert(0, ["bot", answer])  # See above comment about reverse display
+    chat_history.append(["bot", answer])
     chat_history_state.set(chat_history)
     return update_components(*chat_history_state.listeners)
 
@@ -154,7 +154,17 @@ def ChatHistory() -> Div:  # noqa: N802
     """
 
     def chat_bubbles():
-        return [ChatBubble(speaker, message) for speaker, message in chat_history_state.get()]
+        """Render chat bubbles from history state.
+
+        We use reversed() to iterate the list in reverse order. Combined with the
+        flex-col-reverse CSS on the parent ChatHistory Div, this ensures the latest
+        messages appear at the bottom of the chat while maintaining efficient append
+        operations when adding new messages.
+
+        Returns:
+            list: List of ChatBubble components in display order
+        """
+        return [ChatBubble(speaker, message) for speaker, message in reversed(chat_history_state.get())]
 
     return Div(
         chat_bubbles,
