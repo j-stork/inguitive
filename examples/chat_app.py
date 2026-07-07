@@ -17,7 +17,7 @@ Run with: uvicorn examples.chat_app:app --reload
 import random
 from pathlib import Path
 
-from inguitive import Button, Div, Form, Icon, Input, State, Text, create_app, update_components, dynamic
+from inguitive import Button, Div, Form, Icon, Input, State, Text, create_app, update_components
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
@@ -26,20 +26,12 @@ app, templates = create_app(template_dir=Path(__file__).parent.parent / "templat
 # --- CSS ---
 COLOR_BASE = "slate"
 COLOR_100 = f"{COLOR_BASE}-100"
-COLOR_200 = f"{COLOR_BASE}-200"
-COLOR_300 = f"{COLOR_BASE}-300"
-COLOR_400 = f"{COLOR_BASE}-400"
 COLOR_900 = f"{COLOR_BASE}-900"
 COLOR_BRAND_1 = "blue-700"
 COLOR_BRAND_2 = "fuchsia-600"
 COLOR_BRAND_2_LIGHT = "fuchsia-500"
 BUTTON_SHAPE = "p-3 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
 BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT}"
-BUTTON_SECONDARY = (
-    f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200}"
-)
-CARD = "max-w-2xl mx-auto p-6 space-y-6 bg-white rounded-xl shadow-md"
-TEXT_CONTAINER = "w-full flex flex-grow p-6 rounded-lg bg-white justify-center items-center"
 
 
 # --- Icons ---
@@ -62,6 +54,7 @@ LIGHTBULB_ICON = f"""
 """
 
 
+# --- Bot Responses ---
 answers = [
     "I have no idea.",
     "Sorry, I don't know.",
@@ -75,6 +68,8 @@ answers = [
     "I don't think there's anyone out there who can answer that.",
 ]
 
+
+# --- State Instance ---
 # State to store chat history as list of [speaker, message] pairs
 chat_history_state = State([["bot", "Ask me anything!"]], "chat_history_state")
 
@@ -94,16 +89,17 @@ def generate_bot_response(form_data: dict):
         return ""
 
     chat_history = chat_history_state.get()
-    chat_history.append(["user", user_message])
+    chat_history.insert(0, ["user", user_message])  # The latest message is the first of the list for reverse display
     if "?" in user_message:
         answer = random.choice(answers)
     else:
         answer = "I don't think that's a question... Could you ask me a question?"
-    chat_history.append(["bot", answer])
+    chat_history.insert(0, ["bot", answer])  # See above comment about reverse display
     chat_history_state.set(chat_history)
     return update_components(*chat_history_state.listeners)
 
 
+# --- Components ---
 def ChatBubble(speaker: str, message: str) -> Div:  # noqa: N802
     """Create a chat bubble for the given speaker and message.
 
@@ -114,17 +110,17 @@ def ChatBubble(speaker: str, message: str) -> Div:  # noqa: N802
     Returns:
         Div: A styled chat bubble component with icon and message text
     """
-    text_css = f"bg-{COLOR_100} rounded-lg p-3"
+    text_css = f"bg-{COLOR_100} text-{COLOR_900} rounded-md p-3"
     if speaker == "user":
         return Div(
             Div(
                 Div(
                     Icon(USER_ICON),
-                    css=f"rounded-full bg-{COLOR_BRAND_2} p-3"
+                    css=f"rounded-full bg-{COLOR_BRAND_2} p-3",
                 ),
                 Text(
-                    message, 
-                    css=text_css
+                    message,
+                    css=text_css,
                 ),
                 css="flex justify-end items-start gap-3",
             ),
@@ -135,11 +131,11 @@ def ChatBubble(speaker: str, message: str) -> Div:  # noqa: N802
             Div(
                 Div(
                     Icon(LIGHTBULB_ICON),
-                    css=f"rounded-full bg-{COLOR_BRAND_1} p-3"
+                    css=f"rounded-full bg-{COLOR_BRAND_1} p-3",
                 ),
                 Text(
-                    message, 
-                    css=text_css
+                    message,
+                    css=text_css,
                 ),
                 css="flex justify-start items-start gap-3",
             ),
@@ -156,13 +152,14 @@ def ChatHistory() -> Div:  # noqa: N802
     Returns:
         Div: A container with all chat bubble components
     """
+
     def chat_bubbles():
         return [ChatBubble(speaker, message) for speaker, message in chat_history_state.get()]
-    
+
     return Div(
         chat_bubbles,
         listen_to="chat_history_state",
-        css="w-full flex flex-col grow justify-end gap-6 overflow-y-auto",
+        css="w-full flex flex-1 flex-col-reverse gap-6 overflow-y-auto",
     )
 
 
@@ -176,18 +173,19 @@ def MessageForm() -> Form:  # noqa: N802
         Input(
             name="message",
             placeholder="Type your question here...",
-            css="flex-grow p-3 bg-white rounded-md border",
+            css=f"flex-grow p-3 bg-{COLOR_100} rounded-md border",
         ),
         Button(
-            Icon(ARROW_UP_ICON), 
+            Icon(ARROW_UP_ICON),
             type="submit",
-            css=BUTTON_PRIMARY
+            css=BUTTON_PRIMARY,
         ),
         trigger="generate_bot_response",
-        css="w-full flex flex-row gap-3"
+        css="w-full flex flex-row gap-3",
     )
-   
 
+
+# --- Routes ---
 @app.page("/")
 def index():
     """Render the main chat application page.
@@ -198,17 +196,18 @@ def index():
     return Div(
         Div(
             Text(
-                "Welcome to the Chat App!", 
-                css="text-2xl font-bold text-white"
+                "Welcome to the Chat App!",
+                css=f"text-2xl font-bold text-{COLOR_100} text-center",
             ),
             ChatHistory(),
             MessageForm(),
-            css="w-full max-w-4xl h-screen mx-auto p-6 flex flex-col gap-6"
+            css="w-full max-w-4xl h-screen mx-auto p-6 flex flex-col gap-12",
         ),
         css=f"w-full bg-{COLOR_900}",
     )
 
 
+# --- Start ---
 if __name__ == "__main__":
     import uvicorn
 
