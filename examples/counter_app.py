@@ -19,7 +19,7 @@ This proves that State values are fully isolated per user session.
 
 from pathlib import Path
 
-from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components, dynamic
+from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
 from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
@@ -69,30 +69,39 @@ def toggle_theme():
     return update_components(*theme_state.listeners)
 
 
-# --- Dynamic styling functions ---
-def get_counter_style() -> str:
-    """Dynamic styling based on counter value."""
-    count = counter_state.get()
-    base = "text-xl text-center"
-    if count > 5:
-        return f"{base} text-red-500 font-bold"
-    return f"{base} text-{COLOR_900}"
-
-
-def get_theme_bg() -> str:
-    """Dynamic background based on theme state."""
-    return f"bg-{COLOR_100}" if theme_state.get() == "light" else f"bg-{COLOR_900}"
-
-
 # --- Counter Component ---
 def Counter() -> Div:  # noqa: N802
     """Main counter component demonstrating INGUITIVE features."""
-    print(f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center")
+
+    def dynamic_icon() -> str:
+        """Dynamic icon based on theme state."""
+        return MOON if theme_state.get() == "light" else SUN
+
+    def dynamic_text() -> str:
+        """Dynamic text based on counter state."""
+        return f"Count: {counter_state.get()}"
+
+    def dynamic_text_css() -> str:
+        """Dynamic styling based on counter value."""
+        count = counter_state.get()
+        base = "text-xl text-center"
+        if count > 5:
+            return f"{base} text-red-500 font-bold"
+        return f"{base} text-{COLOR_900}"
+
+    def dynamic_div_css() -> str:
+        """Dynamic styling based on theme state."""
+        bg = f"bg-{COLOR_100}" if theme_state.get() == "light" else f"bg-{COLOR_900}"
+        return f"{bg} w-full min-h-screen flex items-center justify-center"
+
     return Div(
         Div(
             Div(
                 Button(
-                    Icon(dynamic(MOON if theme_state.get() == "light" else SUN), css="w-6 h-6"),
+                    Icon(
+                        dynamic_icon,
+                        css="w-6 h-6",
+                    ),
                     trigger="toggle_theme",
                     id="theme-toggle",
                     css=BUTTON_PRIMARY,
@@ -100,19 +109,30 @@ def Counter() -> Div:  # noqa: N802
                 css="w-full flex justify-end",
             ),
             Text(
-                text=dynamic(f"Count: {counter_state.get()}"),
+                text=dynamic_text,
                 id="counter-label",
-                css=dynamic(get_counter_style()),
+                css=dynamic_text_css,
                 listen_to="counter_state",
             ),
-            Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY} w-full"),
-            Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY} w-full"),
-            Text(f"Session: {get_session_id()}", css=f"text-sm text-center text-{COLOR_600}"),
+            Button(
+                "+1",
+                trigger="increment",
+                css=f"{BUTTON_PRIMARY} w-full",
+            ),
+            Button(
+                "Reset",
+                trigger="reset",
+                css=f"{BUTTON_SECONDARY} w-full",
+            ),
+            Text(
+                f"Session: {get_session_id()}",
+                css=f"text-sm text-center text-{COLOR_600}",
+            ),
             id="counter-card",
             css="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
         ),
         id="theme-container",
-        css=dynamic(f"w-full min-h-screen {get_theme_bg()} flex items-center justify-center"),
+        css=dynamic_div_css,
         listen_to="theme_state",
     )
 
