@@ -22,7 +22,6 @@ from inguitive import (
     Textarea,
     create_app,
     update_components,
-    dynamic,
 )
 
 # --- App Setup ---
@@ -51,6 +50,41 @@ async def register(form_data: dict) -> str:
 # --- Helper Functions ---
 def GenderRadio(id: str, value: str, label: str) -> Div:  # noqa: N802
     return Div(Radio(id=id, name="gender", value=value), Label(label, for_=id), css="flex items-baseline gap-2")
+
+
+def name_text():
+    """Return name text for display."""
+    return f"Name: {form_state.get().get('name', '')}" if form_state.get().get("name") else "Name:"
+
+
+def email_text():
+    """Return email text for display."""
+    return f"Email: {form_state.get().get('email', '')}" if form_state.get().get("email") else "Email:"
+
+
+def password_text():
+    """Return password text for display."""
+    return f"Password: {'*' * len(form_state.get().get('password', ''))}" if form_state.get().get("password") else "Password:"
+
+
+def bio_text():
+    """Return bio text for display."""
+    return f"Bio: {form_state.get().get('bio', '')}" if form_state.get().get("bio") else "Bio:"
+
+
+def country_text():
+    """Return country text for display."""
+    return f"Country: {form_state.get().get('country', '')}" if form_state.get().get("country") else "Country:"
+
+
+def terms_text():
+    """Return terms text for display."""
+    return f"Terms accepted: {'Yes' if form_state.get().get('terms') else 'No'}"
+
+
+def gender_text():
+    """Return gender text for display."""
+    return f"Gender: {form_state.get().get('gender', '')}" if form_state.get().get("gender") else "Gender:"
 
 
 # --- Registration Form Component ---
@@ -109,28 +143,28 @@ def RegistrationForm() -> Div:  # noqa: N802
         # Confirmation display
         Div(
             Text(
-                dynamic(f"Name: {form_state.get().get('name', '')}" if form_state.get().get("name") else "Name:"),
+                name_text,
                 css="text-center",
             ),
             Text(
-                dynamic(f"Email: {form_state.get().get('email', '')}" if form_state.get().get("email") else "Email:"),
+                email_text,
                 css="text-center",
             ),
             Text(
-                dynamic(f"Password: {'*' * len(form_state.get().get('password', ''))}" if form_state.get().get("password") else "Password:"),
+                password_text,
                 css="text-center",
             ),
             Text(
-                dynamic(f"Bio: {form_state.get().get('bio', '')}" if form_state.get().get("bio") else "Bio:"),
+                bio_text,
                 css="text-center",
             ),
             Text(
-                dynamic(f"Country: {form_state.get().get('country', '')}" if form_state.get().get("country") else "Country:"),
+                country_text,
                 css="text-center",
             ),
-            Text(dynamic(f"Terms accepted: {'Yes' if form_state.get().get('terms') else 'No'}"), css="text-center"),
+            Text(terms_text, css="text-center"),
             Text(
-                dynamic(f"Gender: {form_state.get().get('gender', '')}" if form_state.get().get("gender") else "Gender:"),
+                gender_text,
                 css="text-center",
             ),
             id="form_display",
