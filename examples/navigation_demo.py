@@ -10,7 +10,7 @@ Run with: uvicorn examples.navigation_demo:app --reload
 
 from pathlib import Path
 
-from inguitive import Button, Div, Link, State, Text, create_app, redirect, update_components, dynamic
+from inguitive import Button, Div, Link, State, Text, create_app, redirect, update_components
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
@@ -135,10 +135,15 @@ def ContentB():  # noqa: N802
 
 
 # --- Page Component Functions ---
+# --- Helper Functions ---
+def dynamic_content():
+    """Return content A or B based on content_state."""
+    return ContentA() if content_state.get() == "a" else ContentB()
+
 def Page1():  # noqa: N802
     """Page 1 demonstrating traditional navigation and SPA content switching."""
     return Div(
-        dynamic(ContentA() if content_state.get() == "a" else ContentB()),
+        dynamic_content,
         css=PAGE,
         listen_to="content_state",
     )
