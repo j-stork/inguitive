@@ -39,31 +39,6 @@ from inguitive.session import (
 from inguitive.state import State
 
 
-def dynamic(value):
-    """Mark a value as dynamic - re-evaluated on component updates.
-
-    Use this to make any expression re-evaluate when the parent component's
-    listened-to states change. This is syntactic sugar over lambda that makes
-    the intent clearer.
-
-    Args:
-        value: Any value or expression that should be re-evaluated
-
-    Returns:
-        A callable that returns the value when invoked
-
-    Example:
-        # Instead of: lambda: state.get()
-        Div(dynamic(state.get()), listen_to="state")
-
-        # Instead of: lambda: f"Count: {count}"
-        Text(dynamic(f"Count: {count_state.get()}"))
-    """
-    if callable(value):
-        return value
-    return lambda: value
-
-
 __all__ = [
     # Components
     "Component",
@@ -85,7 +60,6 @@ __all__ = [
     # HTMX helpers
     "update_components",
     # Helpers
-    "dynamic",
     # FastAPI
     "InguitiveApp",
     "create_app",
