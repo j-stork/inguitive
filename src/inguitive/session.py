@@ -70,11 +70,9 @@ class SessionBackend(ABC):
 class MemoryBackend(SessionBackend):
     """In-memory session backend for development. Not suitable for production."""
 
-    # Class-level storage shared across all instances
-    _sessions: dict[SessionId, Session] = {}
-
     def __init__(self):
         """Initialize memory backend."""
+        self._sessions: dict[SessionId, Session] = {}
 
     def get_session(self, session_id: SessionId) -> Session | None:
         """Retrieve session from memory."""
