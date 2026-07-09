@@ -29,8 +29,6 @@ class Session:
         """Serialize session data for storage."""
         return {
             "session_id": self.session_id,
-            "component_registry": self.component_registry,
-            "state_registry": self.state_registry,
             "data_registry": self.data_registry,
         }
 
@@ -39,8 +37,8 @@ class Session:
         """Deserialize session data from storage."""
         return cls(
             session_id=data["session_id"],
-            component_registry=data.get("component_registry", {}),
-            state_registry=data.get("state_registry", {}),
+            component_registry={},
+            state_registry={},
             data_registry=data.get("data_registry", {}),
         )
 
