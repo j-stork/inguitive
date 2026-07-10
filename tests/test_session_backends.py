@@ -188,3 +188,237 @@ class TestMemoryBackendBasicOperations:
         # Should not raise
         backend.delete_session('nonexistent-id')
         assert backend.get_session('nonexistent-id') is None
+
+
+class TestMemoryBackendSessionExpiry:
+    """Tests for MemoryBackend session expiry and cleanup functionality."""
+
+    def test_session_has_last_accessed_on_creation(self):
+        """Test that sessions have last_accessed timestamp set on creation."""
+        from inguitive.session import create_session
+        import time
+        
+        before = time.time()
+        session = create_session()
+        after = time.time()
+        
+        assert session.last_accessed >= before
+        assert session.last_accessed <= after
+
+    def test_get_session_updates_last_accessed(self):
+        """Test that getting a session updates its last_accessed timestamp."""
+        import time
+        from unittest.mock import patch
+        
+        backend = MemoryBackend()
+        session = create_session()
+        backend.save_session(session)
+        
+        # Ensure some time has passed
+        time.sleep(0.01)
+        
+        old_timestamp = session.last_accessed
+        retrieved = backend.get_session(session.session_id)
+        
+        assert retrieved is not None
+        assert retrieved.last_accessed > old_timestamp
+
+    def test_save_session_updates_last_accessed(self):
+        """Test that saving a session updates its last_accessed timestamp."""
+        import time
+        from unittest.mock import patch
+        
+        backend = MemoryBackend()
+        session = create_session()
+        
+        # Ensure some time has passed
+        time.sleep(0.01)
+        
+        old_timestamp = session.last_accessed
+        backend.save_session(session)
+        
+        assert session.last_accessed > old_timestamp
+
+    def test_cleanup_expired_removes_old_sessions(self):
+        """Test that cleanup_expired removes sessions older than TTL."""
+        import time
+        from unittest.mock import patch
+        
+        # Create backend with short TTL for testing
+        backend = MemoryBackend(ttl_seconds=1)
+        
+        # Create a session
+        session = create_session()
+        backend.save_session(session)
+        
+        # Verify session exists
+        assert backend.get_session(session.session_id) is not None
+        
+        # Manually set last_accessed to the past (2 seconds ago) by modifying the stored session
+        backend._sessions[session.session_id].last_accessed = time.time() - 2
+        
+        # Run cleanup
+        deleted_count = backend.cleanup_expired()
+        
+        # Session should be deleted
+        assert deleted_count == 1
+        assert backend.get_session(session.session_id) is None
+
+    def test_cleanup_expired_keeps_recent_sessions(self):
+        """Test that cleanup_expired keeps sessions within TTL."""
+        import time
+        
+        # Create backend with TTL of 1 hour
+        backend = MemoryBackend(ttl_seconds=3600)
+        
+        # Create a session (will have current timestamp)
+        session = create_session()
+        backend.save_session(session)
+        
+        # Run cleanup
+        deleted_count = backend.cleanup_expired()
+        
+        # Session should NOT be deleted
+        assert deleted_count == 0
+        assert backend.get_session(session.session_id) is not None
+
+    def test_cleanup_expired_with_no_expiry(self):
+        """Test that cleanup with TTL <= 0 does nothing."""
+        backend = MemoryBackend(ttl_seconds=0)
+        
+        # Create and save a session with old timestamp
+        session = create_session()
+        session.last_accessed = 0.0  # Very old timestamp
+        backend.save_session(session)
+        
+        # Run cleanup - should not delete anything
+        deleted_count = backend.cleanup_expired()
+        
+        assert deleted_count == 0
+        assert backend.get_session(session.session_id) is not None
+
+    def test_cleanup_expired_multiple_sessions(self):
+        """Test cleanup with multiple sessions, some expired, some not."""
+        import time
+        
+        backend = MemoryBackend(ttl_seconds=1)
+        
+        # Create 3 sessions
+        session1 = create_session()  # Recent
+        session2 = create_session()  # Will be expired
+        session3 = create_session()  # Recent
+        
+        backend.save_session(session1)
+        backend.save_session(session2)
+        backend.save_session(session3)
+        
+        # Manually set session2 to be expired
+        backend._sessions[session2.session_id].last_accessed = time.time() - 2
+        
+        # Run cleanup
+        deleted_count = backend.cleanup_expired()
+        
+        # Only session2 should be deleted
+        assert deleted_count == 1
+        assert backend.get_session(session1.session_id) is not None
+        assert backend.get_session(session2.session_id) is None
+        assert backend.get_session(session3.session_id) is not None
+
+    def test_cleanup_expired_returns_correct_count(self):
+        """Test that cleanup_expired returns the correct number of deleted sessions."""
+        import time
+        
+        backend = MemoryBackend(ttl_seconds=1)
+        
+        # Create 5 expired sessions
+        session_ids = []
+        for _ in range(5):
+            session = create_session()
+            backend.save_session(session)
+            session_ids.append(session.session_id)
+        
+        # Manually set all to be expired
+        for sid in session_ids:
+            backend._sessions[sid].last_accessed = time.time() - 2
+        
+        # Run cleanup
+        deleted_count = backend.cleanup_expired()
+        
+        assert deleted_count == 5
+
+    def test_cleanup_expired_empty_backend(self):
+        """Test that cleanup on empty backend returns 0."""
+        backend = MemoryBackend(ttl_seconds=1)
+        deleted_count = backend.cleanup_expired()
+        assert deleted_count == 0
+
+    def test_session_serialization_with_last_accessed(self):
+        """Test that last_accessed is serialized and deserialized correctly."""
+        import json
+        
+        # Create a session
+        session = create_session()
+        original_timestamp = session.last_accessed
+        
+        # Serialize
+        serialized = session.to_dict()
+        assert 'last_accessed' in serialized
+        assert serialized['last_accessed'] == original_timestamp
+        
+        # Deserialize
+        json_str = json.dumps(serialized)
+        deserialized = Session.from_dict(json.loads(json_str))
+        
+        assert deserialized.last_accessed == original_timestamp
+
+    def test_session_deserialization_backward_compatible(self):
+        """Test that old session data without last_accessed can be deserialized."""
+        import json
+        
+        # Old session data without last_accessed
+        old_data = {
+            "session_id": "test-id",
+            "data_registry": {"key": "value"},
+        }
+        
+        # Should not raise
+        session = Session.from_dict(old_data)
+        
+        # last_accessed should default to 0.0
+        assert session.last_accessed == 0.0
+        assert session.session_id == "test-id"
+        assert session.data_registry == {"key": "value"}
+
+    def test_get_session_updates_timestamp_then_cleanup(self):
+        """Integration test: accessing a session keeps it from being cleaned up."""
+        import time
+        from unittest.mock import patch
+        
+        backend = MemoryBackend(ttl_seconds=1)
+        
+        # Create a session
+        session = create_session()
+        backend.save_session(session)
+        
+        # Wait a bit
+        time.sleep(0.01)
+        
+        # Manually set last_accessed to the past (but within TTL)
+        session.last_accessed = time.time() - 0.5
+        backend.save_session(session)
+        
+        # Now access the session (should update timestamp)
+        retrieved = backend.get_session(session.session_id)
+        assert retrieved is not None
+        
+        # Wait a bit more
+        time.sleep(0.01)
+        
+        # Manually set timestamp to just before TTL
+        retrieved.last_accessed = time.time() - 0.5
+        backend.save_session(retrieved)
+        
+        # Run cleanup - session should survive because it's within TTL
+        deleted_count = backend.cleanup_expired()
+        assert deleted_count == 0
+        assert backend.get_session(session.session_id) is not None
