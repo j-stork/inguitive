@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A pure Python web framework combining intuitive syntax with HTMX for partial page reloads and Tailwind CSS for styling"
 readme = "README.md"
 license = {text = "MIT"}
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 authors = [
     {name = "Johannes", email = "example@example.com"}
 ]
@@ -32,7 +32,6 @@ dependencies = [
     "fastapi>=0.95.0",
     "uvicorn[standard]>=0.21.0",
     "jinja2>=3.1.0",
-    "markdown>=3.4.0",
     "python-multipart>=0.0.6",
 ]
 
