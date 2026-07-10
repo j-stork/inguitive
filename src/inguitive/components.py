@@ -818,3 +818,125 @@ class TemplateComponent(Component):
             resolved_context["css"] = self._resolve(self.css)
         content = template.render(**resolved_context)
         return f"<div {attrs}>{content}</div>"
+
+
+class DataTable(Component):
+    """HTML table component for rendering tabular data.
+
+    Renders a list of dictionaries as an HTML table. Each dictionary represents
+    a row, and keys represent column names. Supports optional column ordering.
+
+    Example:
+        # Basic usage with automatic column detection
+        DataTable(
+            data=[
+                {"name": "Alice", "age": 30},
+                {"name": "Bob", "age": 25}
+            ],
+            css="w-full"
+        )
+
+        # With explicit column order
+        DataTable(
+            data=[
+                {"name": "Alice", "age": 30, "city": "NYC"},
+                {"name": "Bob", "age": 25, "city": "LA"}
+            ],
+            columns=["name", "city", "age"],
+            css="w-full"
+        )
+
+        # With dynamic data from state
+        DataTable(
+            data=table_data_state.get,
+            listen_to="table_data_state",
+            columns=["id", "name", "status"]
+        )
+    """
+
+    def __init__(
+        self,
+        data: list[dict] | Callable[[], list[dict]],
+        columns: list[str] | None = None,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        listen_to: str | None = None,
+        **attrs,
+    ):
+        """Initialize a DataTable component.
+
+        Args:
+            data: Tabular data as list of dictionaries, or callable returning such list.
+                  Each dict represents a row, keys are column names.
+            columns: Optional list of column names to display, in order.
+                    If None, columns are extracted from the first row's keys.
+                    Use this to control column order or select a subset of columns.
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            listen_to: State name to listen for changes (triggers re-render)
+            **attrs: Additional HTML attributes (e.g., data-testid)
+        """
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
+        self.data = data
+        self.columns = columns
+
+    def _get_columns(self, resolved_data: list[dict]) -> list[str]:
+        """Get the list of columns to display.
+        
+        If columns parameter was provided, use it.
+        Otherwise, extract from first row's keys.
+        Returns empty list if data is empty.
+        """
+        if self.columns is not None:
+            return self.columns
+        if resolved_data:
+            return list(resolved_data[0].keys())
+        return []
+
+    def _get_value(self, row: dict, column: str) -> str:
+        """Get the string value for a cell, handling None and missing keys."""
+        value = row.get(column, "")
+        if value is None:
+            return ""
+        return str(value)
+
+    def _render_table(self, resolved_data: list[dict]) -> str:
+        """Render the HTML table structure with resolved data."""
+        columns = self._get_columns(resolved_data)
+        
+        # Render thead
+        header_cells = "".join(f"<th class=\"px-4 py-2 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider\">{col}</th>" 
+                               for col in columns)
+        thead = f"<thead><tr>{header_cells}</tr></thead>"
+        
+        # Render tbody
+        if not resolved_data:
+            tbody = "<tbody></tbody>"
+        else:
+            rows_html = []
+            for i, row in enumerate(resolved_data):
+                row_class = "odd:bg-white even:bg-gray-50"
+                cells = "".join(
+                    f"<td class=\"px-4 py-2 border-t border-gray-200\">{self._get_value(row, col)}</td>"
+                    for col in columns
+                )
+                rows_html.append(f"<tr class=\"{row_class}\">{cells}</tr>")
+            tbody = f"<tbody>{''.join(rows_html)}</tbody>"
+        
+        return f"{thead}{tbody}"
+
+    def render(self) -> str:
+        """Render the DataTable as HTML."""
+        resolved_data = self._resolve(self.data) if callable(self.data) else self.data
+        attrs = self._get_attrs_str()
+        table_content = self._render_table(resolved_data)
+        return f"<table {attrs}>{table_content}</table>"
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        resolved_data = self._resolve(self.data) if callable(self.data) else self.data
+        table_content = self._render_table(resolved_data)
+        return f"<table {attrs}>{table_content}</table>"
