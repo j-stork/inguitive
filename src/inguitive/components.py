@@ -5,7 +5,7 @@ Component classes for INGUITIVE framework.
 from __future__ import annotations
 
 import uuid
-from typing import Callable
+from collections.abc import Callable
 
 import jinja2
 
@@ -67,12 +67,12 @@ class Component:
 
     def _render_children(self) -> str:
         """Render all children of this component.
-        
+
         Handles both direct child components and callable/lambda children.
         Supports nested lists of children.
         """
         children_html_parts = []
-        for child in getattr(self, 'children', []):
+        for child in getattr(self, "children", []):
             if hasattr(child, "render"):
                 children_html_parts.append(child.render())
             else:
@@ -92,7 +92,7 @@ class Component:
 
     def _oob_attrs_str(self) -> str:
         """Get attributes string with hx-swap-oob for out-of-band updates.
-        
+
         Returns regular attributes if self.id is not set.
         """
         if not self.id:
@@ -201,7 +201,7 @@ class Label(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        attrs = self._oob_attrs_str()
         resolved_text = self._resolve(self.text)
         return f"<label {attrs}>{resolved_text}</label>"
 
@@ -274,7 +274,7 @@ class Link(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        attrs = self._oob_attrs_str()
         children_html_parts = []
         for child in self.children:
             if hasattr(child, "render"):
@@ -331,7 +331,7 @@ class Text(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        attrs = self._oob_attrs_str()
         resolved_text = self._resolve(self.text)
         return f"<p {attrs}>{resolved_text}</p>"
 
@@ -445,7 +445,7 @@ class Input(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        attrs = self._oob_attrs_str()
         return f"<input {attrs}>"
 
 
@@ -499,7 +499,7 @@ class Textarea(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        attrs = self._oob_attrs_str()
         resolved_value = self._resolve(self.value) if self.value else ""
         return f"<textarea {attrs}>{resolved_value}</textarea>"
 
@@ -559,7 +559,7 @@ class Select(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        attrs = self._oob_attrs_str()
         options_html = self._render_options()
         return f"<select {attrs}>{options_html}</select>"
 
@@ -616,7 +616,7 @@ class Checkbox(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        attrs = self._oob_attrs_str()
         resolved_checked = self._resolve(self.checked) if self.checked else False  # type: ignore
         if resolved_checked:
             attrs += " checked"
@@ -681,7 +681,7 @@ class Radio(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        attrs = self._oob_attrs_str()
         resolved_checked = self._resolve(self.checked) if self.checked else False  # type: ignore
         if resolved_checked:
             attrs += " checked"
@@ -700,7 +700,7 @@ class Form(Component):
             method="POST"
         )
         Form(Button("Save", trigger="save"), ...)  # HTMX form with trigger
-    
+
     Note: Forms with triggers automatically reset after successful submission.
     """
 
@@ -735,7 +735,7 @@ class Form(Component):
             self.children = list(children[0])
         else:
             self.children = list(children)
-        
+
         # Auto-add form reset handler for HTMX forms
         # This clears the form after successful submission
         if self.attrs.get("hx-post") and "hx-on::after-request" not in self.attrs:
@@ -841,12 +841,7 @@ class TemplateComponent(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        attrs = 'hx-swap-oob="true"'
-        if self.id:
-            attrs += f' id="{self.id}"'
-        if self.css:
-            resolved_css = self._resolve(self.css)
-            attrs += f' class="{resolved_css}"'
+        attrs = self._oob_attrs_str()
         # Render template content
         env = jinja2.Environment(loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape(["html", "xml"]))
         template = env.from_string(self.template_str)
