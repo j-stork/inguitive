@@ -21,6 +21,12 @@ from inguitive.session import (
     set_current_session,
     set_session_backend,
 )
+from inguitive.state import (
+    get_mutated_states,
+    get_state_by_name,
+    track_mutations,
+)
+from inguitive.htmx import update_components
 
 # Type variables for decorator type annotations
 P = ParamSpec("P")
@@ -100,8 +106,24 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
             form_data_dict.update(query_params)
             kwargs["form_data"] = form_data_dict
 
-        result = await h(**kwargs) if is_async else h(**kwargs)
-        return result
+        # Track state mutations during handler execution for auto-propagation
+        with track_mutations():
+            result = await h(**kwargs) if is_async else h(**kwargs)
+
+        # If handler returned explicit response, use it (allows overriding auto-propagation)
+        if result:
+            return result
+
+        # Otherwise, auto-generate OOB response from mutated states
+        mutated_state_keys = get_mutated_states()
+        all_component_ids = set()
+        for state_key in mutated_state_keys:
+            # Get the State object for this key and collect its listeners
+            state = get_state_by_name(state_key)
+            if state is not None:
+                all_component_ids.update(state.listeners)
+
+        return update_components(*all_component_ids)
 
 
 class SessionMiddleware:
