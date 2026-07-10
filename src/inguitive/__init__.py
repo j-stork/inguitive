@@ -6,6 +6,7 @@ from inguitive.components import (
     Button,
     Checkbox,
     Component,
+    DataTable,
     Div,
     Form,
     Icon,
@@ -55,6 +56,7 @@ __all__ = [
     "Text",
     "Link",
     "TemplateComponent",
+    "DataTable",
     # State
     "State",
     # HTMX helpers
