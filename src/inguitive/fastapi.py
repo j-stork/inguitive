@@ -136,18 +136,37 @@ class SessionMiddleware:
         session_cookie_max_age: int = 3600,
         session_cookie_secure: bool = False,
         session_cookie_httponly: bool = True,
+        cleanup_interval: int = 100,
     ):
+        """Initialize SessionMiddleware.
+        
+        Args:
+            app: The ASGI application
+            session_cookie_name: Name of the session cookie
+            session_cookie_max_age: Cookie max age in seconds
+            session_cookie_secure: Whether cookie is secure (HTTPS only)
+            session_cookie_httponly: Whether cookie is HTTP-only
+            cleanup_interval: Call cleanup_expired() every N requests (default: 100)
+        """
         self.app = app
         self.session_cookie_name = session_cookie_name
         self.session_cookie_max_age = session_cookie_max_age
         self.session_cookie_secure = session_cookie_secure
         self.session_cookie_httponly = session_cookie_httponly
+        self.cleanup_interval = cleanup_interval
+        self._request_count = 0
 
     async def __call__(self, scope, receive, send):
         """Process ASGI request with session management."""
         if scope["type"] not in ("http", "websocket"):
             await self.app(scope, receive, send)
             return
+
+        # Periodic cleanup of expired sessions
+        self._request_count += 1
+        if self._request_count % self.cleanup_interval == 0:
+            backend = get_session_backend()
+            backend.cleanup_expired()
 
         # Extract cookies from headers
         headers = dict(scope.get("headers", []))
@@ -202,6 +221,7 @@ def create_app(
     session_cookie_max_age: int = 3600,
     session_cookie_secure: bool = False,
     session_cookie_httponly: bool = True,
+    session_cleanup_interval: int = 100,
 ) -> tuple[InguitiveApp[P, T], Jinja2Templates]:
     """Create and configure a FastAPI application for INGUITIVE.
 
@@ -212,6 +232,7 @@ def create_app(
         session_cookie_max_age: Cookie max age in seconds
         session_cookie_secure: Whether cookie is secure (HTTPS only)
         session_cookie_httponly: Whether cookie is HTTP-only
+        session_cleanup_interval: Call cleanup_expired() every N requests (default: 100)
 
     Returns:
         Tuple of (InguitiveApp, Jinja2Templates) - the app has custom decorators
@@ -270,6 +291,7 @@ def create_app(
         session_cookie_max_age=session_cookie_max_age,
         session_cookie_secure=session_cookie_secure,
         session_cookie_httponly=session_cookie_httponly,
+        cleanup_interval=session_cleanup_interval,
     )
 
     return app, templates
