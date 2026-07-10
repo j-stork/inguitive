@@ -60,12 +60,10 @@ def reset():
 
 @app.trigger_handler
 def toggle_theme():
-    print("toggle_theme was triggered.")
     """Toggle between light and dark theme."""
     current: str = theme_state.get()
     new_theme: str = "dark" if current == "light" else "light"
     theme_state.set(new_theme)
-    print(f"*theme_state.listeners = {theme_state.listeners}")
     return update_components(*theme_state.listeners)
 
 
