@@ -99,6 +99,22 @@ class Component:
             return self._get_attrs_str()
         return f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
 
+    @staticmethod
+    def _normalize_children(children: tuple) -> list:
+        """Normalize children tuple to a list.
+
+        Supports both: Component(a, b) and Component([a, b]).
+
+        Args:
+            children: Tuple of child components/strings from *children
+
+        Returns:
+            List of children (flattened if single element was a list)
+        """
+        if len(children) == 1 and isinstance(children[0], list):
+            return list(children[0])
+        return list(children)
+
     def render(self) -> str:
         raise NotImplementedError
 
@@ -108,11 +124,7 @@ class Div(Component):
 
     def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
         super().__init__(id=id, css=css, **attrs)
-        # Support both: Div(a, b) and Div([a, b])
-        if len(children) == 1 and isinstance(children[0], list):
-            self.children = list(children[0])
-        else:
-            self.children = list(children)
+        self.children = self._normalize_children(children)
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
@@ -139,12 +151,7 @@ class Button(Component):
 
     def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
         super().__init__(id=id, css=css, **attrs)
-
-        # Support both: Button(a, b) and Button([a, b])
-        if len(children) == 1 and isinstance(children[0], list):
-            self.children = list(children[0])
-        else:
-            self.children = list(children)
+        self.children = self._normalize_children(children)
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
@@ -242,11 +249,7 @@ class Link(Component):
         super().__init__(id=id, css=css, **attrs)
         if href:
             self.attrs["href"] = href
-        # Support both: Link(a, b) and Link([a, b])
-        if len(children) == 1 and isinstance(children[0], list):
-            self.children = list(children[0])
-        else:
-            self.children = list(children)
+        self.children = self._normalize_children(children)
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
@@ -730,11 +733,7 @@ class Form(Component):
         if method:
             attrs["method"] = method
         super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
-        # Support both: Form(a, b) and Form([a, b])
-        if len(children) == 1 and isinstance(children[0], list):
-            self.children = list(children[0])
-        else:
-            self.children = list(children)
+        self.children = self._normalize_children(children)
 
         # Auto-add form reset handler for HTMX forms
         # This clears the form after successful submission
