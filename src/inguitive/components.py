@@ -253,24 +253,7 @@ class Link(Component):
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
-        children_html_parts = []
-        for child in self.children:
-            if hasattr(child, "render"):
-                children_html_parts.append(child.render())
-            else:
-                resolved = self._resolve(child)
-                if isinstance(resolved, list):
-                    for item in resolved:
-                        if hasattr(item, "render"):
-                            children_html_parts.append(item.render())
-                        else:
-                            children_html_parts.append(str(item))
-                else:
-                    if hasattr(resolved, "render") and callable(resolved.render):
-                        children_html_parts.append(resolved.render())
-                    else:
-                        children_html_parts.append(str(resolved))
-        children_html = "".join(children_html_parts)
+        children_html = self._render_children()
         return f"<a {attrs}>{children_html}</a>"
 
     def update(self) -> str:
@@ -278,24 +261,7 @@ class Link(Component):
         if not self.id:
             return self.render()
         attrs = self._oob_attrs_str()
-        children_html_parts = []
-        for child in self.children:
-            if hasattr(child, "render"):
-                children_html_parts.append(child.render())
-            else:
-                resolved = self._resolve(child)
-                if isinstance(resolved, list):
-                    for item in resolved:
-                        if hasattr(item, "render"):
-                            children_html_parts.append(item.render())
-                        else:
-                            children_html_parts.append(str(item))
-                else:
-                    if hasattr(resolved, "render") and callable(resolved.render):
-                        children_html_parts.append(resolved.render())
-                    else:
-                        children_html_parts.append(str(resolved))
-        children_html = "".join(children_html_parts)
+        children_html = self._render_children()
         return f"<a {attrs}>{children_html}</a>"
 
 
