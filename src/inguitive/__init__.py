@@ -38,6 +38,7 @@ from inguitive.session import (
     set_session_backend,
 )
 from inguitive.state import State
+from inguitive.trigger import get_trigger_args
 
 
 __all__ = [
@@ -61,6 +62,8 @@ __all__ = [
     "State",
     # HTMX helpers
     "update_components",
+    # Trigger
+    "get_trigger_args",
     # Helpers
     # FastAPI
     "InguitiveApp",
