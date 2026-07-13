@@ -5,11 +5,12 @@ Demonstrates:
 - Rendering tabular data with the DataTable component
 - Using list of dictionaries as the data structure
 - Optional column ordering with the columns parameter
+- Fine-grained CSS styling with dictionary-based css parameter
 - Dynamic data rendering with state management
 
 Features:
 - Displays a table of employee data
-- Shows two examples: default columns and custom column order
+- Shows three examples: default columns, custom column order, and custom CSS styling
 - Table automatically updates when data changes
 
 Run with: uvicorn examples.data_table_app:app --reload
@@ -58,6 +59,21 @@ def EmployeeTableWithColumnOrder():
     )
 
 
+def EmployeeTableWithCustomCSS():
+    """Render employee data table with custom CSS for sub-elements."""
+    return DataTable(
+        data=employee_data_state.get,
+        listen_to="employee_data_state",
+        columns=["name", "department", "salary", "status"],
+        css={
+            "table": "w-full border-2 border-blue-600 rounded-lg",
+            "header": "px-4 py-3 bg-blue-600 text-white font-bold text-sm",
+            "cell": "px-4 py-3 border border-blue-200",
+            "row": "hover:bg-blue-50 transition-colors",
+        },
+    )
+
+
 # --- Pages ---
 @app.page("/")
 def index():
@@ -98,6 +114,21 @@ def index():
                     css="text-sm text-gray-500 mb-3",
                 ),
                 EmployeeTableWithColumnOrder(),
+                css="mb-12",
+            ),
+            
+            # Third example: Custom CSS with dictionary
+            Div(
+                Text(
+                    "Example 3: Custom CSS Styling",
+                    css="text-xl font-semibold text-gray-800 mb-4",
+                ),
+                Text(
+                    "Use a dictionary for the 'css' parameter to style sub-elements independently: "
+                    "'table', 'header', 'cell', and 'row'.",
+                    css="text-sm text-gray-500 mb-3",
+                ),
+                EmployeeTableWithCustomCSS(),
                 css="mb-12",
             ),
             
