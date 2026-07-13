@@ -8,6 +8,7 @@ Demonstrates:
 - Fine-grained CSS styling with dictionary-based css parameter
 - Dynamic data rendering with state management
 - Table sorting with toggleable ascending/descending order
+- Auto-propagation of state updates (automatic OOB response generation)
 
 Features:
 - Displays a table of employee data
@@ -15,13 +16,14 @@ Features:
 - Click a button to sort ascending, click again to sort descending
 - Shows three examples: default columns, custom column order, and custom CSS styling
 - Table automatically updates when data changes
+- Auto-generated OOB responses from state mutations
 
 Run with: uvicorn examples.data_table_app:app --reload
 """
 
 from pathlib import Path
 
-from inguitive import Button, DataTable, Div, State, Text, create_app, update_components
+from inguitive import Button, DataTable, Div, State, Text, create_app
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
@@ -48,7 +50,11 @@ sort_config_state = State({"column": None, "direction": "asc"}, "sort_config_sta
 # --- Trigger Handlers ---
 @app.trigger_handler
 def sort_employees(form_data: dict):
-    """Sort employee table by specified column. Toggles direction on repeated clicks."""
+    """Sort employee table by specified column. Toggles direction on repeated clicks.
+    
+    Demonstrates auto-propagation: the framework automatically generates the OOB
+    response for mutated states (employee_data_state).
+    """
     column = form_data.get("column")
     if not column:
         return ""
@@ -74,10 +80,10 @@ def sort_employees(form_data: dict):
         # Handle None values and missing keys safely
         data.sort(key=lambda x: str(x.get(column, "") or ""), reverse=(new_direction == "desc"))
     
-    # Update data state with sorted data
+    # Update data state - auto-propagation will handle OOB response
     employee_data_state.set(data)
     
-    return update_components(*employee_data_state.listeners)
+    # No explicit return - auto-propagation generates response automatically
 
 
 # --- Components ---
