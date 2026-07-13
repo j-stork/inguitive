@@ -26,6 +26,7 @@ from inguitive.state import (
     get_state_by_name,
     track_mutations,
 )
+from inguitive.trigger import get_trigger_args, trigger_args_context
 from inguitive.htmx import update_components
 
 # Type variables for decorator type annotations
@@ -99,31 +100,36 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
         kwargs = {}
         if needs_request:
             kwargs["request"] = request
-        if needs_form_data:
-            form_data_dict = dict(await request.form())
-            # Merge query parameters (from trigger_args) into form_data
-            query_params = dict(request.query_params)
-            form_data_dict.update(query_params)
-            kwargs["form_data"] = form_data_dict
+
+        # Extract query params which contain trigger_args from Component
+        query_params = dict(request.query_params)
 
         # Track state mutations during handler execution for auto-propagation
         with track_mutations():
-            result = await h(**kwargs) if is_async else h(**kwargs)
+            # Set trigger_args in context for get_trigger_args() access
+            with trigger_args_context(query_params):
+                if needs_form_data:
+                    form_data_dict = dict(await request.form())
+                    # Merge query parameters (from trigger_args) into form_data
+                    form_data_dict.update(query_params)
+                    kwargs["form_data"] = form_data_dict
 
-            # If handler returned explicit response, use it (allows overriding auto-propagation)
-            if result:
-                return result
+                result = await h(**kwargs) if is_async else h(**kwargs)
 
-            # Otherwise, auto-generate OOB response from mutated states
-            mutated_state_keys = get_mutated_states()
-            all_component_ids = set()
-            for state_key in mutated_state_keys:
-                # Get the State object for this key and collect its listeners
-                state = get_state_by_name(state_key)
-                if state is not None:
-                    all_component_ids.update(state.listeners)
+                # If handler returned explicit response, use it (allows overriding auto-propagation)
+                if result:
+                    return result
 
-            return update_components(*all_component_ids)
+                # Otherwise, auto-generate OOB response from mutated states
+                mutated_state_keys = get_mutated_states()
+                all_component_ids = set()
+                for state_key in mutated_state_keys:
+                    # Get the State object for this key and collect its listeners
+                    state = get_state_by_name(state_key)
+                    if state is not None:
+                        all_component_ids.update(state.listeners)
+
+                return update_components(*all_component_ids)
 
 
 class SessionMiddleware:
