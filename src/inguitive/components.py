@@ -971,27 +971,6 @@ class DataTable(Component):
             return ""
         return str(value)
 
-    def _get_attrs_str(self) -> str:
-        """Get attributes string, incorporating the root table CSS."""
-        root_css, element_css = self._resolve_css()
-        
-        # Build attrs dict as normal
-        filtered_attrs = {}
-        for k, v in self.attrs.items():
-            if k != "css":
-                filtered_attrs[k] = self._resolve(v)
-        
-        # Use the root CSS (from string css or empty if dict was provided)
-        resolved_css = root_css if root_css else None
-        if resolved_css:
-            filtered_attrs["class"] = resolved_css
-        
-        # Add id if present
-        if self.id:
-            filtered_attrs["id"] = self.id
-        
-        return " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
-
     def _render_table(self, resolved_data: list[dict], element_css: dict[str, str]) -> str:
         """Render the HTML table structure with resolved data and CSS."""
         columns = self._get_columns(resolved_data)
@@ -1020,11 +999,44 @@ class DataTable(Component):
         
         return f"{thead}{tbody}"
 
+    def _build_attrs(self, root_css: str, include_oob: bool = False) -> str:
+        """Build HTML attributes string with optional OOB prefix.
+        
+        Args:
+            root_css: CSS classes for the root table element
+            include_oob: If True, prefix with hx-swap-oob="true"
+        
+        Returns:
+            Complete attributes string for <table> element
+        """
+        filtered_attrs = {}
+        for k, v in self.attrs.items():
+            if k != "css":
+                filtered_attrs[k] = self._resolve(v)
+        
+        # Add root CSS to class attribute
+        if root_css:
+            if "class" in filtered_attrs:
+                filtered_attrs["class"] += " " + root_css
+            else:
+                filtered_attrs["class"] = root_css
+        
+        # Add id if present
+        if self.id:
+            filtered_attrs["id"] = self.id
+        
+        attrs = " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
+        
+        if include_oob:
+            attrs = f'hx-swap-oob="true" {attrs}'.strip()
+        
+        return attrs
+
     def render(self) -> str:
         """Render the DataTable as HTML."""
         resolved_data = self._resolve(self.data) if callable(self.data) else self.data
-        attrs = self._get_attrs_str()
         root_css, element_css = self._resolve_css()
+        attrs = self._build_attrs(root_css, include_oob=False)
         table_content = self._render_table(resolved_data, element_css)
         return f"<table {attrs}>{table_content}</table>"
 
@@ -1033,32 +1045,8 @@ class DataTable(Component):
         if not self.id:
             return self.render()
         
-        # For OOB updates, we need to include the id in attrs
-        # Build the attrs string manually for update
-        root_css, element_css = self._resolve_css()
-        
-        # Build base attrs
-        filtered_attrs = {}
-        for k, v in self.attrs.items():
-            if k != "css":
-                filtered_attrs[k] = self._resolve(v)
-        
-        # Add id
-        if self.id:
-            filtered_attrs["id"] = self.id
-        
-        # Add root CSS if it's a string
-        if root_css:
-            if "class" in filtered_attrs:
-                filtered_attrs["class"] += " " + root_css
-            else:
-                filtered_attrs["class"] = root_css
-        
-        attrs = " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
-        
-        # Add hx-swap-oob
-        attrs = f'hx-swap-oob="true" {attrs}'.strip()
-        
         resolved_data = self._resolve(self.data) if callable(self.data) else self.data
+        root_css, element_css = self._resolve_css()
+        attrs = self._build_attrs(root_css, include_oob=True)
         table_content = self._render_table(resolved_data, element_css)
         return f"<table {attrs}>{table_content}</table>"
