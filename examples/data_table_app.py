@@ -9,6 +9,7 @@ Demonstrates:
 - Dynamic data rendering with state management
 - Table sorting with toggleable ascending/descending order
 - Auto-propagation of state updates (automatic OOB response generation)
+- Using get_trigger_args() to access trigger arguments
 
 Features:
 - Displays a table of employee data
@@ -17,13 +18,14 @@ Features:
 - Shows three examples: default columns, custom column order, and custom CSS styling
 - Table automatically updates when data changes
 - Auto-generated OOB responses from state mutations
+- Trigger handlers access arguments via get_trigger_args() without form_data parameter
 
 Run with: uvicorn examples.data_table_app:app --reload
 """
 
 from pathlib import Path
 
-from inguitive import Button, DataTable, Div, State, Text, create_app
+from inguitive import Button, DataTable, Div, State, Text, create_app, get_trigger_args
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
@@ -49,13 +51,13 @@ sort_config_state = State({"column": None, "direction": "asc"}, "sort_config_sta
 
 # --- Trigger Handlers ---
 @app.trigger_handler
-def sort_employees(form_data: dict):
+def sort_employees():
     """Sort employee table by specified column. Toggles direction on repeated clicks.
     
-    Demonstrates auto-propagation: the framework automatically generates the OOB
-    response for mutated states (employee_data_state).
+    Demonstrates auto-propagation and get_trigger_args() for accessing
+    trigger arguments without form_data parameter.
     """
-    column = form_data.get("column")
+    column = get_trigger_args().get("column")
     if not column:
         return ""
     
