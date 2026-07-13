@@ -7,9 +7,12 @@ Demonstrates:
 - Optional column ordering with the columns parameter
 - Fine-grained CSS styling with dictionary-based css parameter
 - Dynamic data rendering with state management
+- Table sorting with toggleable ascending/descending order
 
 Features:
 - Displays a table of employee data
+- Sort controls with buttons for each column
+- Click a button to sort ascending, click again to sort descending
 - Shows three examples: default columns, custom column order, and custom CSS styling
 - Table automatically updates when data changes
 
@@ -18,7 +21,7 @@ Run with: uvicorn examples.data_table_app:app --reload
 
 from pathlib import Path
 
-from inguitive import DataTable, Div, State, Text, create_app
+from inguitive import Button, DataTable, Div, State, Text, create_app, update_components
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
@@ -37,6 +40,44 @@ EMPLOYEE_DATA = [
 
 # State to store table data (allows dynamic updates)
 employee_data_state = State(EMPLOYEE_DATA, "employee_data_state")
+
+# State to track sort configuration
+sort_config_state = State({"column": None, "direction": "asc"}, "sort_config_state")
+
+
+# --- Trigger Handlers ---
+@app.trigger_handler
+def sort_employees(form_data: dict):
+    """Sort employee table by specified column. Toggles direction on repeated clicks."""
+    column = form_data.get("column")
+    if not column:
+        return ""
+    
+    # Get current sort config
+    current_config = sort_config_state.get()
+    current_column = current_config.get("column")
+    
+    # Determine new direction
+    if current_column == column:
+        # Same column: toggle direction
+        new_direction = "desc" if current_config.get("direction") == "asc" else "asc"
+    else:
+        # Different column: start with ascending
+        new_direction = "asc"
+    
+    # Update sort config
+    sort_config_state.set({"column": column, "direction": new_direction})
+    
+    # Sort the data (copy to avoid mutating original)
+    data = list(employee_data_state.get())
+    if column and column != "none":
+        # Handle None values and missing keys safely
+        data.sort(key=lambda x: str(x.get(column, "") or ""), reverse=(new_direction == "desc"))
+    
+    # Update data state with sorted data
+    employee_data_state.set(data)
+    
+    return update_components(*employee_data_state.listeners)
 
 
 # --- Components ---
@@ -74,6 +115,26 @@ def EmployeeTableWithCustomCSS():
     )
 
 
+def SortButtons():
+    """Render sort buttons for each column in the employee table."""
+    # Column names and their display labels
+    columns = ["id", "name", "department", "salary", "status"]
+    column_labels = ["ID", "Name", "Department", "Salary", "Status"]
+    
+    buttons = []
+    for col, label in zip(columns, column_labels):
+        buttons.append(
+            Button(
+                label,
+                trigger="sort_employees",
+                trigger_args={"column": col},
+                css="px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300 text-sm font-medium transition-colors",
+            )
+        )
+    
+    return Div(*buttons, css="flex flex-wrap gap-2 mb-4")
+
+
 # --- Pages ---
 @app.page("/")
 def index():
@@ -88,6 +149,10 @@ def index():
                 "Demonstrates the DataTable component with list of dictionaries data structure.",
                 css="text-lg text-gray-600 mb-8",
             ),
+            
+            # Sort controls
+            Text("Sort by:", css="text-sm font-medium text-gray-700 mb-2"),
+            SortButtons(),
             
             # First example: Default columns (natural order)
             Div(
