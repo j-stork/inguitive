@@ -10,22 +10,27 @@ Demonstrates:
 - Table sorting with toggleable ascending/descending order
 - Auto-propagation of state updates (automatic OOB response generation)
 - Using get_trigger_args() to access trigger arguments
+- Free-text filtering with conditional reset button
+- State-based UI controls (show/hide reset button)
 
 Features:
 - Displays a table of employee data
 - Sort controls with buttons for each column
 - Click a button to sort ascending, click again to sort descending
+- Free-text filter across all fields with conditional reset button
+- Reset button appears only when filter is active
 - Shows three examples: default columns, custom column order, and custom CSS styling
 - Table automatically updates when data changes
 - Auto-generated OOB responses from state mutations
 - Trigger handlers access arguments via get_trigger_args() without form_data parameter
+- Form submission with form_data for dynamic input
 
 Run with: uvicorn examples.data_table_app:app --reload
 """
 
 from pathlib import Path
 
-from inguitive import Button, DataTable, Div, State, Text, create_app, get_trigger_args
+from inguitive import Button, DataTable, Div, Form, Input, State, Text, create_app, get_trigger_args
 
 # --- App Setup ---
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
@@ -47,6 +52,9 @@ employee_data_state = State(EMPLOYEE_DATA, "employee_data_state")
 
 # State to track sort configuration
 sort_config_state = State({"column": None, "direction": "asc"}, "sort_config_state")
+
+# State to track if filter is currently active
+filter_active_state = State(False, "filter_active_state")
 
 
 # --- Trigger Handlers ---
@@ -86,6 +94,48 @@ def sort_employees():
     employee_data_state.set(data)
     
     # No explicit return - auto-propagation generates response automatically
+
+
+@app.trigger_handler
+def filter_employees(form_data: dict):
+    """Filter employees by text search across all fields.
+
+    Searches all string values in each employee dictionary for the
+    filter text (case-insensitive). Sets filter_active_state to True
+    when filter is applied, False when cleared.
+
+    Demonstrates:
+    - Form data access via form_data parameter
+    - Free-text search across multiple fields
+    - State management for UI feedback
+    """
+    search_text = form_data.get("filter-text", "").lower()
+
+    if search_text:
+        # Filter data: search across all fields
+        filtered = [
+            e for e in EMPLOYEE_DATA
+            if any(search_text in str(v).lower() for v in e.values())
+        ]
+        filter_active_state.set(True)
+    else:
+        # Empty search = show all (clear filter)
+        filtered = list(EMPLOYEE_DATA)
+        filter_active_state.set(False)
+
+    employee_data_state.set(filtered)
+    # Auto-propagation handles OOB response - no explicit return needed
+
+
+@app.trigger_handler
+def clear_filter():
+    """Clear the current filter, showing all employees.
+
+    Resets employee data to full list and updates filter_active_state.
+    """
+    filter_active_state.set(False)
+    employee_data_state.set(list(EMPLOYEE_DATA))
+    # Auto-propagation handles OOB response - no explicit return needed
 
 
 # --- Components ---
@@ -143,6 +193,49 @@ def SortButtons():
     return Div(*buttons, css="flex flex-wrap gap-2 mb-4")
 
 
+def FilterControls():
+    """Filter UI with input field and conditional reset button.
+
+    Demonstrates:
+    - Form component with Input and Button
+    - Conditional rendering based on state (reset button)
+    - Trigger handlers for form submission
+    - Free-text search across all fields
+    """
+    def dynamic_reset_button_css():
+        """Return CSS for reset button based on filter_active_state."""
+        if filter_active_state.get():
+            return "ml-2 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+        else:
+            return "hidden"
+
+    return Div(
+        Form(
+            Input(
+                id="filter-text",
+                name="filter-text",
+                placeholder="Search by any field...",
+                css="px-3 py-2 border border-gray-300 rounded-l-md",
+            ),
+            Button(
+                "Filter",
+                type="submit",
+                css="px-4 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600",
+            ),
+            trigger="filter_employees",
+            css="flex items-center",
+        ),
+        # Reset button appears only when filter is active
+        Button(
+            "Reset",
+            trigger="clear_filter",
+            listen_to="filter_active_state",
+            css=dynamic_reset_button_css,
+        ),
+        css="flex items-center gap-2 mb-4",
+    )
+
+
 # --- Pages ---
 @app.page("/")
 def index():
@@ -161,6 +254,10 @@ def index():
             # Sort controls
             Text("Sort by:", css="text-sm font-medium text-gray-700 mb-2"),
             SortButtons(),
+
+            # Filter controls
+            Text("Filter:", css="text-sm font-medium text-gray-700 mb-2 mt-6"),
+            FilterControls(),
             
             # First example: Default columns (natural order)
             Div(
