@@ -10,14 +10,15 @@ Demonstrates:
 - Table sorting with toggleable ascending/descending order
 - Auto-propagation of state updates (automatic OOB response generation)
 - Using get_trigger_args() to access trigger arguments
-- Free-text filtering with conditional reset button
-- State-based UI controls (show/hide reset button)
+- Free-text filtering with conditional reset button and status display
+- State-based UI controls (show/hide status text and reset button)
 
 Features:
 - Displays a table of employee data
 - Sort controls with buttons for each column
 - Click a button to sort ascending, click again to sort descending
-- Free-text filter across all fields with conditional reset button
+- Free-text filter across all fields with status display and conditional reset button
+- Status text shows "Filter is applied: <text>" when a filter is active
 - Reset button appears only when filter is active
 - Shows three examples: default columns, custom column order, and custom CSS styling
 - Table automatically updates when data changes
@@ -53,8 +54,8 @@ employee_data_state = State(EMPLOYEE_DATA, "employee_data_state")
 # State to track sort configuration
 sort_config_state = State({"column": None, "direction": "asc"}, "sort_config_state")
 
-# State to track if filter is currently active
-filter_active_state = State(False, "filter_active_state")
+# State to track filter text (empty string = no filter)
+filter_text_state = State("", "filter_text_state")
 
 
 # --- Trigger Handlers ---
@@ -101,8 +102,8 @@ def filter_employees(form_data: dict):
     """Filter employees by text search across all fields.
 
     Searches all string values in each employee dictionary for the
-    filter text (case-insensitive). Sets filter_active_state to True
-    when filter is applied, False when cleared.
+    filter text (case-insensitive). Sets filter_text_state to the search
+    text when filter is applied, empty string when cleared.
 
     Demonstrates:
     - Form data access via form_data parameter
@@ -117,11 +118,11 @@ def filter_employees(form_data: dict):
             e for e in EMPLOYEE_DATA
             if any(search_text in str(v).lower() for v in e.values())
         ]
-        filter_active_state.set(True)
+        filter_text_state.set(search_text)
     else:
         # Empty search = show all (clear filter)
         filtered = list(EMPLOYEE_DATA)
-        filter_active_state.set(False)
+        filter_text_state.set("")
 
     employee_data_state.set(filtered)
     # Auto-propagation handles OOB response - no explicit return needed
@@ -131,9 +132,9 @@ def filter_employees(form_data: dict):
 def clear_filter():
     """Clear the current filter, showing all employees.
 
-    Resets employee data to full list and updates filter_active_state.
+    Resets employee data to full list and clears filter_text_state.
     """
-    filter_active_state.set(False)
+    filter_text_state.set("")
     employee_data_state.set(list(EMPLOYEE_DATA))
     # Auto-propagation handles OOB response - no explicit return needed
 
@@ -194,20 +195,33 @@ def SortButtons():
 
 
 def FilterControls():
-    """Filter UI with input field and conditional reset button.
+    """Filter UI with input field, status text, and conditional reset button.
 
     Demonstrates:
     - Form component with Input and Button
-    - Conditional rendering based on state (reset button)
+    - Conditional rendering based on state (status text and reset button)
     - Trigger handlers for form submission
     - Free-text search across all fields
+    - State-based conditional UI with text display
     """
+    def dynamic_text():
+        """Return status text based on whether filter is applied."""
+        filter_text = filter_text_state.get()
+        if filter_text:
+            return f"Filter is applied: {filter_text}"
+        return ""
+    
+    def dynamic_text_css():
+        """Return CSS for status text based on whether filter is applied."""
+        if filter_text_state.get():
+            return "text-sm text-gray-600"
+        return "hidden"
+
     def dynamic_reset_button_css():
-        """Return CSS for reset button based on filter_active_state."""
-        if filter_active_state.get():
+        """Return CSS for reset button based on whether filter is applied."""
+        if filter_text_state.get():
             return "ml-2 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-        else:
-            return "hidden"
+        return "hidden"
 
     return Div(
         Form(
@@ -225,14 +239,21 @@ def FilterControls():
             trigger="filter_employees",
             css="flex items-center",
         ),
-        # Reset button appears only when filter is active
-        Button(
-            "Reset",
-            trigger="clear_filter",
-            listen_to="filter_active_state",
-            css=dynamic_reset_button_css,
+        # TODO: dynamic_div_css instead
+        Div(
+            Text(
+                dynamic_text,
+                css=dynamic_text_css,
+            ),
+            Button(
+                "Reset",
+                trigger="clear_filter",
+                listen_to="filter_text_state",
+                css=dynamic_reset_button_css,
+            ),
+            css="flex items-center gap-2",
         ),
-        css="flex items-center gap-2 mb-4",
+        css="flex flex-col gap-2 mb-4",
     )
 
 
