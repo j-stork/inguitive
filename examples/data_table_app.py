@@ -37,6 +37,21 @@ from inguitive import Button, DataTable, Div, Form, Input, State, Text, create_a
 app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
 
 
+# --- CSS ---
+COLOR_BASE = "slate"
+COLOR_100 = f"{COLOR_BASE}-100"
+COLOR_200 = f"{COLOR_BASE}-200"
+COLOR_300 = f"{COLOR_BASE}-300"
+COLOR_400 = f"{COLOR_BASE}-400"
+COLOR_900 = f"{COLOR_BASE}-900"
+COLOR_BRAND_1 = "blue-700"
+COLOR_BRAND_2 = "fuchsia-600"
+COLOR_BRAND_2_LIGHT = "fuchsia-500"
+BUTTON_SHAPE = "px-2 py-1 rounded-md text-sm font-semibold cursor-pointer shadow-lg active:shadow-none"
+BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT}"
+BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200}"
+
+
 # --- Sample Data ---
 # Employee data as list of dictionaries
 EMPLOYEE_DATA = [
@@ -184,11 +199,20 @@ def SortButtons():  # noqa: N802
                 label,
                 trigger="sort_employees",
                 trigger_args={"column": col},
-                css="px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300 text-sm font-medium transition-colors",
+                css=BUTTON_SECONDARY,
             )
         )
 
-    return Div(*buttons, css="flex flex-wrap gap-2 mb-4")
+    return Div(
+        Text(
+            "Sort tables by:", 
+            css=f"font-medium text-{COLOR_300}",
+        ),
+        Div(
+            *buttons, 
+            css="flex flex-wrap gap-2 mb-4"
+        ),
+    )
 
 
 def FilterControls():  # noqa: N802
@@ -255,16 +279,17 @@ def index():
     """Render the main data table example page."""
     return Div(
         Div(
-            Text(
-                "Data Table Example",
-                css="text-3xl font-bold text-gray-900 mb-2",
-            ),
-            Text(
-                "Demonstrates the DataTable component with list of dictionaries data structure.",
-                css="text-lg text-gray-600 mb-8",
+            Div(
+                Text(
+                    "Data Table Example",
+                    css=f"text-3xl font-bold text-{COLOR_100}",
+                ),
+                Text(
+                    "Demonstrates the DataTable component with list of dictionaries data structure.",
+                    css=f"text-lg text-{COLOR_300}",
+                ),
             ),
             # Sort controls
-            Text("Sort by:", css="text-sm font-medium text-gray-700 mb-2"),
             SortButtons(),
             # Filter controls
             Text("Filter:", css="text-sm font-medium text-gray-700 mb-2 mt-6"),
@@ -309,9 +334,9 @@ def index():
                 EmployeeTableWithCustomCSS(),
                 css="mb-12",
             ),
-            css="w-full max-w-6xl mx-auto p-6",
+            css="w-full max-w-6xl mx-auto p-4 space-y-4",
         ),
-        css="w-full bg-gray-100 min-h-screen",
+        css=f"w-full bg-{COLOR_900} min-h-screen",
     )
 
 
