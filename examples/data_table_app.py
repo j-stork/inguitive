@@ -62,18 +62,18 @@ filter_text_state = State("", "filter_text_state")
 @app.trigger_handler
 def sort_employees():
     """Sort employee table by specified column. Toggles direction on repeated clicks.
-    
+
     Demonstrates auto-propagation and get_trigger_args() for accessing
     trigger arguments without form_data parameter.
     """
     column = get_trigger_args().get("column")
     if not column:
         return ""
-    
+
     # Get current sort config
     current_config = sort_config_state.get()
     current_column = current_config.get("column")
-    
+
     # Determine new direction
     if current_column == column:
         # Same column: toggle direction
@@ -81,19 +81,19 @@ def sort_employees():
     else:
         # Different column: start with ascending
         new_direction = "asc"
-    
+
     # Update sort config
     sort_config_state.set({"column": column, "direction": new_direction})
-    
+
     # Sort the data (copy to avoid mutating original)
     data = list(employee_data_state.get())
     if column and column != "none":
         # Handle None values and missing keys safely
         data.sort(key=lambda x: str(x.get(column, "") or ""), reverse=(new_direction == "desc"))
-    
+
     # Update data state - auto-propagation will handle OOB response
     employee_data_state.set(data)
-    
+
     # No explicit return - auto-propagation generates response automatically
 
 
@@ -114,10 +114,7 @@ def filter_employees(form_data: dict):
 
     if search_text:
         # Filter data: search across all fields
-        filtered = [
-            e for e in EMPLOYEE_DATA
-            if any(search_text in str(v).lower() for v in e.values())
-        ]
+        filtered = [e for e in EMPLOYEE_DATA if any(search_text in str(v).lower() for v in e.values())]
         filter_text_state.set(search_text)
     else:
         # Empty search = show all (clear filter)
@@ -140,7 +137,7 @@ def clear_filter():
 
 
 # --- Components ---
-def EmployeeTable():
+def EmployeeTable():  # noqa: N802
     """Render employee data table with default column order."""
     return DataTable(
         data=employee_data_state.get,
@@ -149,7 +146,7 @@ def EmployeeTable():
     )
 
 
-def EmployeeTableWithColumnOrder():
+def EmployeeTableWithColumnOrder():  # noqa: N802
     """Render employee data table with custom column order."""
     return DataTable(
         data=employee_data_state.get,
@@ -159,7 +156,7 @@ def EmployeeTableWithColumnOrder():
     )
 
 
-def EmployeeTableWithCustomCSS():
+def EmployeeTableWithCustomCSS():  # noqa: N802
     """Render employee data table with custom CSS for sub-elements."""
     return DataTable(
         data=employee_data_state.get,
@@ -174,12 +171,12 @@ def EmployeeTableWithCustomCSS():
     )
 
 
-def SortButtons():
+def SortButtons():  # noqa: N802
     """Render sort buttons for each column in the employee table."""
     # Column names and their display labels
     columns = ["id", "name", "department", "salary", "status"]
     column_labels = ["ID", "Name", "Department", "Salary", "Status"]
-    
+
     buttons = []
     for col, label in zip(columns, column_labels):
         buttons.append(
@@ -190,11 +187,11 @@ def SortButtons():
                 css="px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300 text-sm font-medium transition-colors",
             )
         )
-    
+
     return Div(*buttons, css="flex flex-wrap gap-2 mb-4")
 
 
-def FilterControls():
+def FilterControls():  # noqa: N802
     """Filter UI with input field, status text, and conditional reset button.
 
     Demonstrates:
@@ -204,23 +201,18 @@ def FilterControls():
     - Free-text search across all fields
     - State-based conditional UI with text display
     """
+
     def dynamic_text():
         """Return status text based on whether filter is applied."""
         filter_text = filter_text_state.get()
         if filter_text:
             return f"Filter is applied: {filter_text}"
         return ""
-    
-    def dynamic_text_css():
-        """Return CSS for status text based on whether filter is applied."""
-        if filter_text_state.get():
-            return "text-sm text-gray-600"
-        return "hidden"
 
-    def dynamic_reset_button_css():
-        """Return CSS for reset button based on whether filter is applied."""
+    # TODO: Add a docstring to this function
+    def dynamic_div_css():
         if filter_text_state.get():
-            return "ml-2 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+            return "flex items-center gap-2"
         return "hidden"
 
     return Div(
@@ -228,6 +220,7 @@ def FilterControls():
             Input(
                 id="filter-text",
                 name="filter-text",
+                # TODO: Find a more precise placeholder text
                 placeholder="Search by any field...",
                 css="px-3 py-2 border border-gray-300 rounded-l-md",
             ),
@@ -239,19 +232,19 @@ def FilterControls():
             trigger="filter_employees",
             css="flex items-center",
         ),
-        # TODO: dynamic_div_css instead
         Div(
             Text(
                 dynamic_text,
-                css=dynamic_text_css,
+                css="text-sm text-gray-600",
             ),
             Button(
                 "Reset",
                 trigger="clear_filter",
                 listen_to="filter_text_state",
-                css=dynamic_reset_button_css,
+                css="ml-2 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400",
             ),
-            css="flex items-center gap-2",
+            listen_to="filter_text_state",
+            css=dynamic_div_css,
         ),
         css="flex flex-col gap-2 mb-4",
     )
@@ -271,15 +264,12 @@ def index():
                 "Demonstrates the DataTable component with list of dictionaries data structure.",
                 css="text-lg text-gray-600 mb-8",
             ),
-            
             # Sort controls
             Text("Sort by:", css="text-sm font-medium text-gray-700 mb-2"),
             SortButtons(),
-
             # Filter controls
             Text("Filter:", css="text-sm font-medium text-gray-700 mb-2 mt-6"),
             FilterControls(),
-            
             # First example: Default columns (natural order)
             Div(
                 Text(
@@ -293,7 +283,6 @@ def index():
                 EmployeeTable(),
                 css="mb-12",
             ),
-            
             # Second example: Custom column order
             Div(
                 Text(
@@ -307,7 +296,6 @@ def index():
                 EmployeeTableWithColumnOrder(),
                 css="mb-12",
             ),
-            
             # Third example: Custom CSS with dictionary
             Div(
                 Text(
@@ -322,22 +310,6 @@ def index():
                 EmployeeTableWithCustomCSS(),
                 css="mb-12",
             ),
-            
-            # Information about the data structure
-            Div(
-                Text(
-                    "Data Structure: List of Dictionaries",
-                    css="text-lg font-semibold text-gray-800 mb-2",
-                ),
-                Text(
-                    "Each row is a dictionary with column names as keys. "
-                    "This is the most common format for tabular data in Python web applications, "
-                    "matching JSON API responses and ORM query results.",
-                    css="text-sm text-gray-600",
-                ),
-                css="p-6 bg-gray-50 rounded-lg border border-gray-200",
-            ),
-            
             css="w-full max-w-6xl mx-auto p-6",
         ),
         css="w-full bg-gray-100 min-h-screen",
