@@ -209,8 +209,8 @@ def FilterControls():  # noqa: N802
             return f"Filter is applied: {filter_text}"
         return ""
 
-    # TODO: Add a docstring to this function
     def dynamic_div_css():
+        """Return CSS for status div based on whether filter is applied."""
         if filter_text_state.get():
             return "flex items-center gap-2"
         return "hidden"
@@ -220,8 +220,7 @@ def FilterControls():  # noqa: N802
             Input(
                 id="filter-text",
                 name="filter-text",
-                # TODO: Find a more precise placeholder text
-                placeholder="Search by any field...",
+                placeholder="Filter by any keyword...",
                 css="px-3 py-2 border border-gray-300 rounded-l-md",
             ),
             Button(
