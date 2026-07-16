@@ -4,14 +4,15 @@ Data Table Example using INGUITIVE framework.
 Demonstrates:
 - Rendering tabular data with the DataTable component
 - Using list of dictionaries as the data structure
-- Optional column ordering with the columns parameter
-- Fine-grained CSS styling with dictionary-based css parameter
+- Dynamic column ordering via state management
+- Dynamic CSS styling with dictionary-based css parameter
 - Dynamic data rendering with state management
 - Table sorting with toggleable ascending/descending order
 - Auto-propagation of state updates (automatic OOB response generation)
 - Using get_trigger_args() to access trigger arguments
 - Free-text filtering with conditional reset button and status display
 - State-based UI controls (show/hide status text and reset button)
+- Dynamic layout controls with custom column order and styling
 
 Features:
 - Displays a table of employee data
@@ -20,8 +21,8 @@ Features:
 - Free-text filter across all fields with status display and conditional reset button
 - Status text shows "Filter is applied: <text>" when a filter is active
 - Reset button appears only when filter is active
-- Shows three examples: default columns, custom column order, and custom CSS styling
-- Table automatically updates when data changes
+- Single interactive table with dynamic column order and custom CSS styling controlled via layout controls
+- Table automatically updates when data or layout state changes
 - Auto-generated OOB responses from state mutations
 - Trigger handlers access arguments via get_trigger_args() without form_data parameter
 - Form submission with form_data for dynamic input
@@ -71,6 +72,12 @@ sort_config_state = State({"column": None, "direction": "asc"}, "sort_config_sta
 
 # State to track filter text (empty string = no filter)
 filter_text_state = State("", "filter_text_state")
+
+# State for custom column order
+column_order_state = State(None, "column_order_state")
+
+# State for custom styling (None = default, "custom" = custom CSS)
+styling_state = State(None, "styling_state")
 
 
 # --- Trigger Handlers ---
@@ -151,38 +158,51 @@ def clear_filter():
     # Auto-propagation handles OOB response - no explicit return needed
 
 
+@app.trigger_handler
+def reset_layout():
+    """Reset table to original layout and default styling."""
+    column_order_state.set(None)
+    styling_state.set(None)
+
+
+@app.trigger_handler  
+def set_custom_column_order():
+    """Set custom column order: name, department, salary, status (omitting id)."""
+    column_order_state.set(["name", "department", "salary", "status"])
+
+
+@app.trigger_handler
+def set_custom_styling():
+    """Set custom CSS styling for the table."""
+    styling_state.set("custom")
+
+
 # --- Components ---
-def EmployeeTable():  # noqa: N802
-    """Render employee data table with default column order."""
-    return DataTable(
-        data=employee_data_state.get,
-        listen_to="employee_data_state",
-        css="w-full border border-gray-200 rounded-lg",
-    )
-
-
-def EmployeeTableWithColumnOrder():  # noqa: N802
-    """Render employee data table with custom column order."""
-    return DataTable(
-        data=employee_data_state.get,
-        listen_to="employee_data_state",
-        columns=["name", "department", "salary", "status"],  # id is omitted
-        css="w-full border border-gray-200 rounded-lg",
-    )
-
-
-def EmployeeTableWithCustomCSS():  # noqa: N802
-    """Render employee data table with custom CSS for sub-elements."""
-    return DataTable(
-        data=employee_data_state.get,
-        listen_to="employee_data_state",
-        columns=["name", "department", "salary", "status"],
-        css={
+def DynamicEmployeeTable():
+    """Single table that responds to column_order_state and styling_state.
+    
+    Demonstrates:
+    - Dynamic column ordering via state
+    - Dynamic CSS styling via state
+    - Single component responding to multiple states
+    """
+    columns = column_order_state.get()
+    styling = styling_state.get()
+    
+    css_config = "w-full border border-gray-200 rounded-lg"
+    if styling == "custom":
+        css_config = {
             "table": "w-full border-2 border-blue-600 rounded-lg",
             "header": "px-4 py-3 bg-blue-600 text-white font-bold text-sm",
             "cell": "px-4 py-3 border border-blue-200",
             "row": "hover:bg-blue-50 transition-colors",
-        },
+        }
+    
+    return DataTable(
+        data=employee_data_state.get,
+        listen_to=["employee_data_state", "column_order_state", "styling_state"],
+        columns=columns,
+        css=css_config,
     )
 
 
@@ -278,6 +298,40 @@ def FilterControls():  # noqa: N802
     )
 
 
+def LayoutControls():
+    """Controls for toggling table column order and styling.
+    
+    Demonstrates:
+    - Multiple buttons controlling different state aspects
+    - State-based layout customization
+    """
+    return Div(
+        Text(
+            "Customize table layout:",
+            css=f"font-medium text-{COLOR_300}",
+        ),
+        Div(
+            Button(
+                "Original Layout",
+                trigger="reset_layout",
+                css=BUTTON_PRIMARY,
+            ),
+            Button(
+                "Custom Column Order",
+                trigger="set_custom_column_order",
+                css=BUTTON_SECONDARY,
+            ),
+            Button(
+                "Custom Styling",
+                trigger="set_custom_styling",
+                css=BUTTON_SECONDARY,
+            ),
+            css="flex gap-3",
+        ),
+        css="space-y-3",
+    )
+
+
 # --- Pages ---
 @app.page("/")
 def index():
@@ -298,44 +352,19 @@ def index():
             SortButtons(),
             # Filter controls
             FilterControls(),
-            # First example: Default columns (natural order)
+            # Layout controls
+            LayoutControls(),
+            # Dynamic table demonstrating column order and styling
             Div(
                 Text(
-                    "Example 1: Default Column Order",
+                    "Interactive Table",
                     css="text-xl font-semibold text-gray-800 mb-4",
                 ),
                 Text(
-                    "Columns are automatically extracted from the first row's keys in insertion order.",
+                    "Use the layout controls above to toggle between default, custom column order, and custom styling.",
                     css="text-sm text-gray-500 mb-3",
                 ),
-                EmployeeTable(),
-                css="mb-12",
-            ),
-            # Second example: Custom column order
-            Div(
-                Text(
-                    "Example 2: Custom Column Order",
-                    css="text-xl font-semibold text-gray-800 mb-4",
-                ),
-                Text(
-                    "Use the 'columns' parameter to control order and select which columns to display.",
-                    css="text-sm text-gray-500 mb-3",
-                ),
-                EmployeeTableWithColumnOrder(),
-                css="mb-12",
-            ),
-            # Third example: Custom CSS with dictionary
-            Div(
-                Text(
-                    "Example 3: Custom CSS Styling",
-                    css="text-xl font-semibold text-gray-800 mb-4",
-                ),
-                Text(
-                    "Use a dictionary for the 'css' parameter to style sub-elements independently: "
-                    "'table', 'header', 'cell', and 'row'.",
-                    css="text-sm text-gray-500 mb-3",
-                ),
-                EmployeeTableWithCustomCSS(),
+                DynamicEmployeeTable(),
                 css="mb-12",
             ),
             css="w-full max-w-6xl mx-auto p-6 space-y-6",
