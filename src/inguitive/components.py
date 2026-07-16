@@ -19,7 +19,7 @@ class Component:
         self,
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         trigger: str | None = None,
         trigger_args: dict[str, str] | None = None,
         **attrs,
@@ -43,9 +43,12 @@ class Component:
         if listen_to:
             from inguitive.state import get_state_by_name
 
-            state = get_state_by_name(listen_to)
-            if state is not None:
-                state.add_listener(self.id)
+            # Normalize to list for uniform handling
+            state_names = [listen_to] if isinstance(listen_to, str) else listen_to
+            for state_name in state_names:
+                state = get_state_by_name(state_name)
+                if state is not None:
+                    state.add_listener(self.id)
 
     def _resolve(self, value: str | Callable[[], str]) -> str:
         """Resolve a potentially dynamic value (callable or static)."""
@@ -379,7 +382,7 @@ class Input(Component):
         type: str = "text",
         value: str | Callable[[], str] | None = None,
         placeholder: str = "",
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         **attrs,
     ):
         """Initialize an Input component.
@@ -433,7 +436,7 @@ class Textarea(Component):
         value: str | Callable[[], str] | None = None,
         placeholder: str = "",
         rows: int = 3,
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         **attrs,
     ):
         """Initialize a Textarea component.
@@ -488,7 +491,7 @@ class Select(Component):
         css: str | Callable[[], str] | None = None,
         options: list[tuple[str, str]] | Callable[[], list[tuple[str, str]]] | None = None,
         value: str | Callable[[], str] | None = None,
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         **attrs,
     ):
         """Initialize a Select component.
@@ -552,7 +555,7 @@ class Checkbox(Component):
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
         checked: bool | Callable[[], bool] = False,
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         **attrs,
     ):
         """Initialize a Checkbox component.
@@ -614,7 +617,7 @@ class Radio(Component):
         css: str | Callable[[], str] | None = None,
         value: str = "",
         checked: bool | Callable[[], bool] = False,
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         **attrs,
     ):
         """Initialize a Radio component.
@@ -680,7 +683,7 @@ class Form(Component):
         css: str | Callable[[], str] | None = None,
         action: str = "",
         method: str = "post",
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         **attrs,
     ):
         """Initialize a Form component.
@@ -747,7 +750,7 @@ class TemplateComponent(Component):
         template: str,
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         **context,
     ):
         """Initialize a TemplateComponent.
@@ -769,7 +772,7 @@ class TemplateComponent(Component):
         template_path: str,
         id: str | None = None,
         css_name: str | Callable[[], str] | None = None,
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         **context,
     ):
         """Create a TemplateComponent from a template file.
@@ -879,7 +882,7 @@ class DataTable(Component):
         columns: list[str] | None = None,
         id: str | None = None,
         css: str | dict[str, str] | Callable[[], str | dict[str, str]] | None = None,
-        listen_to: str | None = None,
+        listen_to: str | list[str] | None = None,
         **attrs,
     ):
         """Initialize a DataTable component.
