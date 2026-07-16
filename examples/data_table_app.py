@@ -186,7 +186,9 @@ def DynamicEmployeeTable():
     - Dynamic CSS styling via state
     - Single component responding to multiple states
     """
-    columns = column_order_state.get()
+    def dynamic_columns():
+        return column_order_state.get()
+    
     styling = styling_state.get()
     
     css_config = "w-full border border-gray-200 rounded-lg"
@@ -201,7 +203,7 @@ def DynamicEmployeeTable():
     return DataTable(
         data=employee_data_state.get,
         listen_to=["employee_data_state", "column_order_state", "styling_state"],
-        columns=columns,
+        columns=dynamic_columns,
         css=css_config,
     )
 
