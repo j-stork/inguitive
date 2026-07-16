@@ -47,7 +47,7 @@ COLOR_900 = f"{COLOR_BASE}-900"
 COLOR_BRAND_1 = "blue-700"
 COLOR_BRAND_2 = "fuchsia-600"
 COLOR_BRAND_2_LIGHT = "fuchsia-500"
-BUTTON_SHAPE = "px-2 py-1 rounded-md text-sm font-semibold cursor-pointer shadow-lg active:shadow-none"
+BUTTON_SHAPE = "px-3 py-2 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
 BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT}"
 BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200}"
 
@@ -210,8 +210,9 @@ def SortButtons():  # noqa: N802
         ),
         Div(
             *buttons, 
-            css="flex flex-wrap gap-2 mb-4"
+            css="flex flex-wrap gap-3"
         ),
+        css="space-y-3",
     )
 
 
@@ -236,40 +237,44 @@ def FilterControls():  # noqa: N802
     def dynamic_div_css():
         """Return CSS for status div based on whether filter is applied."""
         if filter_text_state.get():
-            return "flex items-center gap-2"
+            return "flex items-center gap-3"
         return "hidden"
 
     return Div(
+        Text(
+            "Filter:", 
+            css=f"font-medium text-{COLOR_300}",
+        ),
         Form(
             Input(
                 id="filter-text",
                 name="filter-text",
                 placeholder="Filter by any keyword...",
-                css="px-3 py-2 border border-gray-300 rounded-l-md",
+                css=f"px-3 py-2 bg-{COLOR_300} rounded-md",
             ),
             Button(
                 "Filter",
                 type="submit",
-                css="px-4 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600",
+                css=BUTTON_PRIMARY,
             ),
             trigger="filter_employees",
-            css="flex items-center",
+            css="flex items-center gap-3",
         ),
         Div(
             Text(
                 dynamic_text,
-                css="text-sm text-gray-600",
+                css=f"text-{COLOR_300}",
             ),
             Button(
                 "Reset",
                 trigger="clear_filter",
                 listen_to="filter_text_state",
-                css="ml-2 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400",
+                css=BUTTON_SECONDARY,
             ),
             listen_to="filter_text_state",
             css=dynamic_div_css,
         ),
-        css="flex flex-col gap-2 mb-4",
+        css="space-y-3",
     )
 
 
@@ -292,7 +297,6 @@ def index():
             # Sort controls
             SortButtons(),
             # Filter controls
-            Text("Filter:", css="text-sm font-medium text-gray-700 mb-2 mt-6"),
             FilterControls(),
             # First example: Default columns (natural order)
             Div(
@@ -334,7 +338,7 @@ def index():
                 EmployeeTableWithCustomCSS(),
                 css="mb-12",
             ),
-            css="w-full max-w-6xl mx-auto p-4 space-y-4",
+            css="w-full max-w-6xl mx-auto p-6 space-y-6",
         ),
         css=f"w-full bg-{COLOR_900} min-h-screen",
     )
