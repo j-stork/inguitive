@@ -5,7 +5,7 @@ Component classes for INGUITIVE framework.
 from __future__ import annotations
 
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 
 import jinja2
 
@@ -881,7 +881,7 @@ class DataTable(Component):
         data: list[dict] | Callable[[], list[dict]],
         columns: list[str] | Callable[[], list[str] | None] | None = None,
         id: str | None = None,
-        css: str | dict[str, str] | Callable[[], str | dict[str, str]] | None = None,
+        css: str | Mapping[str, str | Callable[[], str]] | Callable[[], str | Mapping[str, str | Callable[[], str]]] | None = None,
         listen_to: str | list[str] | None = None,
         **attrs,
     ):
