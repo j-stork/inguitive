@@ -60,11 +60,11 @@ BUTTON_SECONDARY = (
 # Employee data as list of dictionaries
 EMPLOYEE_DATA = [
     {"id": 1, "name": "Alice Johnson", "department": "Engineering", "salary": 75000, "status": "Active"},
-    {"id": 2, "name": "Bob Smith", "department": "Sales", "salary": 65000, "status": "Active"},
-    {"id": 3, "name": "Charlie Brown", "department": "Engineering", "salary": 80000, "status": "Active"},
+    {"id": 2, "name": "Charlie Brown", "department": "Sales", "salary": 65000, "status": "Active"},
+    {"id": 3, "name": "Bob Smith", "department": "Engineering", "salary": 80000, "status": "Active"},
     {"id": 4, "name": "Diana Prince", "department": "Marketing", "salary": 68000, "status": "On Leave"},
-    {"id": 5, "name": "Eve Adams", "department": "HR", "salary": 72000, "status": "Active"},
-    {"id": 6, "name": "Frank Castle", "department": "Engineering", "salary": 85000, "status": "Active"},
+    {"id": 5, "name": "Frank Castle", "department": "HR", "salary": 72000, "status": "Active"},
+    {"id": 6, "name": "Eve Adams", "department": "Engineering", "salary": 85000, "status": "Active"},
 ]
 
 # State to store table data (allows dynamic updates)
