@@ -963,7 +963,7 @@ class DataTable(Component):
         Returns empty list if data is empty.
         """
         if self.columns is not None:
-            resolved = self._resolve(self.columns) if callable(self.columns) else self.columns
+            resolved = self.columns() if callable(self.columns) else self.columns
             if resolved is not None:
                 return resolved
         if resolved_data:
