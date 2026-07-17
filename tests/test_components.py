@@ -167,14 +167,11 @@ class TestDataTable:
     def test_basic_render(self):
         """Test basic DataTable rendering with list of dicts."""
         from inguitive.components import DataTable
-        
-        data = [
-            {"name": "Alice", "age": 30},
-            {"name": "Bob", "age": 25}
-        ]
+
+        data = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
         table = DataTable(data=data)
         html = table.render()
-        
+
         assert "<table" in html
         assert "<thead>" in html
         assert "<tbody>" in html
@@ -188,17 +185,17 @@ class TestDataTable:
     def test_columns_parameter(self):
         """Test column ordering and selection."""
         from inguitive.components import DataTable
-        
+
         data = [
             {"name": "Alice", "age": 30, "city": "NYC"},
         ]
         table = DataTable(data=data, columns=["name", "city"])
         html = table.render()
-        
+
         assert ">name<" in html
         assert ">city<" in html
         assert ">age<" not in html  # omitted
-        
+
         # Check order: name should come before city
         name_pos = html.find(">name<")
         city_pos = html.find(">city<")
@@ -207,10 +204,10 @@ class TestDataTable:
     def test_empty_data(self):
         """Test rendering with empty data."""
         from inguitive.components import DataTable
-        
+
         table = DataTable(data=[])
         html = table.render()
-        
+
         assert "<table" in html
         assert "<thead><tr></tr></thead>" in html
         assert "<tbody></tbody>" in html
@@ -218,10 +215,10 @@ class TestDataTable:
     def test_empty_data_with_columns(self):
         """Test rendering with empty data but columns specified."""
         from inguitive.components import DataTable
-        
+
         table = DataTable(data=[], columns=["name", "age"])
         html = table.render()
-        
+
         assert ">name<" in html
         assert ">age<" in html
         assert "<tbody></tbody>" in html
@@ -229,56 +226,52 @@ class TestDataTable:
     def test_missing_values(self):
         """Test handling of None and missing keys in data."""
         from inguitive.components import DataTable
-        
+
         data = [
             {"name": "Alice", "age": 30},
             {"name": "Bob", "age": None},
-            {"name": "Charlie"}  # missing age
+            {"name": "Charlie"},  # missing age
         ]
         table = DataTable(data=data)
         html = table.render()
-        
+
         # None should be empty string - cells have class attrs, so look for empty cells
         # Count cells that contain only whitespace between tags
         import re
+
         empty_cells = len(re.findall(r'<td class="[^"]*"></td>', html))
         assert empty_cells >= 2  # Bob's age (None) and Charlie's age (missing)
 
     def test_string_css_backward_compatibility(self):
         """Test that string CSS still works (backward compatibility)."""
         from inguitive.components import DataTable
-        
+
         data = [{"name": "Alice"}]
         table = DataTable(data=data, css="w-full border")
         html = table.render()
-        
+
         assert 'class="w-full border' in html
         assert "<table" in html
 
     def test_callable_string_css(self):
         """Test that callable returning string works."""
         from inguitive.components import DataTable
-        
+
         data = [{"name": "Alice"}]
         table = DataTable(data=data, css=lambda: "w-full")
         html = table.render()
-        
+
         assert 'class="w-full' in html
 
     def test_dict_css_all_keys(self):
         """Test dictionary CSS with all keys."""
         from inguitive.components import DataTable
-        
+
         data = [{"name": "Alice", "age": 30}]
-        css_dict = {
-            "table": "w-full border-2",
-            "header": "bg-blue-500 text-white",
-            "cell": "p-2",
-            "row": "bg-gray-100"
-        }
+        css_dict = {"table": "w-full border-2", "header": "bg-blue-500 text-white", "cell": "p-2", "row": "bg-gray-100"}
         table = DataTable(data=data, css=css_dict)
         html = table.render()
-        
+
         # Check table CSS
         assert "w-full border-2" in html
         # Check header CSS
@@ -291,48 +284,48 @@ class TestDataTable:
     def test_dict_css_partial(self):
         """Test dictionary CSS with only some keys (should use defaults for missing)."""
         from inguitive.components import DataTable
-        
+
         data = [{"name": "Alice"}]
         css_dict = {"header": "bg-red-500"}
         table = DataTable(data=data, css=css_dict)
         html = table.render()
-        
+
         # Custom header CSS should be applied
         assert "bg-red-500" in html
         # Default cell CSS should be present
-        assert "border-t border-gray-200" in html
+        assert "border border-gray-300" in html
 
     def test_dict_css_empty(self):
         """Test empty dictionary CSS (should use all defaults)."""
         from inguitive.components import DataTable
-        
+
         data = [{"name": "Alice"}]
         table = DataTable(data=data, css={})
         html = table.render()
-        
+
         # Default CSS should be present
-        assert "bg-gray-100" in html  # header default
-        assert "border-t border-gray-200" in html  # cell default
-        assert "odd:bg-white even:bg-gray-50" in html  # row default
+        assert "bg-gray-100" in html  # row default
+        assert "border border-gray-300" in html  # cell default
+        assert "odd:bg-white even:bg-gray-100" in html  # row default
 
     def test_callable_dict_css(self):
         """Test callable returning dictionary CSS."""
         from inguitive.components import DataTable
-        
+
         data = [{"name": "Alice"}]
         table = DataTable(data=data, css=lambda: {"header": "bg-green-500"})
         html = table.render()
-        
+
         assert "bg-green-500" in html
 
     def test_dict_css_with_table_key(self):
         """Test that 'table' key in dict applies to root table element."""
         from inguitive.components import DataTable
-        
+
         data = [{"name": "Alice"}]
         table = DataTable(data=data, css={"table": "my-custom-class"})
         html = table.render()
-        
+
         # Should have the class on the table element
         assert 'class="my-custom-class' in html
         assert "<table" in html
@@ -340,17 +333,11 @@ class TestDataTable:
     def test_dict_css_with_callable_values(self):
         """Test dictionary CSS with callable values."""
         from inguitive.components import DataTable
-        
+
         data = [{"name": "Alice"}]
-        table = DataTable(
-            data=data,
-            css={
-                "header": lambda: "bg-purple-500",
-                "cell": lambda: "p-4"
-            }
-        )
+        table = DataTable(data=data, css={"header": lambda: "bg-purple-500", "cell": lambda: "p-4"})
         html = table.render()
-        
+
         assert "bg-purple-500" in html
         assert 'class="p-4"' in html
 
@@ -358,30 +345,22 @@ class TestDataTable:
         """Test that callable data works with dict CSS."""
         from inguitive.components import DataTable
         from inguitive.state import State
-        
+
         state = State([{"name": "Alice"}], "test_table_state")
-        table = DataTable(
-            data=state.get,
-            listen_to="test_table_state",
-            css={"header": "bg-orange-500"}
-        )
+        table = DataTable(data=state.get, listen_to="test_table_state", css={"header": "bg-orange-500"})
         html = table.render()
-        
+
         assert "Alice" in html
         assert "bg-orange-500" in html
 
     def test_update_method_with_dict_css(self):
         """Test that update() method works with dict CSS."""
         from inguitive.components import DataTable
-        
+
         data = [{"name": "Alice"}]
-        table = DataTable(
-            data=data,
-            id="test-table",
-            css={"header": "bg-teal-500"}
-        )
+        table = DataTable(data=data, id="test-table", css={"header": "bg-teal-500"})
         html = table.update()
-        
+
         assert 'hx-swap-oob="true"' in html
         assert 'id="test-table"' in html
         assert "bg-teal-500" in html
