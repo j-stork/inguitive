@@ -871,9 +871,9 @@ class DataTable(Component):
 
     # Default CSS classes for sub-elements (matching original hardcoded values)
     _DEFAULT_ELEMENT_CSS = {
-        "header": "px-4 py-2 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider",
-        "cell": "px-4 py-2 border-t border-gray-200",
-        "row": "odd:bg-white even:bg-gray-50",
+        "header": "px-3 py-2 bg-gray-400 border border-gray-400 text-left font-semibold uppercase tracking-wider",
+        "cell": "px-3 py-2 border border-gray-300",
+        "row": "odd:bg-white even:bg-gray-100 hover:bg-gray-200 transition-colors",
     }
 
     def __init__(
