@@ -27,8 +27,16 @@ pip install inguitive
 from inguitive import Div, Button, Label, State, create_app
 from inguitive.css import BUTTON_PRIMARY_CSS
 
+# Create FastAPI app
+app, templates = create_app()
+
 # Create reactive state
 counter_state = State(0, "counter_state")
+
+# Define a trigger function
+@app.trigger_handler
+def increment():
+    counter_state.set(counter_state.get() + 1)
 
 # Define a component
 def Counter():
@@ -37,16 +45,10 @@ def Counter():
         Button("+1", trigger="increment", css=BUTTON_PRIMARY_CSS),
     )
 
-# Create FastAPI app
-app, templates = create_app()
-
+# Define a route function
 @app.page("/")
 def index():
     return Counter()
-
-@app.trigger_handler
-def increment():
-    counter_state.set(counter_state.get() + 1)
 ```
 
 ## Component Reference
