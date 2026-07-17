@@ -50,10 +50,8 @@ COLOR_BRAND_1 = "blue-700"
 COLOR_BRAND_2 = "fuchsia-600"
 COLOR_BRAND_2_LIGHT = "fuchsia-500"
 BUTTON_SHAPE = "px-3 py-2 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
-BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT}"
-BUTTON_SECONDARY = (
-    f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200}"
-)
+BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT} active:to-{COLOR_BRAND_2}"
+BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200} active:to-{COLOR_300}"
 
 
 # --- Sample Data ---
@@ -147,6 +145,7 @@ def filter_employees(form_data: dict):
         filter_text_state.set("")
 
     employee_data_state.set(filtered)
+
     # Auto-propagation handles OOB response - no explicit return needed
 
 
@@ -158,6 +157,7 @@ def clear_filter():
     """
     filter_text_state.set("")
     employee_data_state.set(list(EMPLOYEE_DATA))
+
     # Auto-propagation handles OOB response - no explicit return needed
 
 
@@ -208,6 +208,7 @@ def DynamicEmployeeTable():  # noqa: N802
 
     return DataTable(
         data=employee_data_state.get,
+        # Note that listen_to also accepts multiple state names.
         listen_to=["employee_data_state", "column_order_state", "styling_state"],
         columns=dynamic_columns,
         css=dynamic_css,
