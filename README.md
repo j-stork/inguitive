@@ -93,7 +93,7 @@ INGUITIVE provides a comprehensive set of components organized by category. All 
 | Component | Description | Key Parameters | Example |
 |-----------|-------------|----------------|---------|
 | **`DataTable`** | Tabular data display | `data`, `columns`, `css` | `DataTable(data=[{"name": "A"}])` |
-| **`Icon`** | SVG icon component | `svg`, `css` | `Icon(HOME_SVG, css="w-6 h-6")` |
+| **`Icon`** | SVG icon component | `svg`, `css` | `Icon("<svg ...>...</svg>", css="w-6 h-6")` |
 
 ### Common Parameters (All Components)
 
