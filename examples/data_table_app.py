@@ -77,10 +77,10 @@ sort_config_state = State({"column": None, "direction": "asc"}, "sort_config_sta
 filter_text_state = State("", "filter_text_state")
 
 # State for custom column order
-column_order_state = State(None, "column_order_state")
+column_order_state: State[list[str] | None] = State(None, "column_order_state")
 
 # State for custom styling (None = default, "custom" = custom CSS)
-styling_state = State(None, "styling_state")
+styling_state: State[str | None] = State(None, "styling_state")
 
 
 # --- Trigger Handlers ---
@@ -171,7 +171,6 @@ def reset_layout():
 @app.trigger_handler
 def set_custom_column_order():
     """Set custom column order: name, department, salary, status (omitting id)."""
-    # TODO: Explain, why the following line is marked by Pylance
     column_order_state.set(["department", "name", "status", "salary"])
 
 
@@ -210,6 +209,7 @@ def DynamicEmployeeTable():
     return DataTable(
         data=employee_data_state.get,
         listen_to=["employee_data_state", "column_order_state", "styling_state"],
+        # TODO: Explain to me why the following line is marked by Pylance.
         columns=dynamic_columns,
         css=dynamic_css,
     )
