@@ -879,7 +879,7 @@ class DataTable(Component):
     def __init__(
         self,
         data: list[dict] | Callable[[], list[dict]],
-        columns: list[str] | Callable[[], list[str]] | None = None,
+        columns: list[str] | Callable[[], list[str] | None] | None = None,
         id: str | None = None,
         css: str | dict[str, str] | Callable[[], str | dict[str, str]] | None = None,
         listen_to: str | list[str] | None = None,
@@ -890,7 +890,7 @@ class DataTable(Component):
         Args:
             data: Tabular data as list of dictionaries, or callable returning such list.
                   Each dict represents a row, keys are column names.
-            columns: Optional list of column names to display, in order, or callable returning such list.
+            columns: Optional list of column names to display, in order, or callable returning such list or None.
                     If None, columns are extracted from the first row's keys.
                     Use this to control column order or select a subset of columns.
                     Can be a callable to enable dynamic column configuration based on state.
