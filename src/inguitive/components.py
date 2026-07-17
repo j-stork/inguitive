@@ -9,7 +9,7 @@ from collections.abc import Callable, Mapping
 
 import jinja2
 
-from inguitive.session import get_component_registry
+from inguitive.session import _get_component_registry
 
 
 class Component:
@@ -39,14 +39,14 @@ class Component:
             attrs.setdefault("hx-target", "#hx-target")
 
         self.attrs = attrs
-        get_component_registry()[self.id] = self
+        _get_component_registry()[self.id] = self
         if listen_to:
-            from inguitive.state import get_state_by_name
+            from inguitive.state import _get_state_by_name
 
             # Normalize to list for uniform handling
             state_names = [listen_to] if isinstance(listen_to, str) else listen_to
             for state_name in state_names:
-                state = get_state_by_name(state_name)
+                state = _get_state_by_name(state_name)
                 if state is not None:
                     state.add_listener(self.id)
 

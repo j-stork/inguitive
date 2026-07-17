@@ -2,7 +2,7 @@
 HTMX helper functions for INGUITIVE.
 """
 
-from inguitive.session import get_component_registry
+from inguitive.session import _get_component_registry
 
 
 def update_components(*component_ids: str) -> str:
@@ -15,7 +15,7 @@ def update_components(*component_ids: str) -> str:
         Concatenated HTML string with hx-swap-oob attributes
     """
     html_parts: list[str] = []
-    component_registry = get_component_registry()
+    component_registry = _get_component_registry()
     for cid in component_ids:
         if cid in component_registry:
             html_parts.append(component_registry[cid].update())

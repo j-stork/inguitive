@@ -36,7 +36,7 @@ def get_trigger_args() -> Dict[str, str]:
 
 
 @contextmanager
-def trigger_args_context(args: Dict[str, str]):
+def _trigger_args_context(args: Dict[str, str]):
     """Context manager to temporarily set trigger_args for handler execution.
 
     This is used internally by the framework to populate trigger_args from URL

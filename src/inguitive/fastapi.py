@@ -16,30 +16,30 @@ from fastapi.templating import Jinja2Templates
 from inguitive.session import (
     Session,
     SessionBackend,
-    clear_current_session,
+    _clear_current_session,
     get_session_backend,
-    set_current_session,
+    _set_current_session,
     set_session_backend,
 )
 from inguitive.state import (
-    get_mutated_states,
-    get_state_by_name,
-    track_mutations,
+    _get_mutated_states,
+    _get_state_by_name,
+    _track_mutations,
 )
-from inguitive.trigger import get_trigger_args, trigger_args_context
+from inguitive.trigger import get_trigger_args, _trigger_args_context
 from inguitive.htmx import update_components
 
 # Type variables for decorator type annotations
-P = ParamSpec("P")
-T = TypeVar("T")
+_P = ParamSpec("_P")
+_T = TypeVar("_T")
 
 # Type aliases for decorator return types
-TriggerDecorator = Callable[[Callable[P, T]], Callable[P, T]]
-PageDecorator = Callable[[str | None], Callable[[Callable[P, T]], Callable[P, T]]]
+_TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
+_PageDecorator = Callable[[str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
 
 
 @runtime_checkable
-class InguitiveApp(Protocol[P, T]):
+class InguitiveApp(Protocol[_P, _T]):
     """Protocol describing an INGUITIVE application with custom decorators.
 
     This Protocol extends the FastAPI instance with INGUITIVE-specific decorators.
@@ -47,8 +47,8 @@ class InguitiveApp(Protocol[P, T]):
     """
 
     # Custom decorators
-    trigger_handler: TriggerDecorator[P, T]
-    page: PageDecorator[P, T]
+    trigger_handler: _TriggerDecorator[_P, _T]
+    page: _PageDecorator[_P, _T]
 
 
 def _register_page_route(app, path: str, handler: Callable[P, T]):
@@ -105,9 +105,9 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
         query_params = dict(request.query_params)
 
         # Track state mutations during handler execution for auto-propagation
-        with track_mutations():
+        with _track_mutations():
             # Set trigger_args in context for get_trigger_args() access
-            with trigger_args_context(query_params):
+            with _trigger_args_context(query_params):
                 if needs_form_data:
                     form_data_dict = dict(await request.form())
                     # Merge query parameters (from trigger_args) into form_data
@@ -121,11 +121,11 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
                     return result
 
                 # Otherwise, auto-generate OOB response from mutated states
-                mutated_state_keys = get_mutated_states()
+                mutated_state_keys = _get_mutated_states()
                 all_component_ids = set()
                 for state_key in mutated_state_keys:
                     # Get the State object for this key and collect its listeners
-                    state = get_state_by_name(state_key)
+                    state = _get_state_by_name(state_key)
                     if state is not None:
                         all_component_ids.update(state.listeners)
 
@@ -196,7 +196,7 @@ class SessionMiddleware:
             session = Session(session_id=str(uuid.uuid4()))
             backend.save_session(session)
 
-        set_current_session(session)
+        _set_current_session(session)
 
         async def send_with_cookie(message):
             if message["type"] == "http.response.start":
@@ -217,7 +217,7 @@ class SessionMiddleware:
             await self.app(scope, receive, send_with_cookie)
         finally:
             backend.save_session(session)
-            clear_current_session()
+            _clear_current_session()
 
 
 def create_app(
@@ -228,7 +228,7 @@ def create_app(
     session_cookie_secure: bool = False,
     session_cookie_httponly: bool = True,
     session_cleanup_interval: int = 100,
-) -> tuple[InguitiveApp[P, T], Jinja2Templates]:
+) -> tuple[InguitiveApp[_P, _T], Jinja2Templates]:
     """Create and configure a FastAPI application for INGUITIVE.
 
     Args:

@@ -27,13 +27,13 @@ class TestRedisBackend:
         """Test basic save, get, and delete operations with RedisBackend."""
         self._check_redis_available()
         
-        from inguitive.session import RedisBackend, create_session
+        from inguitive.session import RedisBackend, _create_session
         
         # Create RedisBackend
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
         
         # Create and save a session
-        session = create_session()
+        session = _create_session()
         session.data_registry["test_key"] = "test_value"
         backend.save_session(session)
         
@@ -51,12 +51,12 @@ class TestRedisBackend:
         """Test that sessions with data are correctly serialized for Redis."""
         self._check_redis_available()
         
-        from inguitive.session import RedisBackend, create_session
+        from inguitive.session import RedisBackend, _create_session
         
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
         
         # Create a session with various data types
-        session = create_session()
+        session = _create_session()
         session.data_registry["string"] = "value"
         session.data_registry["number"] = 42
         session.data_registry["list"] = [1, 2, 3]
@@ -82,13 +82,13 @@ class TestRedisBackend:
         
         self._check_redis_available()
         
-        from inguitive.session import RedisBackend, create_session
+        from inguitive.session import RedisBackend, _create_session
         
         # Use a very short TTL for testing
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0, ttl_seconds=1)
         
         # Create and save a session
-        session = create_session()
+        session = _create_session()
         backend.save_session(session)
         
         # Verify session exists
@@ -104,13 +104,13 @@ class TestRedisBackend:
         """Test that Redis keys are correctly formatted."""
         self._check_redis_available()
         
-        from inguitive.session import RedisBackend, create_session
+        from inguitive.session import RedisBackend, _create_session
         
         client = redis.Redis.from_url("redis://localhost:6379", db=0, decode_responses=True)
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
         
         # Create and save a session
-        session = create_session()
+        session = _create_session()
         backend.save_session(session)
         
         # Check the key in Redis directly
@@ -127,14 +127,14 @@ class TestRedisBackend:
         """Test that multiple sessions are stored independently."""
         self._check_redis_available()
         
-        from inguitive.session import RedisBackend, create_session
+        from inguitive.session import RedisBackend, _create_session
         
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
         
         # Create multiple sessions
         sessions = []
         for i in range(5):
-            session = create_session()
+            session = _create_session()
             session.data_registry["index"] = i
             backend.save_session(session)
             sessions.append(session)
@@ -170,12 +170,12 @@ class TestRedisBackend:
         self._check_redis_available()
         
         from inguitive.components import Button, Div, Text
-        from inguitive.session import RedisBackend, create_session
+        from inguitive.session import RedisBackend, _create_session
         
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
         
         # Create a session and add components to its registries
-        session = create_session()
+        session = _create_session()
         session.component_registry["button1"] = Button("Test")
         session.component_registry["div1"] = Div(Text("Test"))
         session.state_registry["state1"] = "some_state"

@@ -6,8 +6,8 @@ from inguitive.components import Button, Div, Icon, Label
 from inguitive.session import (
     MemoryBackend,
     Session,
-    clear_current_session,
-    set_current_session,
+    _clear_current_session,
+    _set_current_session,
     set_session_backend,
 )
 from inguitive.state import State
@@ -20,9 +20,9 @@ def cleanup_registries():
     set_session_backend(backend)
     session = Session(session_id="test-session")
     backend.save_session(session)
-    set_current_session(session)
+    _set_current_session(session)
     yield
-    clear_current_session()
+    _clear_current_session()
 
 
 class TestDiv:
@@ -75,10 +75,10 @@ class TestButton:
 
     def test_children_with_icon(self):
         """Test button with icon and text children."""
-        from inguitive.svg import MOON
+        from inguitive.svg import _MOON
 
         btn = Button(
-            Icon(MOON, css="w-6 h-6"),
+            Icon(_MOON, css="w-6 h-6"),
             "Toggle Theme",
         )
         html = btn.render()
@@ -109,27 +109,27 @@ class TestLabel:
 class TestIcon:
     def test_basic_render(self):
         """Test basic icon rendering."""
-        from inguitive.svg import MOON
+        from inguitive.svg import _MOON
 
-        icon = Icon(MOON)
+        icon = Icon(_MOON)
         html = icon.render()
         assert "<svg" in html
         assert "</svg>" in html
 
     def test_css_replacement(self):
         """Test class attribute replacement in SVG."""
-        from inguitive.svg import MOON
+        from inguitive.svg import _MOON
 
-        icon = Icon(MOON, css="w-8 h-8")
+        icon = Icon(_MOON, css="w-8 h-8")
         html = icon.render()
         assert 'class="w-8 h-8' in html
 
     def test_callable_svg(self):
         """Test dynamic SVG via callable."""
-        from inguitive.svg import MOON, SUN
+        from inguitive.svg import _MOON, _SUN
 
         state = State("light")
-        icon = Icon(lambda: MOON if state.get() == "light" else SUN)
+        icon = Icon(lambda: _MOON if state.get() == "light" else _SUN)
 
         html = icon.render()
         assert "MOON" in html or "w-6 h-6 text-gray-800" in html

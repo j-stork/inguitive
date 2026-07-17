@@ -5,7 +5,7 @@ import json
 import pytest
 
 from inguitive.components import Button
-from inguitive.session import MemoryBackend, Session, create_session
+from inguitive.session import MemoryBackend, Session, _create_session
 
 
 class TestRedisBackendSerialization:
@@ -19,7 +19,7 @@ class TestRedisBackendSerialization:
         from serialization, only persisting session_id and data_registry.
         """
         # Create a session with components in registry
-        session = create_session()
+        session = _create_session()
         session.component_registry['test_button'] = Button('Test')
         session.state_registry['test_state'] = 'some_state'
         session.data_registry['test_data'] = 'some_data'
@@ -43,7 +43,7 @@ class TestRedisBackendSerialization:
 
     def test_session_with_complex_data_serialization(self):
         """Test serialization with various data types in data_registry."""
-        session = create_session()
+        session = _create_session()
         session.data_registry['string'] = 'test'
         session.data_registry['number'] = 42
         session.data_registry['list'] = [1, 2, 3]
@@ -74,7 +74,7 @@ class TestMemoryBackendInstanceIsolation:
         backend2 = MemoryBackend()
         
         # Save a session to backend1
-        session1 = create_session()
+        session1 = _create_session()
         session1.data_registry['test'] = 'value1'
         backend1.save_session(session1)
         
@@ -87,7 +87,7 @@ class TestMemoryBackendInstanceIsolation:
         assert retrieved1.data_registry['test'] == 'value1'
         
         # Save a session to backend2
-        session2 = create_session()
+        session2 = _create_session()
         session2.data_registry['test'] = 'value2'
         backend2.save_session(session2)
         
@@ -105,9 +105,9 @@ class TestMemoryBackendInstanceIsolation:
         backend3 = MemoryBackend()
         
         # Create sessions in each backend
-        session1 = create_session()
-        session2 = create_session()
-        session3 = create_session()
+        session1 = _create_session()
+        session2 = _create_session()
+        session3 = _create_session()
         
         backend1.save_session(session1)
         backend2.save_session(session2)
@@ -135,7 +135,7 @@ class TestMemoryBackendBasicOperations:
         backend = MemoryBackend()
         
         # Create and save a session
-        session = create_session()
+        session = _create_session()
         session.data_registry['key'] = 'value'
         backend.save_session(session)
         
@@ -149,7 +149,7 @@ class TestMemoryBackendBasicOperations:
         backend = MemoryBackend()
         
         # Create and save a session
-        session = create_session()
+        session = _create_session()
         backend.save_session(session)
         
         # Verify it exists
@@ -164,7 +164,7 @@ class TestMemoryBackendBasicOperations:
         backend = MemoryBackend()
         
         # Create and save a session
-        session = create_session()
+        session = _create_session()
         session.data_registry['key'] = 'original'
         backend.save_session(session)
         
@@ -195,11 +195,11 @@ class TestMemoryBackendSessionExpiry:
 
     def test_session_has_last_accessed_on_creation(self):
         """Test that sessions have last_accessed timestamp set on creation."""
-        from inguitive.session import create_session
+        from inguitive.session import _create_session
         import time
         
         before = time.time()
-        session = create_session()
+        session = _create_session()
         after = time.time()
         
         assert session.last_accessed >= before
@@ -211,7 +211,7 @@ class TestMemoryBackendSessionExpiry:
         from unittest.mock import patch
         
         backend = MemoryBackend()
-        session = create_session()
+        session = _create_session()
         backend.save_session(session)
         
         # Ensure some time has passed
@@ -229,7 +229,7 @@ class TestMemoryBackendSessionExpiry:
         from unittest.mock import patch
         
         backend = MemoryBackend()
-        session = create_session()
+        session = _create_session()
         
         # Ensure some time has passed
         time.sleep(0.01)
@@ -248,7 +248,7 @@ class TestMemoryBackendSessionExpiry:
         backend = MemoryBackend(ttl_seconds=1)
         
         # Create a session
-        session = create_session()
+        session = _create_session()
         backend.save_session(session)
         
         # Verify session exists
@@ -272,7 +272,7 @@ class TestMemoryBackendSessionExpiry:
         backend = MemoryBackend(ttl_seconds=3600)
         
         # Create a session (will have current timestamp)
-        session = create_session()
+        session = _create_session()
         backend.save_session(session)
         
         # Run cleanup
@@ -287,7 +287,7 @@ class TestMemoryBackendSessionExpiry:
         backend = MemoryBackend(ttl_seconds=0)
         
         # Create and save a session with old timestamp
-        session = create_session()
+        session = _create_session()
         session.last_accessed = 0.0  # Very old timestamp
         backend.save_session(session)
         
@@ -304,9 +304,9 @@ class TestMemoryBackendSessionExpiry:
         backend = MemoryBackend(ttl_seconds=1)
         
         # Create 3 sessions
-        session1 = create_session()  # Recent
-        session2 = create_session()  # Will be expired
-        session3 = create_session()  # Recent
+        session1 = _create_session()  # Recent
+        session2 = _create_session()  # Will be expired
+        session3 = _create_session()  # Recent
         
         backend.save_session(session1)
         backend.save_session(session2)
@@ -333,7 +333,7 @@ class TestMemoryBackendSessionExpiry:
         # Create 5 expired sessions
         session_ids = []
         for _ in range(5):
-            session = create_session()
+            session = _create_session()
             backend.save_session(session)
             session_ids.append(session.session_id)
         
@@ -357,7 +357,7 @@ class TestMemoryBackendSessionExpiry:
         import json
         
         # Create a session
-        session = create_session()
+        session = _create_session()
         original_timestamp = session.last_accessed
         
         # Serialize
@@ -397,7 +397,7 @@ class TestMemoryBackendSessionExpiry:
         backend = MemoryBackend(ttl_seconds=1)
         
         # Create a session
-        session = create_session()
+        session = _create_session()
         backend.save_session(session)
         
         # Wait a bit
