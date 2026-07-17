@@ -10,10 +10,10 @@ import uuid
 from typing import Generic, TypeVar
 
 from inguitive.session import (
-    get_data_registry,
+    _get_data_registry,
 )
 
-T = TypeVar("T")
+_T = TypeVar("_T")
 
 _LISTENERS_PREFIX = "__listeners__"
 
@@ -26,7 +26,7 @@ _mutated_states: contextvars.ContextVar[set[str]] = contextvars.ContextVar(
 
 
 @contextmanager
-def track_mutations():
+def _track_mutations():
     """Context manager to track state mutations during handler execution.
     
     Use this to wrap trigger handler execution. All State.set() calls within
@@ -39,7 +39,7 @@ def track_mutations():
         _mutated_states.reset(token)
 
 
-def get_mutated_states() -> set[str]:
+def _get_mutated_states() -> set[str]:
     """Return set of state keys mutated during current request.
     
     Returns:
@@ -49,12 +49,12 @@ def get_mutated_states() -> set[str]:
     return _mutated_states.get().copy()
 
 
-def get_state_by_name(name: str) -> State | None:
+def _get_state_by_name(name: str) -> State | None:
     """Look up a named State object from the global registry."""
     return _state_name_registry.get(name)
 
 
-class State(Generic[T]):
+class State(Generic[_T]):
     """Reactive state container with per-session isolation.
 
     State values and listener sets are stored in the per-session data_registry,
@@ -67,20 +67,20 @@ class State(Generic[T]):
     states not shared across components via listen_to.
     """
 
-    def __init__(self, initial_value: T, name: str = ""):
+    def __init__(self, initial_value: _T, name: str = ""):
         self._initial_value = initial_value
         self.name = name
         self._key = name if name else f"__anon_{uuid.uuid4().hex}"
         if name:
             _state_name_registry[name] = self
 
-    def get(self) -> T:
+    def get(self) -> _T:
         """Return the current value for the active session."""
-        return get_data_registry().get(self._key, self._initial_value)
+        return _get_data_registry().get(self._key, self._initial_value)
 
-    def set(self, new_value: T) -> None:
+    def set(self, new_value: _T) -> None:
         """Write a new value into the active session's data registry."""
-        get_data_registry()[self._key] = new_value
+        _get_data_registry()[self._key] = new_value
         # Track mutation for auto-propagation in trigger handlers
         _mutated_states.get().add(self._key)
 
@@ -88,7 +88,7 @@ class State(Generic[T]):
     def listeners(self) -> set[str]:
         """Return the set of component IDs listening to this state in the active session."""
         listeners_key = f"{_LISTENERS_PREFIX}{self._key}"
-        data = get_data_registry()
+        data = _get_data_registry()
         if listeners_key not in data:
             data[listeners_key] = set()
         return data[listeners_key]

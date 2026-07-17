@@ -217,13 +217,13 @@ def set_session_backend(backend: SessionBackend) -> None:
     _session_backend = backend
 
 
-def create_session() -> Session:
+def _create_session() -> Session:
     """Create a new session with unique ID."""
     session_id = str(uuid.uuid4())
     return Session(session_id=session_id)
 
 
-def get_current_session() -> Session | None:
+def _get_current_session() -> Session | None:
     """Get the current session for this request/context."""
     session_id = _current_session_id.get()
     if session_id is None:
@@ -232,14 +232,14 @@ def get_current_session() -> Session | None:
     return backend.get_session(session_id)
 
 
-def get_or_create_current_session() -> Session:
+def _get_or_create_current_session() -> Session:
     """Get current session or create a new one."""
-    session = get_current_session()
+    session = _get_current_session()
     if session is not None:
         return session
 
     # Create new session
-    session = create_session()
+    session = _create_session()
     backend = get_session_backend()
     backend.save_session(session)
 
@@ -248,33 +248,33 @@ def get_or_create_current_session() -> Session:
     return session
 
 
-def set_current_session(session: Session) -> None:
+def _set_current_session(session: Session) -> None:
     """Set the current session for this request/context."""
     _current_session_id.set(session.session_id)
 
 
-def clear_current_session() -> None:
+def _clear_current_session() -> None:
     """Clear the current session from context."""
     _current_session_id.set(None)
 
 
 def get_session_id() -> str | None:
     """Get the current session ID, or None if no session is active."""
-    session = get_current_session()
+    session = _get_current_session()
     return session.session_id if session else None
 
 
 # Convenience functions for registries
-def get_component_registry() -> dict[str, Any]:
+def _get_component_registry() -> dict[str, Any]:
     """Get the component registry for the current session."""
-    return get_or_create_current_session().component_registry
+    return _get_or_create_current_session().component_registry
 
 
-def get_state_registry() -> dict[str, Any]:
+def _get_state_registry() -> dict[str, Any]:
     """Get the state registry for the current session."""
-    return get_or_create_current_session().state_registry
+    return _get_or_create_current_session().state_registry
 
 
-def get_data_registry() -> dict[str, Any]:
+def _get_data_registry() -> dict[str, Any]:
     """Get the data registry for the current session."""
-    return get_or_create_current_session().data_registry
+    return _get_or_create_current_session().data_registry
