@@ -44,7 +44,7 @@ def _get_mutated_states() -> set[str]:
     
     Returns:
         Copy of the set of state keys that were mutated via State.set()
-        within the current track_mutations() context.
+        within the current _track_mutations() context.
     """
     return _mutated_states.get().copy()
 
