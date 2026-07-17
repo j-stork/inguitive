@@ -5,8 +5,8 @@ Reactive state management for INGUITIVE.
 from __future__ import annotations
 
 import contextvars
-from contextlib import contextmanager
 import uuid
+from contextlib import contextmanager
 from typing import Generic, TypeVar
 
 from inguitive.session import (
@@ -20,15 +20,13 @@ _LISTENERS_PREFIX = "__listeners__"
 _state_name_registry: dict[str, State] = {}
 
 # Context variable to track mutated state keys during request handling
-_mutated_states: contextvars.ContextVar[set[str]] = contextvars.ContextVar(
-    "mutated_states", default=set()
-)
+_mutated_states: contextvars.ContextVar[set[str]] = contextvars.ContextVar("mutated_states", default=set())
 
 
 @contextmanager
 def _track_mutations():
     """Context manager to track state mutations during handler execution.
-    
+
     Use this to wrap trigger handler execution. All State.set() calls within
     the context will be recorded and can be retrieved via get_mutated_states().
     """
@@ -41,7 +39,7 @@ def _track_mutations():
 
 def _get_mutated_states() -> set[str]:
     """Return set of state keys mutated during current request.
-    
+
     Returns:
         Copy of the set of state keys that were mutated via State.set()
         within the current _track_mutations() context.
