@@ -914,26 +914,26 @@ class DataTable(Component):
 
     def _resolve_css(self) -> tuple[str, dict[str, str]]:
         """Resolve and normalize the CSS parameter.
-        
+
         Returns:
             tuple: (root_css: str, element_css: dict[str, str])
                 - root_css: CSS classes for the root <table> element
                 - element_css: Dictionary of CSS classes for sub-elements (header, row, cell)
         """
         css = self._raw_css
-        
+
         # Handle callable
         if callable(css):
             css = css()
-        
+
         # Handle None
         if css is None:
             return "", {}
-        
+
         # Handle string - applies to root table element
         if isinstance(css, str):
             return css, {}
-        
+
         # Handle dict - can contain 'table', 'header', 'row', 'cell' keys
         if isinstance(css, dict):
             resolved_dict = {}
@@ -943,7 +943,7 @@ class DataTable(Component):
                     value = value()
                 if value is None:
                     value = ""
-                
+
                 # 'table' key applies to root element
                 if key == "table":
                     root_css = value
@@ -951,13 +951,13 @@ class DataTable(Component):
                     # Other keys apply to sub-elements
                     resolved_dict[key] = value
             return root_css, resolved_dict
-        
+
         # Fallback
         return "", {}
 
     def _get_columns(self, resolved_data: list[dict]) -> list[str]:
         """Get the list of columns to display.
-        
+
         If columns parameter was provided, use it.
         Otherwise, extract from first row's keys.
         Returns empty list if data is empty.
@@ -980,38 +980,35 @@ class DataTable(Component):
     def _render_table(self, resolved_data: list[dict], element_css: dict[str, str]) -> str:
         """Render the HTML table structure with resolved data and CSS."""
         columns = self._get_columns(resolved_data)
-        
+
         # Merge user-provided CSS with defaults
         header_css = element_css.get("header", self._DEFAULT_ELEMENT_CSS["header"])
         cell_css = element_css.get("cell", self._DEFAULT_ELEMENT_CSS["cell"])
         row_css = element_css.get("row", self._DEFAULT_ELEMENT_CSS["row"])
-        
+
         # Render thead
-        header_cells = "".join(f"<th class=\"{header_css}\">{col}</th>" for col in columns)
+        header_cells = "".join(f'<th class="{header_css}">{col}</th>' for col in columns)
         thead = f"<thead><tr>{header_cells}</tr></thead>"
-        
+
         # Render tbody
         if not resolved_data:
             tbody = "<tbody></tbody>"
         else:
             rows_html = []
             for row in resolved_data:
-                cells = "".join(
-                    f"<td class=\"{cell_css}\">{self._get_value(row, col)}</td>"
-                    for col in columns
-                )
-                rows_html.append(f"<tr class=\"{row_css}\">{cells}</tr>")
+                cells = "".join(f'<td class="{cell_css}">{self._get_value(row, col)}</td>' for col in columns)
+                rows_html.append(f'<tr class="{row_css}">{cells}</tr>')
             tbody = f"<tbody>{''.join(rows_html)}</tbody>"
-        
+
         return f"{thead}{tbody}"
 
     def _build_attrs(self, root_css: str, include_oob: bool = False) -> str:
         """Build HTML attributes string with optional OOB prefix.
-        
+
         Args:
             root_css: CSS classes for the root table element
             include_oob: If True, prefix with hx-swap-oob="true"
-        
+
         Returns:
             Complete attributes string for <table> element
         """
@@ -1019,23 +1016,23 @@ class DataTable(Component):
         for k, v in self.attrs.items():
             if k != "css":
                 filtered_attrs[k] = self._resolve(v)
-        
+
         # Add root CSS to class attribute
         if root_css:
             if "class" in filtered_attrs:
                 filtered_attrs["class"] += " " + root_css
             else:
                 filtered_attrs["class"] = root_css
-        
+
         # Add id if present
         if self.id:
             filtered_attrs["id"] = self.id
-        
+
         attrs = " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
-        
+
         if include_oob:
             attrs = f'hx-swap-oob="true" {attrs}'.strip()
-        
+
         return attrs
 
     def render(self) -> str:
@@ -1050,7 +1047,7 @@ class DataTable(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        
+
         resolved_data = self.data() if callable(self.data) else self.data
         root_css, element_css = self._resolve_css()
         attrs = self._build_attrs(root_css, include_oob=True)
