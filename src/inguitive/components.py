@@ -1040,7 +1040,7 @@ class DataTable(Component):
 
     def render(self) -> str:
         """Render the DataTable as HTML."""
-        resolved_data = self._resolve(self.data) if callable(self.data) else self.data
+        resolved_data = self.data() if callable(self.data) else self.data
         root_css, element_css = self._resolve_css()
         attrs = self._build_attrs(root_css, include_oob=False)
         table_content = self._render_table(resolved_data, element_css)
@@ -1051,7 +1051,7 @@ class DataTable(Component):
         if not self.id:
             return self.render()
         
-        resolved_data = self._resolve(self.data) if callable(self.data) else self.data
+        resolved_data = self.data() if callable(self.data) else self.data
         root_css, element_css = self._resolve_css()
         attrs = self._build_attrs(root_css, include_oob=True)
         table_content = self._render_table(resolved_data, element_css)
