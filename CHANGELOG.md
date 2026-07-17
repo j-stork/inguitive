@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.1.0] - 2025-07-17
+## [0.1.0] - 2026-07-17
 
 ### Added
 
@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All component attributes support dynamic values via callables
 - Composable UI components with clean Python syntax
 - Tailwind CSS first-class support for all components
+- `DataTable` supports dict-based CSS for per-element styling (`table`, `header`, `row`, `cell` keys)
 
 **Session Management**
 - Per-session state isolation (each browser has independent state)
@@ -42,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Session ID management utilities
 
 **FastAPI Integration**
-- `InguitiveApp` custom FastAPI application class
+- `InguitiveApp` Protocol for type-safe access to `@app.page` and `@app.trigger_handler` decorators
 - `create_app()` factory for easy app creation
 - `@app.page` decorator for page routes
 - `@app.trigger_handler` decorator for trigger handlers
