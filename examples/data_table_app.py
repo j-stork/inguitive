@@ -44,13 +44,16 @@ COLOR_100 = f"{COLOR_BASE}-100"
 COLOR_200 = f"{COLOR_BASE}-200"
 COLOR_300 = f"{COLOR_BASE}-300"
 COLOR_400 = f"{COLOR_BASE}-400"
+COLOR_700 = f"{COLOR_BASE}-700"
 COLOR_900 = f"{COLOR_BASE}-900"
 COLOR_BRAND_1 = "blue-700"
 COLOR_BRAND_2 = "fuchsia-600"
 COLOR_BRAND_2_LIGHT = "fuchsia-500"
 BUTTON_SHAPE = "px-3 py-2 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
 BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT}"
-BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200}"
+BUTTON_SECONDARY = (
+    f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200}"
+)
 
 
 # --- Sample Data ---
@@ -165,10 +168,11 @@ def reset_layout():
     styling_state.set(None)
 
 
-@app.trigger_handler  
+@app.trigger_handler
 def set_custom_column_order():
     """Set custom column order: name, department, salary, status (omitting id)."""
-    column_order_state.set(["name", "department", "salary", "status"])
+    # TODO: Explain, why the following line is marked by Pylance
+    column_order_state.set(["department", "name", "status", "salary"])
 
 
 @app.trigger_handler
@@ -180,31 +184,34 @@ def set_custom_styling():
 # --- Components ---
 def DynamicEmployeeTable():
     """Single table that responds to column_order_state and styling_state.
-    
+
     Demonstrates:
     - Dynamic column ordering via state
     - Dynamic CSS styling via state
     - Single component responding to multiple states
     """
+
     def dynamic_columns():
         return column_order_state.get()
-    
-    styling = styling_state.get()
-    
-    css_config = "w-full border border-gray-200 rounded-lg"
-    if styling == "custom":
-        css_config = {
-            "table": "w-full border-2 border-blue-600 rounded-lg",
-            "header": "px-4 py-3 bg-blue-600 text-white font-bold text-sm",
-            "cell": "px-4 py-3 border border-blue-200",
-            "row": "hover:bg-blue-50 transition-colors",
-        }
-    
+
+    def dynamic_css():
+        styling = styling_state.get()
+        if styling == "custom":
+            css_config = {
+                "table": f"w-full border-2 border-{COLOR_BRAND_1}",
+                "header": f"px-3 py-2 bg-{COLOR_BRAND_1} text-{COLOR_100} font-mono",
+                "cell": f"px-3 py-2 border border-{COLOR_700} text-{COLOR_100} font-mono",
+                "row": f"hover:bg-{COLOR_700} transition-colors",
+            }
+        else:
+            css_config = "w-full"
+        return css_config
+
     return DataTable(
         data=employee_data_state.get,
         listen_to=["employee_data_state", "column_order_state", "styling_state"],
         columns=dynamic_columns,
-        css=css_config,
+        css=dynamic_css,
     )
 
 
@@ -221,19 +228,16 @@ def SortButtons():  # noqa: N802
                 label,
                 trigger="sort_employees",
                 trigger_args={"column": col},
-                css=BUTTON_SECONDARY,
+                css=BUTTON_PRIMARY if col == "id" else BUTTON_SECONDARY,
             )
         )
 
     return Div(
         Text(
-            "Sort tables by:", 
+            "Sort tables by:",
             css=f"font-medium text-{COLOR_300}",
         ),
-        Div(
-            *buttons, 
-            css="flex flex-wrap gap-3"
-        ),
+        Div(*buttons, css="flex flex-wrap gap-3"),
         css="space-y-3",
     )
 
@@ -256,7 +260,7 @@ def FilterControls():  # noqa: N802
             return f"Filter is applied: {filter_text}"
         return ""
 
-    def dynamic_div_css():
+    def dynamic_css():
         """Return CSS for status div based on whether filter is applied."""
         if filter_text_state.get():
             return "flex items-center gap-3"
@@ -264,7 +268,7 @@ def FilterControls():  # noqa: N802
 
     return Div(
         Text(
-            "Filter:", 
+            "Filter:",
             css=f"font-medium text-{COLOR_300}",
         ),
         Form(
@@ -294,7 +298,7 @@ def FilterControls():  # noqa: N802
                 css=BUTTON_SECONDARY,
             ),
             listen_to="filter_text_state",
-            css=dynamic_div_css,
+            css=dynamic_css,
         ),
         css="space-y-3",
     )
@@ -302,7 +306,7 @@ def FilterControls():  # noqa: N802
 
 def LayoutControls():
     """Controls for toggling table column order and styling.
-    
+
     Demonstrates:
     - Multiple buttons controlling different state aspects
     - State-based layout customization
@@ -350,25 +354,17 @@ def index():
                     css=f"text-lg text-{COLOR_300}",
                 ),
             ),
-            # Sort controls
-            SortButtons(),
-            # Filter controls
-            FilterControls(),
-            # Layout controls
-            LayoutControls(),
-            # Dynamic table demonstrating column order and styling
             Div(
-                Text(
-                    "Interactive Table",
-                    css="text-xl font-semibold text-gray-800 mb-4",
-                ),
-                Text(
-                    "Use the layout controls above to toggle between default, custom column order, and custom styling.",
-                    css="text-sm text-gray-500 mb-3",
-                ),
-                DynamicEmployeeTable(),
-                css="mb-12",
+                # Sort controls
+                SortButtons(),
+                # Filter controls
+                FilterControls(),
+                # Layout controls
+                LayoutControls(),
+                css=f"border-2 border-{COLOR_700} rounded-xl p-6 space-y-6",
             ),
+            # Dynamic table demonstrating column order and styling
+            DynamicEmployeeTable(),
             css="w-full max-w-6xl mx-auto p-6 space-y-6",
         ),
         css=f"w-full bg-{COLOR_900} min-h-screen",
