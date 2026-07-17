@@ -76,18 +76,18 @@ class Component:
         """
         children_html_parts = []
         for child in getattr(self, "children", []):
-            if hasattr(child, "render"):
+            if isinstance(child, Component):
                 children_html_parts.append(child.render())
             else:
                 resolved = self._resolve(child)
                 if isinstance(resolved, list):
                     for item in resolved:
-                        if hasattr(item, "render"):
+                        if isinstance(item, Component):
                             children_html_parts.append(item.render())
                         else:
                             children_html_parts.append(str(item))
                 else:
-                    if hasattr(resolved, "render") and callable(resolved.render):
+                    if isinstance(resolved, Component):
                         children_html_parts.append(resolved.render())
                     else:
                         children_html_parts.append(str(resolved))
