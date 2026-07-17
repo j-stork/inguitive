@@ -181,7 +181,7 @@ def set_custom_styling():
 
 
 # --- Components ---
-def DynamicEmployeeTable():
+def DynamicEmployeeTable():  # noqa: N802
     """Single table that responds to column_order_state and styling_state.
 
     Demonstrates:
@@ -209,7 +209,6 @@ def DynamicEmployeeTable():
     return DataTable(
         data=employee_data_state.get,
         listen_to=["employee_data_state", "column_order_state", "styling_state"],
-        # TODO: Explain to me why the following line is marked by Pylance.
         columns=dynamic_columns,
         css=dynamic_css,
     )
@@ -304,7 +303,7 @@ def FilterControls():  # noqa: N802
     )
 
 
-def LayoutControls():
+def LayoutControls():  # noqa: N802
     """Controls for toggling table column order and styling.
 
     Demonstrates:
