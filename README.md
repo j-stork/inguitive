@@ -2,6 +2,8 @@
 
 A pure Python web framework combining intuitive syntax with **HTMX** for partial page reloads and **Tailwind CSS** for styling.
 
+INGUITIVE is a pure Python web framework that combines intuitive component-based UI construction with HTMX for seamless partial page updates and Tailwind CSS for styling. Unlike traditional request-response frameworks, INGUITIVE provides reactive state management where components automatically re-render when state changes, eliminating the need for manual DOM manipulation or JavaScript. It is designed for Python developers who want to build interactive web applications using only Python, without sacrificing the dynamic feel of modern SPAs.
+
 ## Features
 
 - **Reactive State Management**: Components automatically re-render when state changes
@@ -24,7 +26,6 @@ pip install inguitive
 ```python
 from inguitive import Div, Button, Label, State, create_app
 from inguitive.css import BUTTON_PRIMARY_CSS
-from inguitive.htmx import update_components
 
 # Create reactive state
 counter_state = State(0, "counter_state")
@@ -39,11 +40,64 @@ def Counter():
 # Create FastAPI app
 app, templates = create_app()
 
-@app.post("/increment")
+@app.trigger_handler
 def increment():
     counter_state.set(counter_state.get() + 1)
-    return update_components(*counter_state.listeners)
 ```
+
+## Component Reference
+
+INGUITIVE provides a comprehensive set of components organized by category. All components support dynamic attributes via callables and can listen to state changes for automatic re-rendering.
+
+### Base Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`Component`** | Base class for all components | `id`, `css`, `listen_to` | Custom component base |
+| **`TemplateComponent`** | Render Jinja2 templates | `template`, context vars | Custom HTML with templating |
+
+### Layout Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`Div`** | Container div element | `*children`, `id`, `css` | `Div(Button("Click"), css="flex gap-2")` |
+| **`Text`** | Paragraph/text element | `text`, `id`, `css` | `Text("Hello", css="text-xl")` |
+| **`Label`** | Form label element | `text`, `for_`, `id`, `css` | `Label("Name:", for_="name")` |
+
+### Form Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`Form`** | Form container | `*children`, `action`, `method` | `Form(Input(...), Button(...))` |
+| **`Input`** | Text input field | `type`, `value`, `placeholder`, `listen_to` | `Input(id="email", type="email")` |
+| **`Textarea`** | Multi-line text input | `value`, `placeholder`, `rows` | `Textarea(id="bio", rows=5)` |
+| **`Select`** | Dropdown select | `options`, `value`, `listen_to` | `Select(id="country", options=[...])` |
+| **`Checkbox`** | Checkbox input | `checked`, `id`, `listen_to` | `Checkbox(id="agree", checked=True)` |
+| **`Radio`** | Radio button input | `value`, `checked`, `name` | `Radio(id="male", name="gender")` |
+| **`Button`** | Clickable button | `*children`, `trigger`, `css` | `Button("Click", trigger="action")` |
+
+### Navigation Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`Link`** | Semantic navigation link | `*children`, `href`, `css` | `Link("Home", href="/")` |
+
+### Data Display Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`DataTable`** | Tabular data display | `data`, `columns`, `css` | `DataTable(data=[{"name": "A"}])` |
+| **`Icon`** | SVG icon component | `svg`, `css` | `Icon(HOME_SVG, css="w-6 h-6")` |
+
+### Common Parameters (All Components)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `str \| None` | HTML id attribute. Required for state listening and OOB updates |
+| `css` | `str \| Callable[[], str] \| dict \| None` | Tailwind CSS classes. For DataTable, can be a dict with keys: `table`, `header`, `row`, `cell` |
+| `listen_to` | `str \| list[str] \| None` | State name(s) to listen for changes. Triggers re-render when state updates |
+| `trigger` | `str \| None` | Trigger name for HTMX POST actions (Button, Input, etc.) |
+| `trigger_args` | `dict[str, str] \| None` | Query parameters to pass with trigger |
 
 ## When to Use: Navigation & Actions
 
@@ -84,6 +138,28 @@ Button("Save", trigger="save_form")
 Button("Like", trigger="like_post", trigger_args={"id": "123"})
 ```
 
+## Comparison with FastHTML
+
+INGUITIVE and FastHTML both enable Python-only web development, but they have different architectures and trade-offs.
+
+| Feature | INGUITIVE | FastHTML |
+|---------|-----------|----------|
+| **Paradigm** | Component-based with reactive state | Direct HTML generation with functional helpers |
+| **State Management** | Automatic - components re-render when observed state changes | Manual - you control when and how HTML is regenerated |
+| **Component Model** | Class-based components with `render()` and `update()` methods | Function-based with `htmx` attributes added directly |
+| **Reactivity** | Built-in via `State` objects and `listen_to` parameter | Manual - you write the update logic explicitly |
+| **Routing** | Decorator-based (`@app.page`, `@app.trigger_handler`) | Route functions return HTML strings |
+| **Session Isolation** | Automatic per-user session registries | Manual or framework-agnostic |
+| **Styling** | Tailwind CSS first-class support | Any CSS works, Tailwind common |
+| **Learning Curve** | Higher - requires understanding component lifecycle | Lower - more direct and explicit |
+| **Best For** | SPAs, complex stateful apps, teams wanting structure | Simple sites, maximum control, minimal abstractions |
+
+**Choose INGUITIVE when:** You want reactive components that automatically update, clean separation of UI and business logic, and are building applications with complex state interactions.
+
+**Choose FastHTML when:** You prefer explicit control over every HTML generation, want minimal framework overhead, or are building content-heavy sites where manual control is preferred.
+
+Both frameworks can coexist - INGUITIVE's reactive components can be used alongside FastHTML's direct approach in the same project.
+
 ## Project Structure
 
 ```
@@ -93,7 +169,7 @@ Button("Like", trigger="like_post", trigger_args={"id": "123"})
 │       ├── __init__.py      # Public API
 │       ├── components.py    # Component classes
 │       ├── state.py         # Reactive state
-│       ├── hx.py             # HTMX helpers
+│       ├── htmx.py           # HTMX helpers
 │       ├── fastapi.py       # FastAPI integration
 │       └── svg.py           # SVG icon definitions
 ├── examples/
@@ -134,6 +210,29 @@ app, templates = create_app(
 ```
 
 Requires `pip install redis` for RedisBackend.
+
+### Session Lifetime and Expiry
+
+INGUITIVE sessions are created automatically on first request and persist across page reloads. Each session has isolated component, state, and data registries.
+
+**Session Creation:** A new session is created with a unique ID when a user first visits your application. The session ID is stored in a cookie.
+
+**Session Persistence:** Sessions persist across page reloads and browser navigation within the same domain. The session cookie maintains the session ID, allowing the framework to restore the user's state.
+
+**Session Expiry:**
+- **MemoryBackend:** Sessions expire after `ttl_seconds` (default: 3600 = 1 hour) of inactivity. Expired sessions are automatically cleaned up every N requests (configurable via `cleanup_interval`).
+- **RedisBackend:** Sessions are stored in Redis with a TTL. Redis automatically expires keys after the configured `ttl_seconds`, providing automatic cleanup.
+
+**Differences Between Backends:**
+
+| Aspect | MemoryBackend | RedisBackend |
+|--------|---------------|--------------|
+| Persistence | Lost on process restart | Survives process restarts |
+| Multi-worker | Not supported (shared memory) | Supported (Redis as shared store) |
+| Cleanup | Manual/Periodic via `cleanup_expired()` | Automatic via Redis TTL |
+| Use Case | Development, testing | Production, scaling |
+
+**Page Reload Behavior:** Session state is preserved across page reloads. Components listening to state will re-render with the current state values when the page loads.
 
 ## Production Deployment
 
