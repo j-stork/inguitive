@@ -29,7 +29,7 @@ from inguitive import Div, Button, Label, State, create_app
 from inguitive.css import BUTTON_PRIMARY_CSS
 
 # Create FastAPI app
-app, templates = create_app()  # templates is used in @app.page routes for Jinja2 rendering
+app = create_app()
 
 # Create reactive state
 counter_state = State(0, "counter_state")
@@ -59,7 +59,7 @@ Pass data from a component to its handler using `trigger_args` on the component 
 ```python
 from inguitive import Button, Div, State, Text, create_app, get_trigger_args
 
-app, templates = create_app()  # templates is used in @app.page routes for Jinja2 rendering
+app = create_app()
 selected_state = State("none", "selected_state")
 
 @app.trigger_handler
@@ -194,13 +194,13 @@ INGUITIVE uses session-scoped registries to isolate user state. Choose a backend
 from inguitive import create_app, MemoryBackend, RedisBackend
 
 # Development: In-memory sessions (default, no config needed)
-app, templates = create_app()
+app = create_app()
 
 # Or explicitly:
-app, templates = create_app(session_backend=MemoryBackend())
+app = create_app(session_backend=MemoryBackend())
 
 # Production: Redis-backed sessions for scaling
-app, templates = create_app(
+app = create_app(
     session_backend=RedisBackend(
         redis_url="redis://localhost:6379",
         ttl_seconds=3600  # Session timeout: 1 hour
@@ -240,7 +240,7 @@ Before deploying your INGUITIVE app to production, configure these security sett
 ```python
 from inguitive import create_app, RedisBackend
 
-app, templates = create_app(
+app = create_app(
     session_backend=RedisBackend(redis_url="redis://localhost:6379"),
     session_cookie_secure=True,      # Cookies only over HTTPS
     session_cookie_httponly=True,    # Prevent JavaScript access (default)

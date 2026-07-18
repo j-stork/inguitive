@@ -228,7 +228,7 @@ def create_app(
     session_cookie_secure: bool = False,
     session_cookie_httponly: bool = True,
     session_cleanup_interval: int = 100,
-) -> tuple[InguitiveApp[_P, _T], Jinja2Templates]:
+) -> InguitiveApp[_P, _T]:
     """Create and configure a FastAPI application for INGUITIVE.
 
     Args:
@@ -241,8 +241,8 @@ def create_app(
         session_cleanup_interval: Call cleanup_expired() every N requests (default: 100)
 
     Returns:
-        Tuple of (InguitiveApp, Jinja2Templates) - the app has custom decorators
-        trigger_handler and page for defining handlers and routes
+        InguitiveApp - the FastAPI application with INGUITIVE decorators
+        (trigger_handler and page) and templates accessible via app.state.templates
     """
     app = FastAPI()
     templates = Jinja2Templates(directory=template_dir)
@@ -300,7 +300,7 @@ def create_app(
         cleanup_interval=session_cleanup_interval,
     )
 
-    return app, templates
+    return app
 
 
 def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True):

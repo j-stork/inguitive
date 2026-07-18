@@ -10,7 +10,7 @@ class TestAsyncPageHandlers:
 
     def test_async_page_handler(self):
         """Test that async page handlers work correctly."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.page("/async-page")
         async def async_page():
@@ -23,7 +23,7 @@ class TestAsyncPageHandlers:
 
     def test_async_page_handler_with_state(self):
         """Test that async page handlers can access and display state."""
-        app, _ = create_app()
+        app = create_app()
         message_state = State("Async Hello", "message_state")
         
         @app.page("/async-state-page")
@@ -37,7 +37,7 @@ class TestAsyncPageHandlers:
 
     def test_async_page_handler_returns_component(self):
         """Test that async page handlers can return Component instances."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.page("/async-component")
         async def async_component_page():
@@ -58,7 +58,7 @@ class TestAsyncTriggerHandlers:
 
     def test_async_trigger_handler_with_form_data(self):
         """Test that async trigger handlers can receive form_data."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -73,7 +73,7 @@ class TestAsyncTriggerHandlers:
 
     def test_async_trigger_handler_with_state(self):
         """Test that async trigger handlers can update state."""
-        app, _ = create_app()
+        app = create_app()
         counter_state = State(0, "counter_state")
         
         @app.page("/async-counter")
@@ -103,7 +103,7 @@ class TestAsyncTriggerHandlers:
 
     def test_async_trigger_handler_with_request(self):
         """Test that async trigger handlers can receive request parameter."""
-        app, _ = create_app()
+        app = create_app()
         received_path = None
         
         @app.trigger_handler
@@ -119,7 +119,7 @@ class TestAsyncTriggerHandlers:
 
     def test_async_trigger_handler_complex_form_data(self):
         """Test async trigger handler with nested/structured form data."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -146,7 +146,7 @@ class TestAsyncIntegration:
 
     def test_multiple_async_handlers(self):
         """Test that multiple async handlers can be registered on the same app."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.page("/async-page-1")
         async def async_page_1():
@@ -184,7 +184,7 @@ class TestAsyncIntegration:
 
     def test_mixed_sync_and_async_handlers(self):
         """Test that sync and async handlers can coexist on the same app."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.page("/sync-page")
         def sync_page():

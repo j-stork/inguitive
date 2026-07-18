@@ -12,7 +12,7 @@ class TestPageDecorator:
 
     def test_page_decorator_registration(self):
         """Test that @app.page registers the route correctly."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.page("/test")
         def test_page():
@@ -25,7 +25,7 @@ class TestPageDecorator:
 
     def test_page_decorator_root_path(self):
         """Test that @app.page(\"/\") registers at the root path."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.page("/")
         def root_page():
@@ -38,7 +38,7 @@ class TestPageDecorator:
 
     def test_page_decorator_custom_path(self):
         """Test that @app.page works with various custom paths."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.page("/custom/path")
         def custom_page():
@@ -55,7 +55,7 @@ class TestTriggerHandlerDecorator:
 
     def test_trigger_handler_decorator_registration(self):
         """Test that @app.trigger_handler registers the POST route correctly."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.trigger_handler
         def increment():
@@ -68,7 +68,7 @@ class TestTriggerHandlerDecorator:
 
     def test_trigger_handler_with_custom_name(self):
         """Test that @app.trigger_handler(\"custom_name\") uses the custom name."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.trigger_handler("custom_trigger")
         def my_handler():
@@ -80,7 +80,7 @@ class TestTriggerHandlerDecorator:
 
     def test_trigger_handler_form_data_injection(self):
         """Test that form_data is correctly injected into trigger handlers."""
-        app, _ = create_app()
+        app = create_app()
         received_data = {}
         
         @app.trigger_handler
@@ -95,7 +95,7 @@ class TestTriggerHandlerDecorator:
 
     def test_trigger_handler_async(self):
         """Test that async trigger handlers work correctly."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.trigger_handler
         async def async_trigger():
@@ -111,7 +111,7 @@ class TestMultipleDecorators:
 
     def test_multiple_page_routes(self):
         """Test that multiple @app.page routes can be registered."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.page("/page1")
         def page1():
@@ -133,7 +133,7 @@ class TestMultipleDecorators:
 
     def test_multiple_trigger_handlers(self):
         """Test that multiple @app.trigger_handler routes can be registered."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.trigger_handler("trigger1")
         def handler1():
@@ -153,7 +153,7 @@ class TestMultipleDecorators:
 
     def test_page_and_trigger_coexistence(self):
         """Test that @app.page and @app.trigger_handler can coexist on the same app."""
-        app, _ = create_app()
+        app = create_app()
         
         @app.page("/test-page")
         def test_page():
@@ -180,7 +180,7 @@ class TestStateIntegration:
 
     def test_page_with_state(self):
         """Test that pages can access and display state."""
-        app, _ = create_app()
+        app = create_app()
         message_state = State("Hello", "message_state")
         
         @app.page("/state-test")
@@ -194,7 +194,7 @@ class TestStateIntegration:
 
     def test_trigger_with_state_update(self):
         """Test that triggers can update state and pages reflect the changes."""
-        app, _ = create_app()
+        app = create_app()
         counter_state = State(0, "counter_state")
         
         @app.page("/counter-test")
@@ -224,7 +224,7 @@ class TestStateIntegration:
 
     def test_trigger_handler_with_form_data_and_state(self):
         """Test that trigger handlers can receive form data and update state."""
-        app, _ = create_app()
+        app = create_app()
         form_state = State({}, "form_state")
         
         @app.trigger_handler

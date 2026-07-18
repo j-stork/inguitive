@@ -20,7 +20,7 @@ from pathlib import Path
 from inguitive import Button, Div, Form, Icon, Input, State, Text, create_app, update_components
 
 # --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
+app = create_app(template_dir=Path(__file__).parent.parent / "templates")
 
 
 # --- CSS ---
