@@ -10,7 +10,7 @@ class TestBasicFormData:
 
     def test_basic_form_data_injection(self):
         """Test that form_data parameter receives POST form data."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -26,7 +26,7 @@ class TestBasicFormData:
 
     def test_multiple_form_fields(self):
         """Test that multiple form fields are all received in form_data."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -49,7 +49,7 @@ class TestBasicFormData:
 
     def test_empty_form_data(self):
         """Test that empty form data results in empty dict."""
-        app, _ = create_app()
+        app = create_app()
         received = None
         
         @app.trigger_handler
@@ -69,7 +69,7 @@ class TestQueryParamsMerging:
 
     def test_query_params_merged_into_form_data(self):
         """Test that query parameters from trigger_args are merged into form_data."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -87,7 +87,7 @@ class TestQueryParamsMerging:
 
     def test_mixed_form_data_and_query_params(self):
         """Test that form POST data and URL query params are merged into form_data."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -108,7 +108,7 @@ class TestQueryParamsMerging:
 
     def test_query_params_only(self):
         """Test that query params work even without POST form data."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -129,7 +129,7 @@ class TestHandlerWithoutFormData:
 
     def test_handler_without_form_data_parameter(self):
         """Test that handlers without form_data parameter are not affected."""
-        app, _ = create_app()
+        app = create_app()
         called = False
         
         @app.trigger_handler
@@ -146,7 +146,7 @@ class TestHandlerWithoutFormData:
 
     def test_handler_with_different_parameters(self):
         """Test that handlers with other parameters work correctly."""
-        app, _ = create_app()
+        app = create_app()
         called_with_request = False
         
         @app.trigger_handler
@@ -166,7 +166,7 @@ class TestSpecialCases:
 
     def test_form_data_with_special_characters(self):
         """Test that special characters in form data are preserved."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -187,7 +187,7 @@ class TestSpecialCases:
 
     def test_form_data_with_unicode(self):
         """Test that unicode characters in form data are handled correctly."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -209,7 +209,7 @@ class TestSpecialCases:
         import tempfile
         import os
         
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler
@@ -240,7 +240,7 @@ class TestSpecialCases:
 
     def test_duplicate_keys_in_form_data(self):
         """Test behavior when form data has values that could be problematic."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
         
         @app.trigger_handler

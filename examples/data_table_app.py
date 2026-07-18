@@ -35,7 +35,7 @@ from pathlib import Path
 from inguitive import Button, DataTable, Div, Form, Input, State, Text, create_app, get_trigger_args
 
 # --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
+app = create_app(template_dir=Path(__file__).parent.parent / "templates")
 
 
 # --- CSS ---
