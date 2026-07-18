@@ -25,7 +25,7 @@ from inguitive import (
 )
 
 # --- App Setup ---
-app, templates = create_app(template_dir=Path(__file__).parent.parent / "templates")
+app = create_app(template_dir=Path(__file__).parent.parent / "templates")
 
 # --- State Instances ---
 # Use collective State for form data (simpler pattern)

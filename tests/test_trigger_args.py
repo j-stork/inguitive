@@ -10,7 +10,7 @@ class TestGetTriggerArgsBasic:
 
     def test_trigger_args_accessed_via_get_trigger_args(self):
         """Test that trigger_args are accessible via get_trigger_args()."""
-        app, _ = create_app()
+        app = create_app()
         received_args = {}
 
         @app.trigger_handler
@@ -27,7 +27,7 @@ class TestGetTriggerArgsBasic:
 
     def test_empty_trigger_args_returns_empty_dict(self):
         """Test that get_trigger_args() returns empty dict when no query params."""
-        app, _ = create_app()
+        app = create_app()
         received = None
 
         @app.trigger_handler
@@ -47,7 +47,7 @@ class TestQueryParameterExtraction:
 
     def test_single_trigger_arg(self):
         """Test accessing a single trigger argument."""
-        app, _ = create_app()
+        app = create_app()
         result = None
 
         @app.trigger_handler
@@ -63,7 +63,7 @@ class TestQueryParameterExtraction:
 
     def test_multiple_trigger_args(self):
         """Test accessing multiple trigger arguments."""
-        app, _ = create_app()
+        app = create_app()
         result = {}
 
         @app.trigger_handler
@@ -80,7 +80,7 @@ class TestQueryParameterExtraction:
 
     def test_trigger_args_with_post_form_data(self):
         """Test that trigger_args (query params) work alongside POST form data."""
-        app, _ = create_app()
+        app = create_app()
         trigger_result = {}
         form_result = {}
 
@@ -105,7 +105,7 @@ class TestContextIsolation:
 
     def test_trigger_args_context_isolation(self):
         """Test that trigger_args from one request don't affect another."""
-        app, _ = create_app()
+        app = create_app()
         results = []
 
         @app.trigger_handler
@@ -131,7 +131,7 @@ class TestContextIsolation:
 
     def test_async_trigger_args_context_isolation(self):
         """Test context isolation with async handlers."""
-        app, _ = create_app()
+        app = create_app()
         results = []
 
         @app.trigger_handler
@@ -157,7 +157,7 @@ class TestBackwardCompatibility:
 
     def test_trigger_args_and_form_data_coexist(self):
         """Test that get_trigger_args() works alongside form_data parameter."""
-        app, _ = create_app()
+        app = create_app()
         trigger_values = {}
         form_values = {}
 
@@ -178,7 +178,7 @@ class TestBackwardCompatibility:
 
     def test_form_data_pattern_still_works(self):
         """Test backward compatibility: form_data pattern continues to work."""
-        app, _ = create_app()
+        app = create_app()
         received = {}
 
         @app.trigger_handler
@@ -199,7 +199,7 @@ class TestEdgeCases:
 
     def test_trigger_args_with_special_characters(self):
         """Test that special characters in trigger_args are handled correctly."""
-        app, _ = create_app()
+        app = create_app()
         result = {}
 
         @app.trigger_handler
@@ -215,7 +215,7 @@ class TestEdgeCases:
 
     def test_trigger_args_with_various_types(self):
         """Test that trigger_args values are always strings (from URL params)."""
-        app, _ = create_app()
+        app = create_app()
         result = {}
 
         @app.trigger_handler
@@ -246,7 +246,7 @@ class TestComponentIntegration:
 
     def test_button_trigger_args_integration(self):
         """Test that Button component's trigger_args work with get_trigger_args()."""
-        app, _ = create_app()
+        app = create_app()
         received_column = None
 
         @app.trigger_handler
