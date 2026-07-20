@@ -26,6 +26,8 @@ from inguitive.css import (
     BUTTON_PRIMARY_CSS,
     BUTTON_SECONDARY_CSS,
 )
+# Re-export SVG icons for convenience
+from inguitive.svg import MOON, SUN
 from inguitive.fastapi import InguitiveApp, create_app, redirect, run_app
 from inguitive.htmx import update_components
 from inguitive.session import (
@@ -82,6 +84,9 @@ __all__ = [
     "BUTTON_BASE_CSS",
     "BUTTON_PRIMARY_CSS",
     "BUTTON_SECONDARY_CSS",
+    # Icons
+    "MOON",
+    "SUN",
     # Utilities
     "nl2br",
 ]
