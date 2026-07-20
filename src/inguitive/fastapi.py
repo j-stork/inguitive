@@ -1,5 +1,5 @@
 """
-FastAPI integration for INGUITIVE.
+FastAPI integration for inguitive.
 """
 
 from __future__ import annotations
@@ -40,9 +40,9 @@ _PageDecorator = Callable[[str | None], Callable[[Callable[_P, _T]], Callable[_P
 
 @runtime_checkable
 class InguitiveApp(Protocol[_P, _T]):
-    """Protocol describing an INGUITIVE application with custom decorators.
+    """Protocol describing an inguitive application with custom decorators.
 
-    This Protocol extends the FastAPI instance with INGUITIVE-specific decorators.
+    This Protocol extends the FastAPI instance with inguitive-specific decorators.
     Type checkers will recognize these custom attributes on objects of this type.
     """
 
@@ -229,7 +229,7 @@ def create_app(
     session_cookie_httponly: bool = True,
     session_cleanup_interval: int = 100,
 ) -> InguitiveApp[_P, _T]:
-    """Create and configure a FastAPI application for INGUITIVE.
+    """Create and configure a FastAPI application for inguitive.
 
     Args:
         template_dir: Directory containing Jinja2 templates
@@ -241,7 +241,7 @@ def create_app(
         session_cleanup_interval: Call cleanup_expired() every N requests (default: 100)
 
     Returns:
-        InguitiveApp - the FastAPI application with INGUITIVE decorators
+        InguitiveApp - the FastAPI application with inguitive decorators
         (trigger_handler and page) and templates accessible via app.state.templates
     """
     app = FastAPI()

@@ -1,8 +1,8 @@
-# INGUITIVE
+# inguitive
 
 A pure Python web framework combining intuitive syntax with **HTMX** for partial page reloads and **Tailwind CSS** for styling.
 
-Unlike traditional request-response frameworks, INGUITIVE provides reactive state management where components automatically re-render when state changes, eliminating the need for manual DOM manipulation or JavaScript. It is designed for Python developers who want to build interactive web applications using only Python, without sacrificing the dynamic feel of modern SPAs.
+Unlike traditional request-response frameworks, inguitive provides reactive state management where components automatically re-render when state changes, eliminating the need for manual DOM manipulation or JavaScript. It is designed for Python developers who want to build interactive web applications using only Python, without sacrificing the dynamic feel of modern SPAs.
 
 ## Features
 
@@ -80,7 +80,7 @@ def index():
 
 ## Component Reference
 
-INGUITIVE provides a comprehensive set of components organized by category. All components support dynamic attributes via callables and can listen to state changes for automatic re-rendering.
+inguitive provides a comprehensive set of components organized by category. All components support dynamic attributes via callables and can listen to state changes for automatic re-rendering.
 
 ### Base Components
 
@@ -181,7 +181,7 @@ Button("Like", trigger="like_post", trigger_args={"id": "123"})
 
 ## Session Backends
 
-INGUITIVE uses session-scoped registries to isolate user state. Choose a backend based on your deployment needs:
+inguitive uses session-scoped registries to isolate user state. Choose a backend based on your deployment needs:
 
 | Backend | Use When | Persistence | Multi-Worker |
 |---------|----------|-------------|--------------|
@@ -212,7 +212,7 @@ Requires `pip install redis` for RedisBackend.
 
 ### Session Lifetime and Expiry
 
-INGUITIVE sessions are created automatically on first request and persist across page reloads. Each session has isolated component, state, and data registries.
+inguitive sessions are created automatically on first request and persist across page reloads. Each session has isolated component, state, and data registries.
 
 **Session Creation:** A new session is created with a unique ID when a user first visits your application. The session ID is stored in a cookie.
 
@@ -235,7 +235,7 @@ INGUITIVE sessions are created automatically on first request and persist across
 
 ## Production Deployment
 
-Before deploying your INGUITIVE app to production, configure these security settings:
+Before deploying your inguitive app to production, configure these security settings:
 
 ```python
 from inguitive import create_app, RedisBackend
@@ -266,3 +266,9 @@ uvicorn examples.counter_app:app --reload
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
+
+## Contact
+
+- **GitHub**: [j-strk](https://github.com/j-strk)
+- **Email**: info@stork-software.de
+- **Issues**: [GitHub Issues](https://github.com/j-strk/inguitive/issues)
