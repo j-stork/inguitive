@@ -7,7 +7,7 @@ name = "inguitive"
 version = "0.1.0"
 description = "A pure Python web framework combining intuitive syntax with HTMX for partial page reloads and Tailwind CSS for styling"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 authors = [
     {name = "Johannes Stork", email = "info@stork-software.de"}
@@ -16,7 +16,6 @@ keywords = ["web", "framework", "htmx", "tailwind", "fastapi", "python"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -53,7 +52,7 @@ Issues = "https://github.com/j-strk/inguitive/issues"
 where = ["src"]
 
 [tool.setuptools.package-data]
-"*" = ["*.html", "*.svg"]
+"*" = ["*.html", "*.svg", "py.typed"]
 
 [tool.black]
 line-length = 100
