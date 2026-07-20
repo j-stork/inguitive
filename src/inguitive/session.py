@@ -1,5 +1,5 @@
 """
-Session management with pluggable backends for INGUITIVE.
+Session management with pluggable backends for inguitive.
 """
 
 from __future__ import annotations

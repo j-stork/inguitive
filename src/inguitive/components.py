@@ -1,5 +1,5 @@
 """
-Component classes for INGUITIVE framework.
+Component classes for inguitive framework.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from inguitive.session import _get_component_registry
 
 
 class Component:
-    """Base component class for INGUITIVE."""
+    """Base component class for inguitive."""
 
     def __init__(
         self,

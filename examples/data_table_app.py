@@ -1,5 +1,5 @@
 """
-Data Table Example using INGUITIVE framework.
+Data Table Example using inguitive framework.
 
 Demonstrates:
 - Rendering tabular data with the DataTable component

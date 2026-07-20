@@ -1,5 +1,5 @@
 """
-Navigation Demo example using INGUITIVE framework.
+Navigation Demo example using inguitive framework.
 
 Demonstrates two approaches to navigation:
 1. Traditional multi-page navigation (URL changes)

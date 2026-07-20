@@ -1,4 +1,4 @@
-"""Tests for session backend implementations in INGUITIVE."""
+"""Tests for session backend implementations in inguitive."""
 
 import json
 

@@ -1,4 +1,4 @@
-"""Tests for async page and trigger handlers in INGUITIVE."""
+"""Tests for async page and trigger handlers in inguitive."""
 
 from fastapi.testclient import TestClient
 

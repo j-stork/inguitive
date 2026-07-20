@@ -1,4 +1,4 @@
-"""Tests for INGUITIVE component classes."""
+"""Tests for inguitive component classes."""
 
 import pytest
 

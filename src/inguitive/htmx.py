@@ -1,5 +1,5 @@
 """
-HTMX helper functions for INGUITIVE.
+HTMX helper functions for inguitive.
 """
 
 from inguitive.session import _get_component_registry

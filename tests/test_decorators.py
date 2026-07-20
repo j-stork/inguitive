@@ -1,4 +1,4 @@
-"""Tests for @app.page and @app.trigger_handler decorator wiring in INGUITIVE."""
+"""Tests for @app.page and @app.trigger_handler decorator wiring in inguitive."""
 
 import pytest
 

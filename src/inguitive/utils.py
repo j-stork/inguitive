@@ -1,4 +1,4 @@
-"""Utility functions for INGUITIVE framework."""
+"""Utility functions for inguitive framework."""
 
 
 def nl2br(text: str | None) -> str:

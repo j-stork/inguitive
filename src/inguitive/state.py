@@ -1,5 +1,5 @@
 """
-Reactive state management for INGUITIVE.
+Reactive state management for inguitive.
 """
 
 from __future__ import annotations

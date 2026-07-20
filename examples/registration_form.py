@@ -1,5 +1,5 @@
 """
-Registration form example using INGUITIVE framework.
+Registration form example using inguitive framework.
 
 Demonstrates form components (Form, Input, Button, Label) with reactive state.
 
