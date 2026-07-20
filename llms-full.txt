@@ -1,0 +1,3763 @@
+<project title="inguitive" summary="A pure Python web framework for building reactive, interactive web applications without writing JavaScript. Combines FastAPI, HTMX, and Tailwind CSS with a declarative component model and session-scoped reactive state management.">inguitive lets Python developers define pages and trigger handlers entirely in Python. Components automatically re-render when state changes via HTMX out-of-band swaps. Each browser session has isolated state; no global mutable variables are needed. The public API is exported from src/inguitive/__init__.py.<docs><doc title="README" desc="Full quick-start guide, component reference, session backend comparison, and production deployment checklist"># inguitive
+
+A pure Python web framework combining intuitive syntax with **HTMX** for partial page reloads and **Tailwind CSS** for styling.
+
+Unlike traditional request-response frameworks, inguitive provides reactive state management where components automatically re-render when state changes, eliminating the need for manual DOM manipulation or JavaScript. It is designed for Python developers who want to build interactive web applications using only Python, without sacrificing the dynamic feel of modern SPAs.
+
+## Features
+
+- **Reactive State Management**: Components automatically re-render when state changes
+- **HTMX Integration**: Out-of-band swaps for seamless partial page updates
+- **Component-Based**: Composable UI components with clean Python syntax
+- **Dynamic Attributes**: All component attributes can be static strings or callables
+- **Trigger Arguments**: Pass data from components to handlers via `trigger_args` and `get_trigger_args()`
+- **Type Safe**: Full type hints throughout the codebase
+- **Tailwind CSS**: First-class support for utility-first styling
+
+## Quick Start
+
+### Installation
+
+```bash
+pip install inguitive
+```
+
+### Basic Example
+
+```python
+from inguitive import Div, Button, Label, State, create_app
+from inguitive.css import BUTTON_PRIMARY_CSS
+
+# Create FastAPI app
+app = create_app()
+
+# Create reactive state
+counter_state = State(0, &quot;counter_state&quot;)
+
+# Define a trigger function
+@app.trigger_handler
+def increment():
+    counter_state.set(counter_state.get() + 1)
+
+# Define a component
+def Counter():
+    return Div(
+        Label(text=lambda: f&quot;Count: {counter_state.get()}&quot;, id=&quot;counter-label&quot;, listen_to=&quot;counter_state&quot;),
+        Button(&quot;+1&quot;, trigger=&quot;increment&quot;, css=BUTTON_PRIMARY_CSS),
+    )
+
+# Define a route function
+@app.page(&quot;/&quot;)
+def index():
+    return Counter()
+```
+
+### Trigger Arguments
+
+Pass data from a component to its handler using `trigger_args` on the component and `get_trigger_args()` in the handler:
+
+```python
+from inguitive import Button, Div, State, Text, create_app, get_trigger_args
+
+app = create_app()
+selected_state = State(&quot;none&quot;, &quot;selected_state&quot;)
+
+@app.trigger_handler
+def select_item():
+    item_id = get_trigger_args().get(&quot;id&quot;)
+    selected_state.set(item_id)
+
+@app.page(&quot;/&quot;)
+def index():
+    return Div(
+        Button(&quot;Select A&quot;, trigger=&quot;select_item&quot;, trigger_args={&quot;id&quot;: &quot;a&quot;}),
+        Button(&quot;Select B&quot;, trigger=&quot;select_item&quot;, trigger_args={&quot;id&quot;: &quot;b&quot;}),
+        Text(lambda: f&quot;Selected: {selected_state.get()}&quot;, listen_to=&quot;selected_state&quot;),
+    )
+```
+
+`trigger_args` are passed as URL query parameters; `get_trigger_args()` returns them as a `dict[str, str]` inside the handler.
+
+## Component Reference
+
+inguitive provides a comprehensive set of components organized by category. All components support dynamic attributes via callables and can listen to state changes for automatic re-rendering.
+
+### Base Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`Component`** | Base class for all components | `id`, `css`, `listen_to` | Custom component base |
+| **`TemplateComponent`** | Render Jinja2 templates | `template`, context vars | Custom HTML with templating |
+
+### Layout Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`Div`** | Container div element | `*children`, `id`, `css` | `Div(Button(&quot;Click&quot;), css=&quot;flex gap-2&quot;)` |
+| **`Text`** | Paragraph/text element | `text`, `id`, `css` | `Text(&quot;Hello&quot;, css=&quot;text-xl&quot;)` |
+| **`Label`** | Form label element | `text`, `for_`, `id`, `css` | `Label(&quot;Name:&quot;, for_=&quot;name&quot;)` |
+
+### Form Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`Form`** | Form container | `*children`, `action`, `method` | `Form(Input(...), Button(...))` |
+| **`Input`** | Text input field | `type`, `value`, `placeholder`, `listen_to` | `Input(id=&quot;email&quot;, type=&quot;email&quot;)` |
+| **`Textarea`** | Multi-line text input | `value`, `placeholder`, `rows` | `Textarea(id=&quot;bio&quot;, rows=5)` |
+| **`Select`** | Dropdown select | `options`, `value`, `listen_to` | `Select(id=&quot;country&quot;, options=[...])` |
+| **`Checkbox`** | Checkbox input | `checked`, `id`, `listen_to` | `Checkbox(id=&quot;agree&quot;, checked=True)` |
+| **`Radio`** | Radio button input | `value`, `checked`, `name` | `Radio(id=&quot;male&quot;, name=&quot;gender&quot;)` |
+| **`Button`** | Clickable button | `*children`, `trigger`, `css` | `Button(&quot;Click&quot;, trigger=&quot;action&quot;)` |
+
+### Navigation Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`Link`** | Semantic navigation link | `*children`, `href`, `css` | `Link(&quot;Home&quot;, href=&quot;/&quot;)` |
+
+### Data Display Components
+
+| Component | Description | Key Parameters | Example |
+|-----------|-------------|----------------|---------|
+| **`DataTable`** | Tabular data display | `data`, `columns`, `css` | `DataTable(data=[{&quot;name&quot;: &quot;A&quot;}])` |
+| **`Icon`** | SVG icon component | `svg`, `css` | `Icon(&quot;&lt;svg ...&gt;...&lt;/svg&gt;&quot;, css=&quot;w-6 h-6&quot;)` |
+
+### Common Parameters (All Components)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `str \| None` | HTML id attribute. Required for state listening and OOB updates |
+| `css` | `str \| Callable[[], str] \| dict \| None` | Tailwind CSS classes. For DataTable, can be a dict with keys: `table`, `header`, `row`, `cell` |
+| `listen_to` | `str \| list[str] \| None` | State name(s) to listen for changes. Triggers re-render when state updates |
+| `trigger` | `str \| None` | Trigger name for HTMX POST actions (Button, Input, etc.) |
+| `trigger_args` | `dict[str, str] \| None` | Query parameters to pass with trigger |
+
+## Navigation &amp; Actions
+
+Use `Link` for traditional navigation (SEO, bookmarking, new-tab support) and `trigger` for partial page updates:
+
+| | `Link(href=&quot;...&quot;)` | `trigger=&quot;...&quot;` |
+|---|---|---|
+| Renders | `&lt;a href=&quot;...&quot;&gt;` | HTMX POST |
+| URL changes | ✅ | ❌ |
+| Open in new tab | ✅ | ❌ |
+
+```python
+from inguitive import Link, Button
+
+# Traditional navigation
+Link(&quot;Home&quot;, href=&quot;/&quot;)
+Link(&quot;Documentation&quot;, href=&quot;/docs&quot;, css=&quot;text-blue-500&quot;)
+
+# Partial updates
+Button(&quot;Save&quot;, trigger=&quot;save_form&quot;)
+Button(&quot;Like&quot;, trigger=&quot;like_post&quot;, trigger_args={&quot;id&quot;: &quot;123&quot;})
+```
+
+## Project Structure
+
+```
+.
+├── src/
+│   └── inguitive/
+│       ├── __init__.py      # Public API
+│       ├── components.py    # Component classes
+│       ├── state.py         # Reactive state
+│       ├── htmx.py           # HTMX helpers
+│       ├── fastapi.py       # FastAPI integration
+│       └── svg.py           # SVG icon definitions
+├── examples/
+│   ├── counter_app.py        # Per-session counter with theme toggle
+│   ├── todo_app.py           # CRUD with filtering and real-time count
+│   ├── chat_app.py           # Real-time chat
+│   ├── navigation_demo.py    # Link vs trigger patterns
+│   ├── registration_form.py  # Form handling
+│   └── data_table_app.py     # DataTable with sorting and filtering
+├── tests/
+│   └── test_*.py           # Test files
+├── pyproject.toml           # Build configuration
+└── README.md
+```
+
+## Session Backends
+
+inguitive uses session-scoped registries to isolate user state. Choose a backend based on your deployment needs:
+
+| Backend | Use When | Persistence | Multi-Worker |
+|---------|----------|-------------|--------------|
+| **`MemoryBackend`** | Development, single worker | ❌ No (lost on restart) | ❌ No |
+| **`RedisBackend`** | Production, multiple workers | ✅ Yes | ✅ Yes |
+
+**MemoryBackend** (default) stores sessions in RAM - perfect for development. **RedisBackend** stores sessions in Redis for production deployments with multiple workers or persistent sessions.
+
+```python
+from inguitive import create_app, MemoryBackend, RedisBackend
+
+# Development: In-memory sessions (default, no config needed)
+app = create_app()
+
+# Or explicitly:
+app = create_app(session_backend=MemoryBackend())
+
+# Production: Redis-backed sessions for scaling
+app = create_app(
+    session_backend=RedisBackend(
+        redis_url=&quot;redis://localhost:6379&quot;,
+        ttl_seconds=3600  # Session timeout: 1 hour
+    )
+)
+```
+
+Requires `pip install redis` for RedisBackend.
+
+### Session Lifetime and Expiry
+
+inguitive sessions are created automatically on first request and persist across page reloads. Each session has isolated component, state, and data registries.
+
+**Session Creation:** A new session is created with a unique ID when a user first visits your application. The session ID is stored in a cookie.
+
+**Session Persistence:** Sessions persist across page reloads and browser navigation within the same domain. The session cookie maintains the session ID, allowing the framework to restore the user&#x27;s state.
+
+**Session Expiry:**
+- **MemoryBackend:** Sessions expire after `ttl_seconds` (default: 3600 = 1 hour) of inactivity. Expired sessions are automatically cleaned up every N requests (configurable via `session_cleanup_interval`).
+- **RedisBackend:** Sessions are stored in Redis with a TTL. Redis automatically expires keys after the configured `ttl_seconds`, providing automatic cleanup.
+
+**Differences Between Backends:**
+
+| Aspect | MemoryBackend | RedisBackend |
+|--------|---------------|--------------|
+| Persistence | Lost on process restart | Survives process restarts |
+| Multi-worker | Not supported (shared memory) | Supported (Redis as shared store) |
+| Cleanup | Manual/Periodic via `cleanup_expired()` | Automatic via Redis TTL |
+| Use Case | Development, testing | Production, scaling |
+
+**Page Reload Behavior:** Session state is preserved across page reloads. Components listening to state will re-render with the current state values when the page loads.
+
+## Production Deployment
+
+Before deploying your inguitive app to production, configure these security settings:
+
+```python
+from inguitive import create_app, RedisBackend
+
+app = create_app(
+    session_backend=RedisBackend(redis_url=&quot;redis://localhost:6379&quot;),
+    session_cookie_secure=True,      # Cookies only over HTTPS
+    session_cookie_httponly=True,    # Prevent JavaScript access (default)
+    session_cookie_max_age=86400,    # 24-hour session timeout
+)
+```
+
+**Checklist:**
+- ✅ Use `RedisBackend` (not `MemoryBackend`) for persistence across workers
+- ✅ Set `session_cookie_secure=True` when using HTTPS
+- ✅ Verify `session_cookie_httponly=True` (enabled by default)
+- ✅ Deploy with HTTPS (required for secure cookies)
+
+## Running the Demo
+
+```bash
+# From the repository root
+uvicorn examples.counter_app:app --reload
+
+# Then open http://localhost:8000
+```
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
+
+## Contact
+
+- **GitHub**: [j-strk](https://github.com/j-strk)
+- **Email**: info@stork-software.de
+- **Issues**: [GitHub Issues](https://github.com/j-strk/inguitive/issues)
+</doc><doc title="CHANGELOG" desc="Version history and versioning policy (SemVer)"># inguitive Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.1.0] - 2026-07-17
+
+### Added
+
+#### Core Features
+
+**Reactive State Management**
+- `State` class for managing application state
+- Automatic component re-rendering when state changes
+- Listener tracking via `listen_to` parameter
+- Auto-propagation of state updates to listening components
+- Context-local mutation tracking
+
+**HTMX Integration**
+- Native HTMX attribute support on all components
+- Out-of-band (OOB) swap functionality via `update_components()`
+- Trigger handlers with `@app.trigger_handler` decorator
+- Form data injection in trigger handlers
+- Async trigger handler support
+- Trigger argument context via `get_trigger_args()`
+
+**Component System**
+- 15 built-in components: `Component`, `Div`, `Button`, `Label`, `Icon`, `Input`, `Textarea`, `Select`, `Checkbox`, `Radio`, `Form`, `Text`, `Link`, `TemplateComponent`, `DataTable`
+- All component attributes support dynamic values via callables
+- Composable UI components with clean Python syntax
+- Tailwind CSS first-class support for all components
+- `DataTable` supports dict-based CSS for per-element styling (`table`, `header`, `row`, `cell` keys)
+
+**Session Management**
+- Per-session state isolation (each browser has independent state)
+- `MemoryBackend` for development (in-memory storage)
+- `RedisBackend` for production (Redis-based persistence)
+- Session expiry and automatic memory cleanup
+- Session ID management utilities
+
+**FastAPI Integration**
+- `InguitiveApp` Protocol for type-safe access to `@app.page` and `@app.trigger_handler` decorators
+- `create_app()` factory for easy app creation
+- `@app.page` decorator for page routes
+- `@app.trigger_handler` decorator for trigger handlers
+- `redirect()` and `run_app()` utilities
+
+**Styling**
+- First-class Tailwind CSS support
+- Predefined CSS constants (`BUTTON_BASE_CSS`, `BUTTON_PRIMARY_CSS`, `BUTTON_SECONDARY_CSS`)
+- Dynamic CSS via callables for all components
+- Per-component CSS customization
+
+#### Example Applications
+- `counter_app.py`: Per-session isolation with counter and theme toggle
+- `todo_app.py`: CRUD operations with filtering and real-time count
+- `chat_app.py`: Real-time chat demonstration
+- `navigation_demo.py`: Navigation patterns (Link vs trigger)
+- `registration_form.py`: Form handling demonstration
+- `data_table_app.py`: Data table with sorting and filtering
+
+#### Test Coverage
+- 11 test files covering all major functionality
+- Tests for async handlers, components, decorators
+- Tests for form data injection, session backends, state isolation
+- Tests for trigger arguments
+
+### Fixed
+- Fixed `dynamic()` evaluating at call time instead of render time
+- Fixed `RedisBackend` serialization of component registry
+- Fixed `MemoryBackend` class-level variable shared across instances
+
+---
+
+## Versioning Policy
+
+This project follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html):
+
+- **MAJOR** version bumps for backward-incompatible API changes
+- **MINOR** version bumps for backward-compatible new functionality
+- **PATCH** version bumps for backward-compatible bug fixes
+</doc><doc title="Public API" desc="All exported names — components, State, create_app, session backends, helpers">&quot;&quot;&quot;
+inguitive - A pure Python web framework combining intuitive syntax with HTMX and Tailwind CSS.
+&quot;&quot;&quot;
+
+from inguitive.components import (
+    Button,
+    Checkbox,
+    Component,
+    DataTable,
+    Div,
+    Form,
+    Icon,
+    Input,
+    Label,
+    Link,
+    Radio,
+    Select,
+    TemplateComponent,
+    Text,
+    Textarea,
+)
+
+# Re-export styling constants for convenience
+from inguitive.css import (
+    BUTTON_BASE_CSS,
+    BUTTON_PRIMARY_CSS,
+    BUTTON_SECONDARY_CSS,
+)
+from inguitive.fastapi import InguitiveApp, create_app, redirect, run_app
+from inguitive.htmx import update_components
+from inguitive.session import (
+    MemoryBackend,
+    RedisBackend,
+    Session,
+    SessionBackend,
+    get_session_backend,
+    get_session_id,
+    set_session_backend,
+)
+from inguitive.state import State
+
+# Re-export SVG icons for convenience
+from inguitive.svg import MOON, SUN
+from inguitive.trigger import get_trigger_args
+from inguitive.utils import nl2br
+
+__all__ = [
+    # Components
+    &quot;Component&quot;,
+    &quot;Div&quot;,
+    &quot;Button&quot;,
+    &quot;Label&quot;,
+    &quot;Icon&quot;,
+    &quot;Input&quot;,
+    &quot;Textarea&quot;,
+    &quot;Select&quot;,
+    &quot;Checkbox&quot;,
+    &quot;Radio&quot;,
+    &quot;Form&quot;,
+    &quot;Text&quot;,
+    &quot;Link&quot;,
+    &quot;TemplateComponent&quot;,
+    &quot;DataTable&quot;,
+    # State
+    &quot;State&quot;,
+    # HTMX helpers
+    &quot;update_components&quot;,
+    # Trigger
+    &quot;get_trigger_args&quot;,
+    # Helpers
+    # FastAPI
+    &quot;InguitiveApp&quot;,
+    &quot;create_app&quot;,
+    &quot;redirect&quot;,
+    &quot;run_app&quot;,
+    # Session
+    &quot;Session&quot;,
+    &quot;SessionBackend&quot;,
+    &quot;MemoryBackend&quot;,
+    &quot;RedisBackend&quot;,
+    &quot;set_session_backend&quot;,
+    &quot;get_session_backend&quot;,
+    &quot;get_session_id&quot;,
+    # Styling
+    &quot;BUTTON_BASE_CSS&quot;,
+    &quot;BUTTON_PRIMARY_CSS&quot;,
+    &quot;BUTTON_SECONDARY_CSS&quot;,
+    # Icons
+    &quot;MOON&quot;,
+    &quot;SUN&quot;,
+    # Utilities
+    &quot;nl2br&quot;,
+]
+
+__version__ = &quot;0.1.0&quot;
+</doc><doc title="Components" desc="All UI component classes (Div, Button, Input, DataTable, etc.) with render/update methods">&quot;&quot;&quot;
+Component classes for inguitive framework.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import uuid
+from collections.abc import Callable, Mapping
+
+import jinja2
+
+from inguitive.session import _get_component_registry
+
+
+class Component:
+    &quot;&quot;&quot;Base component class for inguitive.&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        listen_to: str | list[str] | None = None,
+        trigger: str | None = None,
+        trigger_args: dict[str, str] | None = None,
+        **attrs,
+    ):
+        # Generate UUID if no id provided
+        if id is None:
+            id = f&quot;comp-{uuid.uuid4().hex[:8]}&quot;
+        self.id = id
+        self.css = css
+
+        # Handle action parameters (trigger = POST)
+        if trigger:
+            url = f&quot;/_trigger/{trigger.lstrip(&#x27;/&#x27;)}&quot;
+            if trigger_args:
+                url += &quot;?&quot; + &quot;&amp;&quot;.join(f&quot;{k}={v}&quot; for k, v in trigger_args.items())
+            attrs.setdefault(&quot;hx-post&quot;, url)
+            attrs.setdefault(&quot;hx-target&quot;, &quot;#hx-target&quot;)
+
+        self.attrs = attrs
+        _get_component_registry()[self.id] = self
+        if listen_to:
+            from inguitive.state import _get_state_by_name
+
+            # Normalize to list for uniform handling
+            state_names = [listen_to] if isinstance(listen_to, str) else listen_to
+            for state_name in state_names:
+                state = _get_state_by_name(state_name)
+                if state is not None:
+                    state.add_listener(self.id)
+
+    def _resolve(self, value: str | Callable[[], str]) -&gt; str:
+        &quot;&quot;&quot;Resolve a potentially dynamic value (callable or static).&quot;&quot;&quot;
+        return value() if callable(value) else value
+
+    def _get_attrs_str(self) -&gt; str:
+        &quot;&quot;&quot;Convert attributes to HTML string, handling css -&gt; class conversion and dynamic values.&quot;&quot;&quot;
+        filtered_attrs = {}
+        for k, v in self.attrs.items():
+            if k != &quot;css&quot;:
+                filtered_attrs[k] = self._resolve(v)
+        resolved_css = self._resolve(self.css) if self.css else None
+        if resolved_css:
+            filtered_attrs[&quot;class&quot;] = resolved_css
+        # Add id if present
+        if self.id:
+            filtered_attrs[&quot;id&quot;] = self.id
+        return &quot; &quot;.join(f&#x27;{k}=&quot;{v}&quot;&#x27; for k, v in filtered_attrs.items())
+
+    def _render_children(self) -&gt; str:
+        &quot;&quot;&quot;Render all children of this component.
+
+        Handles both direct child components and callable/lambda children.
+        Supports nested lists of children.
+        &quot;&quot;&quot;
+        children_html_parts = []
+        for child in getattr(self, &quot;children&quot;, []):
+            if isinstance(child, Component):
+                children_html_parts.append(child.render())
+            else:
+                resolved = self._resolve(child)
+                if isinstance(resolved, list):
+                    for item in resolved:
+                        if isinstance(item, Component):
+                            children_html_parts.append(item.render())
+                        else:
+                            children_html_parts.append(str(item))
+                else:
+                    if isinstance(resolved, Component):
+                        children_html_parts.append(resolved.render())
+                    else:
+                        children_html_parts.append(str(resolved))
+        return &quot;&quot;.join(children_html_parts)
+
+    def _oob_attrs_str(self) -&gt; str:
+        &quot;&quot;&quot;Get attributes string with hx-swap-oob for out-of-band updates.
+
+        Returns regular attributes if self.id is not set.
+        &quot;&quot;&quot;
+        if not self.id:
+            return self._get_attrs_str()
+        return f&#x27;hx-swap-oob=&quot;true&quot; {self._get_attrs_str()}&#x27;.strip()
+
+    @staticmethod
+    def _normalize_children(children: tuple) -&gt; list:
+        &quot;&quot;&quot;Normalize children tuple to a list.
+
+        Supports both: Component(a, b) and Component([a, b]).
+
+        Args:
+            children: Tuple of child components/strings from *children
+
+        Returns:
+            List of children (flattened if single element was a list)
+        &quot;&quot;&quot;
+        if len(children) == 1 and isinstance(children[0], list):
+            return list(children[0])
+        return list(children)
+
+    def render(self) -&gt; str:
+        raise NotImplementedError
+
+
+class Div(Component):
+    &quot;&quot;&quot;HTML div component.&quot;&quot;&quot;
+
+    def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
+        super().__init__(id=id, css=css, **attrs)
+        self.children = self._normalize_children(children)
+
+    def render(self) -&gt; str:
+        attrs = self._get_attrs_str()
+        children_html = self._render_children()
+        return f&quot;&lt;div {attrs}&gt;{children_html}&lt;/div&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        children_html = self._render_children()
+        return f&quot;&lt;div {attrs}&gt;{children_html}&lt;/div&gt;&quot;
+
+
+class Button(Component):
+    &quot;&quot;&quot;HTML button component with HTMX support.
+
+    Use trigger, navigate, or redirect parameters for click actions:
+    - trigger: POST action for partial updates (replaces old on_click)
+    - navigate: GET navigation for full page changes
+    - redirect: Immediate browser redirect
+    &quot;&quot;&quot;
+
+    def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
+        super().__init__(id=id, css=css, **attrs)
+        self.children = self._normalize_children(children)
+
+    def render(self) -&gt; str:
+        attrs = self._get_attrs_str()
+        children_html = self._render_children()
+        return f&quot;&lt;button {attrs}&gt;{children_html}&lt;/button&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        children_html = self._render_children()
+        return f&quot;&lt;button {attrs}&gt;{children_html}&lt;/button&gt;&quot;
+
+
+class Label(Component):
+    &quot;&quot;&quot;HTML label component.
+
+    Renders a &lt;label&gt; element. Use for_ parameter to associate with input elements.
+
+    Example:
+        Label(&quot;Username&quot;, for_=&quot;username-input&quot;)
+        Label(&quot;Remember me&quot;, for_=&quot;remember&quot;, css=&quot;text-sm&quot;)
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        text: str | Callable[[], str],
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        for_: str | None = None,
+        **attrs,
+    ):
+        &quot;&quot;&quot;Initialize a Label component.
+
+        Args:
+            text: Label text content
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            for_: ID of the form element this label is for (uses &#x27;for&#x27; HTML attribute)
+            **attrs: Additional HTML attributes
+        &quot;&quot;&quot;
+        if for_ is not None:
+            attrs[&quot;for&quot;] = for_
+        super().__init__(id=id, css=css, **attrs)
+        self.text = text
+
+    def render(self) -&gt; str:
+        attrs = self._get_attrs_str()
+        resolved_text = self._resolve(self.text)
+        return f&quot;&lt;label {attrs}&gt;{resolved_text}&lt;/label&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        resolved_text = self._resolve(self.text)
+        return f&quot;&lt;label {attrs}&gt;{resolved_text}&lt;/label&gt;&quot;
+
+
+class Link(Component):
+    &quot;&quot;&quot;HTML link/anchor component for semantic navigation.
+
+    Renders a standard &lt;a&gt; tag. Use for traditional links where semantic
+    HTML matters (SEO, accessibility, browser behavior).
+
+    Supports children like Div and Button, allowing nested components.
+
+    Example:
+        Link(&quot;Home&quot;, href=&quot;/&quot;)
+        Link(Text(&quot;Documentation&quot;), href=&quot;/docs&quot;, css=&quot;text-blue-500 hover:underline&quot;)
+        Link(Icon(HOME_SVG), href=&quot;/&quot;, css=&quot;w-6 h-6&quot;)
+        Link(Button(&quot;Click&quot;), href=&quot;/page1&quot;)
+        Link([Text(&quot;A&quot;), Text(&quot;B&quot;)], href=&quot;/&quot;)
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        *children,
+        href: str,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        **attrs,
+    ):
+        &quot;&quot;&quot;Initialize a Link component.
+
+        Args:
+            *children: Link content (strings, Components, or callables)
+            href: URL to link to
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            **attrs: Additional HTML attributes (target, rel, etc.)
+        &quot;&quot;&quot;
+        super().__init__(id=id, css=css, **attrs)
+        if href:
+            self.attrs[&quot;href&quot;] = href
+        self.children = self._normalize_children(children)
+
+    def render(self) -&gt; str:
+        attrs = self._get_attrs_str()
+        children_html = self._render_children()
+        return f&quot;&lt;a {attrs}&gt;{children_html}&lt;/a&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        children_html = self._render_children()
+        return f&quot;&lt;a {attrs}&gt;{children_html}&lt;/a&gt;&quot;
+
+
+class Text(Component):
+    &quot;&quot;&quot;HTML paragraph/text component.
+
+    Renders a &lt;p&gt; tag for paragraph text content. Use for standalone text blocks,
+    descriptions, and any content that isn&#x27;t a form label.
+
+    Example:
+        Text(&quot;Welcome to our application&quot;)
+        Text(&quot;This is a paragraph&quot;, css=&quot;text-gray-600 mt-4&quot;)
+        Text(lambda: get_description(), listen_to=&quot;desc_state&quot;)
+    &quot;&quot;&quot;
+
+    def __init__(
+        self, text: str | Callable[[], str], id: str | None = None, css: str | Callable[[], str] | None = None, **attrs
+    ):
+        &quot;&quot;&quot;Initialize a Text component.
+
+        Args:
+            text: Text content (string or callable returning string)
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            **attrs: Additional HTML attributes
+        &quot;&quot;&quot;
+        super().__init__(id=id, css=css, **attrs)
+        self.text = text
+
+    def render(self) -&gt; str:
+        attrs = self._get_attrs_str()
+        resolved_text = self._resolve(self.text)
+        return f&quot;&lt;p {attrs}&gt;{resolved_text}&lt;/p&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        resolved_text = self._resolve(self.text)
+        return f&quot;&lt;p {attrs}&gt;{resolved_text}&lt;/p&gt;&quot;
+
+
+class Icon(Component):
+    &quot;&quot;&quot;SVG icon component.&quot;&quot;&quot;
+
+    def __init__(self, svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs):
+        super().__init__(css=css, **attrs)
+        self.svg = svg
+
+    @staticmethod
+    def _replace_class(svg_str: str, css_value: str) -&gt; str:
+        &quot;&quot;&quot;Replace or insert class attribute in SVG string.
+
+        Preserves all other attributes, quote style, and structure.
+
+        Args:
+            svg_str: The SVG HTML string
+            css_value: The new class value (without quotes)
+
+        Returns:
+            SVG string with updated class attribute
+        &quot;&quot;&quot;
+        # Find class attribute with optional whitespace between class and =
+        idx = svg_str.find(&quot;class&quot;)
+        if idx != -1:
+            # Move past &#x27;class&#x27;
+            idx += len(&quot;class&quot;)
+            # Skip whitespace
+            while idx &lt; len(svg_str) and svg_str[idx] in &quot; \t&quot;:
+                idx += 1
+            # Check for &#x27;=&#x27;
+            if idx &lt; len(svg_str) and svg_str[idx] == &quot;=&quot;:
+                idx += 1
+                # Skip whitespace after &#x27;=&#x27;
+                while idx &lt; len(svg_str) and svg_str[idx] in &quot; \t&quot;:
+                    idx += 1
+                # Now at the opening quote
+                if idx &lt; len(svg_str) and svg_str[idx] in (&#x27;&quot;&#x27;, &quot;&#x27;&quot;):
+                    quote_char = svg_str[idx]
+                    # Find closing quote
+                    content_start = idx + 1
+                    content_end = svg_str.find(quote_char, content_start)
+                    if content_end != -1:
+                        # Replace the content between quotes
+                        return svg_str[:content_start] + css_value + svg_str[content_end:]
+        # No class attribute found - insert one
+        if svg_str.startswith(&quot;&lt;svg&quot;):
+            pos = len(&quot;&lt;svg&quot;)
+            return svg_str[:pos] + f&#x27; class=&quot;{css_value}&quot;&#x27; + svg_str[pos:]
+        return f&#x27;&lt;svg class=&quot;{css_value}&quot;&gt;{svg_str}&#x27;
+
+    def render(self) -&gt; str:
+        resolved_svg: str = self._resolve(self.svg)
+
+        if self.css:
+            resolved_css: str = self._resolve(self.css)
+            resolved_svg = self._replace_class(resolved_svg, resolved_css)
+
+        return resolved_svg
+
+
+class Input(Component):
+    &quot;&quot;&quot;HTML input component for text, email, password, etc.
+
+    Example:
+        Input(id=&quot;email&quot;, type=&quot;email&quot;, placeholder=&quot;Enter email&quot;, css=&quot;border rounded p-2&quot;)
+        Input(id=&quot;name&quot;, value=state, listen_to=&quot;name_state&quot;)
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        type: str = &quot;text&quot;,
+        value: str | Callable[[], str] | None = None,
+        placeholder: str = &quot;&quot;,
+        listen_to: str | list[str] | None = None,
+        **attrs,
+    ):
+        &quot;&quot;&quot;Initialize an Input component.
+
+        Args:
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            type: Input type (text, email, password, number, etc.)
+            value: Initial value (string or callable)
+            placeholder: Placeholder text
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, etc.)
+        &quot;&quot;&quot;
+        # Set default value
+        if value is not None:
+            attrs[&quot;value&quot;] = value
+        if placeholder:
+            attrs[&quot;placeholder&quot;] = placeholder
+        if type != &quot;text&quot;:
+            attrs[&quot;type&quot;] = type
+        # Auto-set name to id if not provided
+        if &quot;name&quot; not in attrs and id is not None:
+            attrs[&quot;name&quot;] = id
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
+
+    def render(self) -&gt; str:
+        &quot;&quot;&quot;Render the input element.&quot;&quot;&quot;
+        attrs = self._get_attrs_str()
+        return f&quot;&lt;input {attrs}&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        return f&quot;&lt;input {attrs}&gt;&quot;
+
+
+class Textarea(Component):
+    &quot;&quot;&quot;HTML textarea component for multi-line text input.
+
+    Example:
+        Textarea(id=&quot;bio&quot;, placeholder=&quot;Tell us about yourself&quot;, rows=5)
+        Textarea(id=&quot;notes&quot;, value=content_state, listen_to=&quot;notes_state&quot;)
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        value: str | Callable[[], str] | None = None,
+        placeholder: str = &quot;&quot;,
+        rows: int = 3,
+        listen_to: str | list[str] | None = None,
+        **attrs,
+    ):
+        &quot;&quot;&quot;Initialize a Textarea component.
+
+        Args:
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            value: Initial value (string or callable)
+            placeholder: Placeholder text
+            rows: Number of visible rows
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, etc.)
+        &quot;&quot;&quot;
+        if placeholder:
+            attrs[&quot;placeholder&quot;] = placeholder
+        if rows:
+            attrs[&quot;rows&quot;] = str(rows)
+        # Auto-set name to id if not provided
+        if &quot;name&quot; not in attrs and id is not None:
+            attrs[&quot;name&quot;] = id
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
+        self.value = value
+
+    def render(self) -&gt; str:
+        &quot;&quot;&quot;Render the textarea element.&quot;&quot;&quot;
+        attrs = self._get_attrs_str()
+        # Textarea content goes between tags, not in value attribute
+        resolved_value = self._resolve(self.value) if self.value else &quot;&quot;
+        return f&quot;&lt;textarea {attrs}&gt;{resolved_value}&lt;/textarea&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        resolved_value = self._resolve(self.value) if self.value else &quot;&quot;
+        return f&quot;&lt;textarea {attrs}&gt;{resolved_value}&lt;/textarea&gt;&quot;
+
+
+class Select(Component):
+    &quot;&quot;&quot;HTML select dropdown component.
+
+    Example:
+        Select(id=&quot;country&quot;, options=[(&quot;us&quot;, &quot;USA&quot;), (&quot;de&quot;, &quot;Germany&quot;)], value=&quot;us&quot;)
+        Select(id=&quot;theme&quot;, options=[(&quot;light&quot;, &quot;Light&quot;), (&quot;dark&quot;, &quot;Dark&quot;)],
+               value=lambda: theme_state.get(), listen_to=&quot;theme_state&quot;)
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        options: list[tuple[str, str]] | Callable[[], list[tuple[str, str]]] | None = None,
+        value: str | Callable[[], str] | None = None,
+        listen_to: str | list[str] | None = None,
+        **attrs,
+    ):
+        &quot;&quot;&quot;Initialize a Select component.
+
+        Args:
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            options: List of (value, display_text) tuples, or callable returning such list
+            value: Selected value (string or callable)
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, disabled, etc.)
+        &quot;&quot;&quot;
+        # Auto-set name to id if not provided
+        if &quot;name&quot; not in attrs and id is not None:
+            attrs[&quot;name&quot;] = id
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
+        self.options = options or []
+        self.value = value
+
+    def _render_options(self) -&gt; str:
+        &quot;&quot;&quot;Render all option elements.&quot;&quot;&quot;
+        resolved_options = self._resolve(self.options) if self.options else []  # type: ignore
+        resolved_value = self._resolve(self.value) if self.value else None
+        option_tags = []
+        for val, text in resolved_options:  # type: ignore[str-unpack]
+            selected = &quot; selected&quot; if val == resolved_value else &quot;&quot;
+            option_tags.append(f&#x27;&lt;option value=&quot;{val}&quot;{selected}&gt;{text}&lt;/option&gt;&#x27;)
+        return &quot;&quot;.join(option_tags)
+
+    def render(self) -&gt; str:
+        &quot;&quot;&quot;Render the select element with options.&quot;&quot;&quot;
+        attrs = self._get_attrs_str()
+        options_html = self._render_options()
+        return f&quot;&lt;select {attrs}&gt;{options_html}&lt;/select&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        options_html = self._render_options()
+        return f&quot;&lt;select {attrs}&gt;{options_html}&lt;/select&gt;&quot;
+
+
+class Checkbox(Component):
+    &quot;&quot;&quot;HTML checkbox input component.
+
+    Renders only the &lt;input type=&quot;checkbox&quot;&gt; element. Use with Label and Div
+    for composed structures.
+
+    Example:
+        Div(
+            Checkbox(id=&quot;agree&quot;, checked=True),
+            Label(&quot;I agree to terms&quot;, for_=&quot;agree&quot;),
+            css=&quot;flex items-center gap-2&quot;
+        )
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        checked: bool | Callable[[], bool] = False,
+        listen_to: str | list[str] | None = None,
+        **attrs,
+    ):
+        &quot;&quot;&quot;Initialize a Checkbox component.
+
+        Args:
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            checked: Checked state (boolean or callable)
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, disabled, etc.)
+        &quot;&quot;&quot;
+        # Set type to checkbox
+        attrs[&quot;type&quot;] = &quot;checkbox&quot;
+        # Auto-set name to id if not provided
+        if &quot;name&quot; not in attrs and id is not None:
+            attrs[&quot;name&quot;] = id
+        # Store checked state
+        self.checked = checked
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
+
+    def render(self) -&gt; str:
+        &quot;&quot;&quot;Render the checkbox input element.&quot;&quot;&quot;
+        attrs = self._get_attrs_str()
+        resolved_checked = self._resolve(self.checked) if self.checked else False  # type: ignore
+        if resolved_checked:
+            attrs += &quot; checked&quot;
+        return f&quot;&lt;input {attrs}&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        resolved_checked = self._resolve(self.checked) if self.checked else False  # type: ignore
+        if resolved_checked:
+            attrs += &quot; checked&quot;
+        return f&quot;&lt;input {attrs}&gt;&quot;
+
+
+class Radio(Component):
+    &quot;&quot;&quot;HTML radio input component.
+
+    Renders only the &lt;input type=&quot;radio&quot;&gt; element. Use with Label and Div
+    for composed radio groups.
+
+    Example:
+        Div(
+            Radio(id=&quot;male&quot;, name=&quot;gender&quot;, value=&quot;male&quot;, checked=True),
+            Label(&quot;Male&quot;, for_=&quot;male&quot;),
+            Radio(id=&quot;female&quot;, name=&quot;gender&quot;, value=&quot;female&quot;),
+            Label(&quot;Female&quot;, for_=&quot;female&quot;),
+            css=&quot;flex gap-4&quot;
+        )
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        value: str = &quot;&quot;,
+        checked: bool | Callable[[], bool] = False,
+        listen_to: str | list[str] | None = None,
+        **attrs,
+    ):
+        &quot;&quot;&quot;Initialize a Radio component.
+
+        Args:
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            value: Value for this radio option
+            checked: Checked state (boolean or callable)
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, disabled, etc.)
+        &quot;&quot;&quot;
+        # Set type to radio
+        attrs[&quot;type&quot;] = &quot;radio&quot;
+        if value:
+            attrs[&quot;value&quot;] = value
+        # Auto-set name to id if not provided
+        if &quot;name&quot; not in attrs and id is not None:
+            attrs[&quot;name&quot;] = id
+        # Store checked state
+        self.checked = checked
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
+
+    def render(self) -&gt; str:
+        &quot;&quot;&quot;Render the radio input element.&quot;&quot;&quot;
+        attrs = self._get_attrs_str()
+        resolved_checked = self._resolve(self.checked) if self.checked else False  # type: ignore
+        if resolved_checked:
+            attrs += &quot; checked&quot;
+        return f&quot;&lt;input {attrs}&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        resolved_checked = self._resolve(self.checked) if self.checked else False  # type: ignore
+        if resolved_checked:
+            attrs += &quot; checked&quot;
+        return f&quot;&lt;input {attrs}&gt;&quot;
+
+
+class Form(Component):
+    &quot;&quot;&quot;HTML form component for grouping input elements.
+
+    Example:
+        Form(
+            Input(id=&quot;name&quot;, name=&quot;name&quot;),
+            Select(id=&quot;country&quot;, name=&quot;country&quot;, options=[...]),
+            Button(&quot;Submit&quot;, type=&quot;submit&quot;),
+            action=&quot;/submit&quot;,
+            method=&quot;POST&quot;
+        )
+        Form(Button(&quot;Save&quot;, trigger=&quot;save&quot;), ...)  # HTMX form with trigger
+
+    Note: Forms with triggers automatically reset after successful submission.
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        *children,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        action: str = &quot;&quot;,
+        method: str = &quot;post&quot;,
+        listen_to: str | list[str] | None = None,
+        **attrs,
+    ):
+        &quot;&quot;&quot;Initialize a Form component.
+
+        Args:
+            *children: Form elements (Input, Textarea, Select, Button, etc.)
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            action: Form action URL
+            method: HTTP method (get, post, etc.)
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (hx-post, hx-target, etc.)
+        &quot;&quot;&quot;
+        if action:
+            attrs[&quot;action&quot;] = action
+        if method:
+            attrs[&quot;method&quot;] = method
+        super().__init__(id=id, css=css, listen_to=listen_to, **attrs)
+        self.children = self._normalize_children(children)
+
+        # Auto-add form reset handler for HTMX forms
+        # This clears the form after successful submission
+        if self.attrs.get(&quot;hx-post&quot;) and &quot;hx-on::after-request&quot; not in self.attrs:
+            self.attrs[&quot;hx-on::after-request&quot;] = &quot;if(event.detail.successful) this.reset()&quot;
+
+    def render(self) -&gt; str:
+        &quot;&quot;&quot;Render the form with children.&quot;&quot;&quot;
+        attrs = self._get_attrs_str()
+        children_html = self._render_children()
+        return f&quot;&lt;form {attrs}&gt;{children_html}&lt;/form&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        children_html = self._render_children()
+        return f&quot;&lt;form {attrs}&gt;{children_html}&lt;/form&gt;&quot;
+
+
+class TemplateComponent(Component):
+    &quot;&quot;&quot;Component that renders a Jinja2 template.
+
+    Allows embedding complex HTML structures with dynamic content using Jinja2 templating.
+
+    Example:
+        # Inline template
+        TemplateComponent(
+            template=&#x27;&lt;div class=&quot;{{ css }}&quot;&gt;{{ content }}&lt;/div&gt;&#x27;,
+            content=&quot;Hello World&quot;,
+            css=&quot;text-red-500&quot;
+        )
+
+        # Template with state
+        TemplateComponent(
+            template=&#x27;&lt;span&gt;{{ value }}&lt;/span&gt;&#x27;,
+            value=my_state.get,
+            listen_to=&quot;my_state&quot;
+        )
+    &quot;&quot;&quot;
+
+    def __init__(
+        self,
+        template: str,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        listen_to: str | list[str] | None = None,
+        **context,
+    ):
+        &quot;&quot;&quot;Initialize a TemplateComponent.
+
+        Args:
+            template: Jinja2 template string with placeholders
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            listen_to: State name to listen for changes
+            **context: Variables to pass to the template
+        &quot;&quot;&quot;
+        super().__init__(id=id, css=css, listen_to=listen_to)
+        self.template_str = template
+        self.context = context
+
+    @classmethod
+    def from_file(
+        cls,
+        template_path: str,
+        id: str | None = None,
+        css_name: str | Callable[[], str] | None = None,
+        listen_to: str | list[str] | None = None,
+        **context,
+    ):
+        &quot;&quot;&quot;Create a TemplateComponent from a template file.
+
+        Args:
+            template_path: Path to the Jinja2 template file
+            id: HTML id attribute
+            css_name: Tailwind CSS classes
+            listen_to: State name to listen for changes
+            **context: Variables to pass to the template
+        &quot;&quot;&quot;
+        with open(template_path) as f:
+            template_str = f.read()
+        return cls(template_str, id=id, css=css_name, listen_to=listen_to, **context)
+
+    def render(self) -&gt; str:
+        &quot;&quot;&quot;Render the template with context variables.&quot;&quot;&quot;
+        # Resolve all context values
+        resolved_context = {}
+        for key, value in self.context.items():
+            resolved_context[key] = self._resolve(value) if callable(value) else value  # type: ignore
+
+        # Add component attributes to context
+        resolved_context[&quot;id&quot;] = self.id
+        if self.css:
+            resolved_context[&quot;css&quot;] = self._resolve(self.css)
+
+        # Create Jinja2 environment and render
+        env = jinja2.Environment(loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape([&quot;html&quot;, &quot;xml&quot;]))
+        template = env.from_string(self.template_str)
+        return template.render(**resolved_context)
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        # Render template content
+        env = jinja2.Environment(loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape([&quot;html&quot;, &quot;xml&quot;]))
+        template = env.from_string(self.template_str)
+        resolved_context = {}
+        for key, value in self.context.items():
+            resolved_context[key] = self._resolve(value) if callable(value) else value  # type: ignore
+        resolved_context[&quot;id&quot;] = self.id
+        if self.css:
+            resolved_context[&quot;css&quot;] = self._resolve(self.css)
+        content = template.render(**resolved_context)
+        return f&quot;&lt;div {attrs}&gt;{content}&lt;/div&gt;&quot;
+
+
+class DataTable(Component):
+    &quot;&quot;&quot;HTML table component for rendering tabular data.
+
+    Renders a list of dictionaries as an HTML table. Each dictionary represents
+    a row, and keys represent column names. Supports optional column ordering
+    and fine-grained CSS styling.
+
+    Example:
+        # Basic usage with automatic column detection
+        DataTable(
+            data=[
+                {&quot;name&quot;: &quot;Alice&quot;, &quot;age&quot;: 30},
+                {&quot;name&quot;: &quot;Bob&quot;, &quot;age&quot;: 25}
+            ],
+            css=&quot;w-full&quot;
+        )
+
+        # With explicit column order
+        DataTable(
+            data=[
+                {&quot;name&quot;: &quot;Alice&quot;, &quot;age&quot;: 30, &quot;city&quot;: &quot;NYC&quot;},
+                {&quot;name&quot;: &quot;Bob&quot;, &quot;age&quot;: 25, &quot;city&quot;: &quot;LA&quot;}
+            ],
+            columns=[&quot;name&quot;, &quot;city&quot;, &quot;age&quot;],
+            css=&quot;w-full&quot;
+        )
+
+        # With dynamic data from state
+        DataTable(
+            data=table_data_state.get,
+            listen_to=&quot;table_data_state&quot;,
+            columns=[&quot;id&quot;, &quot;name&quot;, &quot;status&quot;]
+        )
+
+        # With dictionary-based CSS for fine-grained styling
+        DataTable(
+            data=data,
+            css={
+                &quot;table&quot;: &quot;w-full border-2 border-blue-500&quot;,
+                &quot;header&quot;: &quot;px-4 py-3 bg-blue-600 text-white font-bold&quot;,
+                &quot;cell&quot;: &quot;px-4 py-3 border border-blue-200&quot;,
+                &quot;row&quot;: &quot;hover:bg-blue-50&quot;,
+            }
+        )
+    &quot;&quot;&quot;
+
+    # Default CSS classes for sub-elements (matching original hardcoded values)
+    _DEFAULT_ELEMENT_CSS = {
+        &quot;header&quot;: &quot;px-3 py-2 bg-gray-400 border border-gray-400 text-left font-semibold uppercase tracking-wider&quot;,
+        &quot;cell&quot;: &quot;px-3 py-2 border border-gray-300&quot;,
+        &quot;row&quot;: &quot;odd:bg-white even:bg-gray-100 hover:bg-gray-200 transition-colors&quot;,
+    }
+
+    def __init__(
+        self,
+        data: list[dict] | Callable[[], list[dict]],
+        columns: list[str] | Callable[[], list[str] | None] | None = None,
+        id: str | None = None,
+        css: str | Mapping[str, str | Callable[[], str]] | Callable[[], str | Mapping[str, str | Callable[[], str]]] | None = None,
+        listen_to: str | list[str] | None = None,
+        **attrs,
+    ):
+        &quot;&quot;&quot;Initialize a DataTable component.
+
+        Args:
+            data: Tabular data as list of dictionaries, or callable returning such list.
+                  Each dict represents a row, keys are column names.
+            columns: Optional list of column names to display, in order, or callable returning such list or None.
+                    If None, columns are extracted from the first row&#x27;s keys.
+                    Use this to control column order or select a subset of columns.
+                    Can be a callable to enable dynamic column configuration based on state.
+            id: HTML id attribute
+            css: CSS styling. Can be:
+                - str: Applied to the root &lt;table&gt; element (original behavior)
+                - dict: Maps element types to CSS classes:
+                    - &quot;table&quot;: Root &lt;table&gt; element
+                    - &quot;header&quot;: &lt;th&gt; elements (header cells)
+                    - &quot;row&quot;: &lt;tr&gt; elements (body rows)
+                    - &quot;cell&quot;: &lt;td&gt; elements (body cells)
+                - Callable: Returns either str or dict
+            listen_to: State name to listen for changes (triggers re-render)
+            **attrs: Additional HTML attributes (e.g., data-testid)
+        &quot;&quot;&quot;
+        # Don&#x27;t pass css to parent __init__ yet - we&#x27;ll handle it specially
+        super().__init__(id=id, css=None, listen_to=listen_to, **attrs)
+        self.data = data
+        self.columns = columns
+        self._raw_css = css
+
+    def _resolve_css(self) -&gt; tuple[str, dict[str, str]]:
+        &quot;&quot;&quot;Resolve and normalize the CSS parameter.
+
+        Returns:
+            tuple: (root_css: str, element_css: dict[str, str])
+                - root_css: CSS classes for the root &lt;table&gt; element
+                - element_css: Dictionary of CSS classes for sub-elements (header, row, cell)
+        &quot;&quot;&quot;
+        css = self._raw_css
+
+        # Handle callable
+        if callable(css):
+            css = css()
+
+        # Handle None
+        if css is None:
+            return &quot;&quot;, {}
+
+        # Handle string - applies to root table element
+        if isinstance(css, str):
+            return css, {}
+
+        # Handle dict - can contain &#x27;table&#x27;, &#x27;header&#x27;, &#x27;row&#x27;, &#x27;cell&#x27; keys
+        if isinstance(css, dict):
+            resolved_dict = {}
+            root_css = &quot;&quot;
+            for key, value in css.items():
+                if callable(value):
+                    value = value()
+                if value is None:
+                    value = &quot;&quot;
+
+                # &#x27;table&#x27; key applies to root element
+                if key == &quot;table&quot;:
+                    root_css = value
+                else:
+                    # Other keys apply to sub-elements
+                    resolved_dict[key] = value
+            return root_css, resolved_dict
+
+        # Fallback
+        return &quot;&quot;, {}
+
+    def _get_columns(self, resolved_data: list[dict]) -&gt; list[str]:
+        &quot;&quot;&quot;Get the list of columns to display.
+
+        If columns parameter was provided, use it.
+        Otherwise, extract from first row&#x27;s keys.
+        Returns empty list if data is empty.
+        &quot;&quot;&quot;
+        if self.columns is not None:
+            resolved = self.columns() if callable(self.columns) else self.columns
+            if resolved is not None:
+                return resolved
+        if resolved_data:
+            return list(resolved_data[0].keys())
+        return []
+
+    def _get_value(self, row: dict, column: str) -&gt; str:
+        &quot;&quot;&quot;Get the string value for a cell, handling None and missing keys.&quot;&quot;&quot;
+        value = row.get(column, &quot;&quot;)
+        if value is None:
+            return &quot;&quot;
+        return str(value)
+
+    def _render_table(self, resolved_data: list[dict], element_css: dict[str, str]) -&gt; str:
+        &quot;&quot;&quot;Render the HTML table structure with resolved data and CSS.&quot;&quot;&quot;
+        columns = self._get_columns(resolved_data)
+
+        # Merge user-provided CSS with defaults
+        header_css = element_css.get(&quot;header&quot;, self._DEFAULT_ELEMENT_CSS[&quot;header&quot;])
+        cell_css = element_css.get(&quot;cell&quot;, self._DEFAULT_ELEMENT_CSS[&quot;cell&quot;])
+        row_css = element_css.get(&quot;row&quot;, self._DEFAULT_ELEMENT_CSS[&quot;row&quot;])
+
+        # Render thead
+        header_cells = &quot;&quot;.join(f&#x27;&lt;th class=&quot;{header_css}&quot;&gt;{col}&lt;/th&gt;&#x27; for col in columns)
+        thead = f&quot;&lt;thead&gt;&lt;tr&gt;{header_cells}&lt;/tr&gt;&lt;/thead&gt;&quot;
+
+        # Render tbody
+        if not resolved_data:
+            tbody = &quot;&lt;tbody&gt;&lt;/tbody&gt;&quot;
+        else:
+            rows_html = []
+            for row in resolved_data:
+                cells = &quot;&quot;.join(f&#x27;&lt;td class=&quot;{cell_css}&quot;&gt;{self._get_value(row, col)}&lt;/td&gt;&#x27; for col in columns)
+                rows_html.append(f&#x27;&lt;tr class=&quot;{row_css}&quot;&gt;{cells}&lt;/tr&gt;&#x27;)
+            tbody = f&quot;&lt;tbody&gt;{&#x27;&#x27;.join(rows_html)}&lt;/tbody&gt;&quot;
+
+        return f&quot;{thead}{tbody}&quot;
+
+    def _build_attrs(self, root_css: str, include_oob: bool = False) -&gt; str:
+        &quot;&quot;&quot;Build HTML attributes string with optional OOB prefix.
+
+        Args:
+            root_css: CSS classes for the root table element
+            include_oob: If True, prefix with hx-swap-oob=&quot;true&quot;
+
+        Returns:
+            Complete attributes string for &lt;table&gt; element
+        &quot;&quot;&quot;
+        filtered_attrs = {}
+        for k, v in self.attrs.items():
+            if k != &quot;css&quot;:
+                filtered_attrs[k] = self._resolve(v)
+
+        # Add root CSS to class attribute
+        if root_css:
+            if &quot;class&quot; in filtered_attrs:
+                filtered_attrs[&quot;class&quot;] += &quot; &quot; + root_css
+            else:
+                filtered_attrs[&quot;class&quot;] = root_css
+
+        # Add id if present
+        if self.id:
+            filtered_attrs[&quot;id&quot;] = self.id
+
+        attrs = &quot; &quot;.join(f&#x27;{k}=&quot;{v}&quot;&#x27; for k, v in filtered_attrs.items())
+
+        if include_oob:
+            attrs = f&#x27;hx-swap-oob=&quot;true&quot; {attrs}&#x27;.strip()
+
+        return attrs
+
+    def render(self) -&gt; str:
+        &quot;&quot;&quot;Render the DataTable as HTML.&quot;&quot;&quot;
+        resolved_data = self.data() if callable(self.data) else self.data
+        root_css, element_css = self._resolve_css()
+        attrs = self._build_attrs(root_css, include_oob=False)
+        table_content = self._render_table(resolved_data, element_css)
+        return f&quot;&lt;table {attrs}&gt;{table_content}&lt;/table&gt;&quot;
+
+    def update(self) -&gt; str:
+        &quot;&quot;&quot;Render with hx-swap-oob for HTMX out-of-band updates.&quot;&quot;&quot;
+        if not self.id:
+            return self.render()
+
+        resolved_data = self.data() if callable(self.data) else self.data
+        root_css, element_css = self._resolve_css()
+        attrs = self._build_attrs(root_css, include_oob=True)
+        table_content = self._render_table(resolved_data, element_css)
+        return f&quot;&lt;table {attrs}&gt;{table_content}&lt;/table&gt;&quot;
+</doc><doc title="State" desc="Reactive State container with per-session isolation and auto-propagation of mutations">&quot;&quot;&quot;
+Reactive state management for inguitive.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import contextvars
+import uuid
+from contextlib import contextmanager
+from typing import Generic, TypeVar
+
+from inguitive.session import (
+    _get_data_registry,
+)
+
+_T = TypeVar(&quot;_T&quot;)
+
+_LISTENERS_PREFIX = &quot;__listeners__&quot;
+
+_state_name_registry: dict[str, State] = {}
+
+# Context variable to track mutated state keys during request handling
+_mutated_states: contextvars.ContextVar[set[str]] = contextvars.ContextVar(&quot;mutated_states&quot;, default=set())
+
+
+@contextmanager
+def _track_mutations():
+    &quot;&quot;&quot;Context manager to track state mutations during handler execution.
+
+    Use this to wrap trigger handler execution. All State.set() calls within
+    the context will be recorded and can be retrieved via get_mutated_states().
+    &quot;&quot;&quot;
+    token = _mutated_states.set(set())
+    try:
+        yield
+    finally:
+        _mutated_states.reset(token)
+
+
+def _get_mutated_states() -&gt; set[str]:
+    &quot;&quot;&quot;Return set of state keys mutated during current request.
+
+    Returns:
+        Copy of the set of state keys that were mutated via State.set()
+        within the current _track_mutations() context.
+    &quot;&quot;&quot;
+    return _mutated_states.get().copy()
+
+
+def _get_state_by_name(name: str) -&gt; State | None:
+    &quot;&quot;&quot;Look up a named State object from the global registry.&quot;&quot;&quot;
+    return _state_name_registry.get(name)
+
+
+class State(Generic[_T]):
+    &quot;&quot;&quot;Reactive state container with per-session isolation.
+
+    State values and listener sets are stored in the per-session data_registry,
+    so each user&#x27;s session maintains fully independent state. The State object
+    itself is a module-level singleton used only as a handle — it holds no
+    mutable runtime data after construction.
+
+    Named states (State(value, &quot;my_state&quot;)) are fully session-isolated.
+    Unnamed states fall back to per-object storage, which is acceptable for
+    states not shared across components via listen_to.
+    &quot;&quot;&quot;
+
+    def __init__(self, initial_value: _T, name: str = &quot;&quot;):
+        self._initial_value = initial_value
+        self.name = name
+        self._key = name if name else f&quot;__anon_{uuid.uuid4().hex}&quot;
+        if name:
+            _state_name_registry[name] = self
+
+    def get(self) -&gt; _T:
+        &quot;&quot;&quot;Return the current value for the active session.&quot;&quot;&quot;
+        return _get_data_registry().get(self._key, self._initial_value)  # type: ignore[no-any-return]
+
+    def set(self, new_value: _T) -&gt; None:
+        &quot;&quot;&quot;Write a new value into the active session&#x27;s data registry.&quot;&quot;&quot;
+        _get_data_registry()[self._key] = new_value
+        # Track mutation for auto-propagation in trigger handlers
+        _mutated_states.get().add(self._key)
+
+    @property
+    def listeners(self) -&gt; set[str]:  # type: ignore[valid-type]
+        &quot;&quot;&quot;Return the set of component IDs listening to this state in the active session.&quot;&quot;&quot;
+        listeners_key = f&quot;{_LISTENERS_PREFIX}{self._key}&quot;
+        data = _get_data_registry()
+        if listeners_key not in data:
+            data[listeners_key] = set()
+        return data[listeners_key]  # type: ignore[no-any-return]
+
+    def add_listener(self, component_id: str) -&gt; None:
+        &quot;&quot;&quot;Register a component ID as a listener for the active session.&quot;&quot;&quot;
+        self.listeners.add(component_id)  # type: ignore[attr-defined]
+
+    def remove_listener(self, component_id: str) -&gt; None:
+        &quot;&quot;&quot;Remove a component ID from the listeners for the active session.&quot;&quot;&quot;
+        self.listeners.discard(component_id)  # type: ignore[attr-defined]
+</doc><doc title="Session" desc="Session dataclass, MemoryBackend, RedisBackend, and context-local session helpers">&quot;&quot;&quot;
+Session management with pluggable backends for inguitive.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import json
+import time
+import uuid
+from abc import ABC, abstractmethod
+from contextvars import ContextVar
+from dataclasses import dataclass, field
+from typing import Any
+
+# Type aliases
+SessionId = str
+SessionData = dict[str, Any]
+
+
+@dataclass
+class Session:
+    &quot;&quot;&quot;Represents a user session with isolated registries.&quot;&quot;&quot;
+
+    session_id: SessionId
+    component_registry: dict[str, Any] = field(default_factory=dict)
+    state_registry: dict[str, Any] = field(default_factory=dict)
+    data_registry: dict[str, Any] = field(default_factory=dict)
+    last_accessed: float = field(default_factory=lambda: time.time())
+
+    def to_dict(self) -&gt; SessionData:
+        &quot;&quot;&quot;Serialize session data for storage.&quot;&quot;&quot;
+        return {
+            &quot;session_id&quot;: self.session_id,
+            &quot;data_registry&quot;: self.data_registry,
+            &quot;last_accessed&quot;: self.last_accessed,
+        }
+
+    @classmethod
+    def from_dict(cls, data: SessionData) -&gt; Session:
+        &quot;&quot;&quot;Deserialize session data from storage.&quot;&quot;&quot;
+        return cls(
+            session_id=data[&quot;session_id&quot;],
+            component_registry={},
+            state_registry={},
+            data_registry=data.get(&quot;data_registry&quot;, {}),
+            last_accessed=data.get(&quot;last_accessed&quot;, 0.0),
+        )
+
+
+class SessionBackend(ABC):
+    &quot;&quot;&quot;Abstract base class for session backends.&quot;&quot;&quot;
+
+    @abstractmethod
+    def get_session(self, session_id: SessionId) -&gt; Session | None:
+        &quot;&quot;&quot;Retrieve a session by ID. Returns None if not found.&quot;&quot;&quot;
+        ...
+
+    @abstractmethod
+    def save_session(self, session: Session) -&gt; None:
+        &quot;&quot;&quot;Save a session to the backend.&quot;&quot;&quot;
+        ...
+
+    @abstractmethod
+    def delete_session(self, session_id: SessionId) -&gt; None:
+        &quot;&quot;&quot;Delete a session from the backend.&quot;&quot;&quot;
+        ...
+
+    @abstractmethod
+    def cleanup_expired(self) -&gt; int:
+        &quot;&quot;&quot;Clean up expired sessions. Returns number of sessions deleted.&quot;&quot;&quot;
+        ...
+
+
+class MemoryBackend(SessionBackend):
+    &quot;&quot;&quot;In-memory session backend for development. Not suitable for production.&quot;&quot;&quot;
+
+    def __init__(self, ttl_seconds: int = 3600):
+        &quot;&quot;&quot;Initialize memory backend.
+
+        Args:
+            ttl_seconds: Session timeout in seconds (default: 3600 = 1 hour).
+                        Sessions older than this will be cleaned up.
+                        Set to 0 or negative for no expiry (not recommended).
+        &quot;&quot;&quot;
+        self._sessions: dict[SessionId, Session] = {}
+        self._ttl_seconds = ttl_seconds
+
+    def get_session(self, session_id: SessionId) -&gt; Session | None:
+        &quot;&quot;&quot;Retrieve session from memory.&quot;&quot;&quot;
+        session = self._sessions.get(session_id)
+        if session is None:
+            return None
+        # Update last_accessed timestamp on every access
+        session.last_accessed = time.time()
+        return session
+
+    def save_session(self, session: Session) -&gt; None:
+        &quot;&quot;&quot;Save session to memory.&quot;&quot;&quot;
+        # Update last_accessed timestamp on every save
+        session.last_accessed = time.time()
+        self._sessions[session.session_id] = session
+
+    def delete_session(self, session_id: SessionId) -&gt; None:
+        &quot;&quot;&quot;Delete session from memory.&quot;&quot;&quot;
+        self._sessions.pop(session_id, None)
+
+    def cleanup_expired(self) -&gt; int:
+        &quot;&quot;&quot;Clean up expired sessions.
+
+        Removes all sessions that have not been accessed within the TTL period.
+        Returns the number of sessions deleted.
+
+        Note: If ttl_seconds is 0 or negative, no sessions are cleaned up.
+        &quot;&quot;&quot;
+        if self._ttl_seconds &lt;= 0:
+            # No expiry configured
+            return 0
+
+        current_time = time.time()
+        expiry_threshold = current_time - self._ttl_seconds
+
+        # Collect expired session IDs
+        expired_ids = [
+            session_id for session_id, session in self._sessions.items()
+            if session.last_accessed &lt; expiry_threshold
+        ]
+
+        # Delete expired sessions
+        for session_id in expired_ids:
+            del self._sessions[session_id]
+
+        return len(expired_ids)
+
+
+class RedisBackend(SessionBackend):
+    &quot;&quot;&quot;Redis-based session backend for production.&quot;&quot;&quot;
+
+    def __init__(self, redis_url: str = &quot;redis://localhost:6379&quot;, ttl_seconds: int = 3600, db: int = 0):
+        &quot;&quot;&quot;
+        Initialize Redis backend.
+
+        Args:
+            redis_url: Redis connection URL
+            ttl_seconds: Session timeout in seconds (default: 3600 = 1 hour)
+            db: Redis database number
+        &quot;&quot;&quot;
+        self._redis_url = redis_url
+        self._ttl_seconds = ttl_seconds
+        self._db = db
+        self._client = None
+
+    def _get_client(self):
+        &quot;&quot;&quot;Lazy initialization of Redis client.&quot;&quot;&quot;
+        if self._client is None:
+            try:
+                import redis
+
+                self._client = redis.Redis.from_url(self._redis_url, db=self._db, decode_responses=True)
+            except ImportError:
+                raise ImportError(&quot;Redis backend requires &#x27;redis&#x27; package. Install with: pip install redis&quot;)
+        return self._client
+
+    def _make_key(self, session_id: SessionId) -&gt; str:
+        &quot;&quot;&quot;Create Redis key for session.&quot;&quot;&quot;
+        return f&quot;inguitive:session:{session_id}&quot;
+
+    def get_session(self, session_id: SessionId) -&gt; Session | None:
+        &quot;&quot;&quot;Retrieve session from Redis.&quot;&quot;&quot;
+        client = self._get_client()
+        key = self._make_key(session_id)
+        data = client.get(key)
+        if data is None:
+            return None
+        try:
+            session_data = json.loads(data)
+            return Session.from_dict(session_data)
+        except (json.JSONDecodeError, KeyError):
+            # Log error and return None
+            return None
+
+    def save_session(self, session: Session) -&gt; None:
+        &quot;&quot;&quot;Save session to Redis with TTL.&quot;&quot;&quot;
+        client = self._get_client()
+        key = self._make_key(session.session_id)
+        data = json.dumps(session.to_dict())
+        client.setex(key, self._ttl_seconds, data)
+
+    def delete_session(self, session_id: SessionId) -&gt; None:
+        &quot;&quot;&quot;Delete session from Redis.&quot;&quot;&quot;
+        client = self._get_client()
+        key = self._make_key(session_id)
+        client.delete(key)
+
+    def cleanup_expired(self) -&gt; int:
+        &quot;&quot;&quot;Redis handles TTL automatically. This is a no-op.&quot;&quot;&quot;
+        return 0
+
+
+# Global session backend instance
+_session_backend: SessionBackend | None = None
+
+# Context variable for current session ID
+_current_session_id: ContextVar[SessionId | None] = ContextVar(&quot;current_session_id&quot;, default=None)
+
+
+def get_session_backend() -&gt; SessionBackend:
+    &quot;&quot;&quot;Get the configured session backend. Defaults to MemoryBackend.&quot;&quot;&quot;
+    global _session_backend
+    if _session_backend is None:
+        _session_backend = MemoryBackend()
+    return _session_backend
+
+
+def set_session_backend(backend: SessionBackend) -&gt; None:
+    &quot;&quot;&quot;Set the session backend. Call this during app initialization.&quot;&quot;&quot;
+    global _session_backend
+    _session_backend = backend
+
+
+def _create_session() -&gt; Session:
+    &quot;&quot;&quot;Create a new session with unique ID.&quot;&quot;&quot;
+    session_id = str(uuid.uuid4())
+    return Session(session_id=session_id)
+
+
+def _get_current_session() -&gt; Session | None:
+    &quot;&quot;&quot;Get the current session for this request/context.&quot;&quot;&quot;
+    session_id = _current_session_id.get()
+    if session_id is None:
+        return None
+    backend = get_session_backend()
+    return backend.get_session(session_id)
+
+
+def _get_or_create_current_session() -&gt; Session:
+    &quot;&quot;&quot;Get current session or create a new one.&quot;&quot;&quot;
+    session = _get_current_session()
+    if session is not None:
+        return session
+
+    # Create new session
+    session = _create_session()
+    backend = get_session_backend()
+    backend.save_session(session)
+
+    # Set in context
+    _current_session_id.set(session.session_id)
+    return session
+
+
+def _set_current_session(session: Session) -&gt; None:
+    &quot;&quot;&quot;Set the current session for this request/context.&quot;&quot;&quot;
+    _current_session_id.set(session.session_id)
+
+
+def _clear_current_session() -&gt; None:
+    &quot;&quot;&quot;Clear the current session from context.&quot;&quot;&quot;
+    _current_session_id.set(None)
+
+
+def get_session_id() -&gt; str | None:
+    &quot;&quot;&quot;Get the current session ID, or None if no session is active.&quot;&quot;&quot;
+    session = _get_current_session()
+    return session.session_id if session else None
+
+
+# Convenience functions for registries
+def _get_component_registry() -&gt; dict[str, Any]:
+    &quot;&quot;&quot;Get the component registry for the current session.&quot;&quot;&quot;
+    return _get_or_create_current_session().component_registry
+
+
+def _get_state_registry() -&gt; dict[str, Any]:
+    &quot;&quot;&quot;Get the state registry for the current session.&quot;&quot;&quot;
+    return _get_or_create_current_session().state_registry
+
+
+def _get_data_registry() -&gt; dict[str, Any]:
+    &quot;&quot;&quot;Get the data registry for the current session.&quot;&quot;&quot;
+    return _get_or_create_current_session().data_registry
+</doc><doc title="FastAPI integration" desc="create_app(), @app.page, @app.trigger_handler, SessionMiddleware">&quot;&quot;&quot;
+FastAPI integration for inguitive.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import inspect
+import uuid
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+
+from inguitive.htmx import update_components
+from inguitive.session import (
+    Session,
+    SessionBackend,
+    _clear_current_session,
+    _set_current_session,
+    get_session_backend,
+    set_session_backend,
+)
+from inguitive.state import (
+    _get_mutated_states,
+    _get_state_by_name,
+    _track_mutations,
+)
+from inguitive.trigger import _trigger_args_context
+
+# Type variables for decorator type annotations
+_P = ParamSpec(&quot;_P&quot;)
+_T = TypeVar(&quot;_T&quot;)
+
+# Type aliases for decorator return types
+_TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
+_PageDecorator = Callable[[str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
+
+
+@runtime_checkable
+class InguitiveApp(Protocol[_P, _T]):
+    &quot;&quot;&quot;Protocol describing an inguitive application with custom decorators.
+
+    This Protocol extends the FastAPI instance with inguitive-specific decorators.
+    Type checkers will recognize these custom attributes on objects of this type.
+    &quot;&quot;&quot;
+
+    # Custom decorators
+    trigger_handler: _TriggerDecorator[_P, _T]
+    page: _PageDecorator[_P, _T]
+
+
+def _register_page_route(app, path: str, handler: Callable[_P, _T]):
+    &quot;&quot;&quot;Helper to register a page route on an app.&quot;&quot;&quot;
+
+    @app.get(path, response_class=HTMLResponse)
+    async def route_wrapper(request: Request, h=handler):
+        sig = inspect.signature(h)
+        needs_request = &quot;request&quot; in sig.parameters
+        needs_form_data = &quot;form_data&quot; in sig.parameters
+        is_async = inspect.iscoroutinefunction(h)
+
+        kwargs: dict[str, Any] = {}
+        if needs_request:
+            kwargs[&quot;request&quot;] = request
+        if needs_form_data:
+            form_data_dict = dict(await request.form())
+            kwargs[&quot;form_data&quot;] = form_data_dict
+
+        result = await h(**kwargs) if is_async else h(**kwargs)
+
+        # If result is a Response object (e.g., RedirectResponse), return it directly
+        from starlette.responses import Response
+
+        if isinstance(result, Response):
+            return result
+
+        # Auto-render Components if they have a render method
+        if hasattr(result, &quot;render&quot;) and callable(result.render):
+            content = result.render()
+        else:
+            content = str(result)
+
+        # Wrap in base template
+        templates = app.state.templates
+        return templates.TemplateResponse(request, &quot;base.html&quot;, {&quot;content&quot;: content})
+
+
+def _register_trigger_route(app, trigger_name: str, handler: Callable):
+    &quot;&quot;&quot;Helper to register a trigger route on an app.&quot;&quot;&quot;
+
+    @app.post(f&quot;/_trigger/{trigger_name.lstrip(&#x27;/&#x27;)}&quot;, response_class=HTMLResponse)
+    async def route_wrapper(request: Request, h=handler, tn=trigger_name):
+        sig = inspect.signature(h)
+        needs_request = &quot;request&quot; in sig.parameters
+        needs_form_data = &quot;form_data&quot; in sig.parameters
+        is_async = inspect.iscoroutinefunction(h)
+
+        kwargs: dict[str, Any] = {}
+        if needs_request:
+            kwargs[&quot;request&quot;] = request
+
+        # Extract query params which contain trigger_args from Component
+        query_params = dict(request.query_params)
+
+        # Track state mutations during handler execution for auto-propagation
+        with _track_mutations():
+            # Set trigger_args in context for get_trigger_args() access
+            with _trigger_args_context(query_params):
+                if needs_form_data:
+                    form_data_dict = dict(await request.form())
+                    # Merge query parameters (from trigger_args) into form_data
+                    form_data_dict.update(query_params)
+                    kwargs[&quot;form_data&quot;] = form_data_dict
+
+                result = await h(**kwargs) if is_async else h(**kwargs)
+
+                # If handler returned explicit response, use it (allows overriding auto-propagation)
+                if result:
+                    return result
+
+                # Otherwise, auto-generate OOB response from mutated states
+                mutated_state_keys = _get_mutated_states()
+                all_component_ids: set[str] = set()
+                for state_key in mutated_state_keys:
+                    # Get the State object for this key and collect its listeners
+                    state = _get_state_by_name(state_key)
+                    if state is not None:
+                        all_component_ids.update(state.listeners)
+
+                return update_components(*all_component_ids)
+
+
+class SessionMiddleware:
+    &quot;&quot;&quot;FastAPI/Starlette ASGI middleware for session management.&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        app,
+        session_cookie_name: str = &quot;inguitive_session_id&quot;,
+        session_cookie_max_age: int = 3600,
+        session_cookie_secure: bool = False,
+        session_cookie_httponly: bool = True,
+        cleanup_interval: int = 100,
+    ):
+        &quot;&quot;&quot;Initialize SessionMiddleware.
+
+        Args:
+            app: The ASGI application
+            session_cookie_name: Name of the session cookie
+            session_cookie_max_age: Cookie max age in seconds
+            session_cookie_secure: Whether cookie is secure (HTTPS only)
+            session_cookie_httponly: Whether cookie is HTTP-only
+            cleanup_interval: Call cleanup_expired() every N requests (default: 100)
+        &quot;&quot;&quot;
+        self.app = app
+        self.session_cookie_name = session_cookie_name
+        self.session_cookie_max_age = session_cookie_max_age
+        self.session_cookie_secure = session_cookie_secure
+        self.session_cookie_httponly = session_cookie_httponly
+        self.cleanup_interval = cleanup_interval
+        self._request_count = 0
+
+    async def __call__(self, scope, receive, send):
+        &quot;&quot;&quot;Process ASGI request with session management.&quot;&quot;&quot;
+        if scope[&quot;type&quot;] not in (&quot;http&quot;, &quot;websocket&quot;):
+            await self.app(scope, receive, send)
+            return
+
+        # Periodic cleanup of expired sessions
+        self._request_count += 1
+        if self._request_count % self.cleanup_interval == 0:
+            backend = get_session_backend()
+            backend.cleanup_expired()
+
+        # Extract cookies from headers
+        headers = dict(scope.get(&quot;headers&quot;, []))
+        cookie_header = headers.get(b&quot;cookie&quot;, b&quot;&quot;).decode(&quot;latin-1&quot;)
+        cookies = {}
+        for part in cookie_header.split(&quot;;&quot;):
+            part = part.strip()
+            if &quot;=&quot; in part:
+                k, v = part.split(&quot;=&quot;, 1)
+                cookies[k.strip()] = v.strip()
+
+        session_id = cookies.get(self.session_cookie_name)
+        backend = get_session_backend()
+
+        if session_id:
+            session = backend.get_session(session_id)
+            if session is None:
+                session = Session(session_id=session_id)
+                backend.save_session(session)
+        else:
+            session = Session(session_id=str(uuid.uuid4()))
+            backend.save_session(session)
+
+        _set_current_session(session)
+
+        async def send_with_cookie(message):
+            if message[&quot;type&quot;] == &quot;http.response.start&quot;:
+                headers_list = list(message.get(&quot;headers&quot;, []))
+                cookie_value = (
+                    f&quot;{self.session_cookie_name}={session.session_id}; &quot;
+                    f&quot;Max-Age={self.session_cookie_max_age}; Path=/; SameSite=Lax&quot;
+                )
+                if self.session_cookie_httponly:
+                    cookie_value += &quot;; HttpOnly&quot;
+                if self.session_cookie_secure:
+                    cookie_value += &quot;; Secure&quot;
+                headers_list.append((b&quot;set-cookie&quot;, cookie_value.encode(&quot;latin-1&quot;)))
+                message = dict(message, headers=headers_list)
+            await send(message)
+
+        try:
+            await self.app(scope, receive, send_with_cookie)
+        finally:
+            backend.save_session(session)
+            _clear_current_session()
+
+
+def create_app(
+    template_dir: str | Path = &quot;templates&quot;,
+    session_backend: SessionBackend | None = None,
+    session_cookie_name: str = &quot;inguitive_session_id&quot;,
+    session_cookie_max_age: int = 3600,
+    session_cookie_secure: bool = False,
+    session_cookie_httponly: bool = True,
+    session_cleanup_interval: int = 100,
+) -&gt; InguitiveApp[_P, _T]:
+    &quot;&quot;&quot;Create and configure a FastAPI application for inguitive.
+
+    Args:
+        template_dir: Directory containing Jinja2 templates
+        session_backend: Session backend to use (defaults to MemoryBackend)
+        session_cookie_name: Name of the session cookie
+        session_cookie_max_age: Cookie max age in seconds
+        session_cookie_secure: Whether cookie is secure (HTTPS only)
+        session_cookie_httponly: Whether cookie is HTTP-only
+        session_cleanup_interval: Call cleanup_expired() every N requests (default: 100)
+
+    Returns:
+        InguitiveApp - the FastAPI application with inguitive decorators
+        (trigger_handler and page) and templates accessible via app.state.templates
+    &quot;&quot;&quot;
+    app = FastAPI()
+    templates = Jinja2Templates(directory=template_dir)
+    app.state.templates = templates
+
+    # Initialize per-app storage for handlers
+    app.state.trigger_handlers = {}
+    app.state.page_routes = {}
+
+    # Add app-scoped decorator methods
+    def _page_decorator(path: str | None = None):
+        def decorator(func: Callable):
+            actual_path = path if path is not None else &quot;/&quot;
+            app.state.page_routes[actual_path] = func
+            _register_page_route(app, actual_path, func)
+            return func
+
+        return decorator
+
+    def _trigger_decorator(trigger_name: str | None | Callable = None):
+        if callable(trigger_name):
+            # Called as @app.trigger_handler (without parentheses)
+            # trigger_name is actually the function
+            func = trigger_name
+            actual_trigger_name = func.__name__
+            app.state.trigger_handlers[actual_trigger_name] = func
+            _register_trigger_route(app, actual_trigger_name, func)
+            return func
+        else:
+            # Called as @app.trigger_handler(&quot;name&quot;) (with parentheses)
+            # trigger_name is the name string
+            def decorator(func: Callable):
+                actual_trigger_name = trigger_name or func.__name__
+                app.state.trigger_handlers[actual_trigger_name] = func
+                _register_trigger_route(app, actual_trigger_name, func)
+                return func
+
+            return decorator
+
+    # Attach decorator methods to app
+    app.page = _page_decorator  # type: ignore
+    app.trigger_handler = _trigger_decorator  # type: ignore
+
+    # Configure session backend
+    if session_backend is not None:
+        set_session_backend(session_backend)
+
+    # Add session middleware
+    app.add_middleware(
+        SessionMiddleware,
+        session_cookie_name=session_cookie_name,
+        session_cookie_max_age=session_cookie_max_age,
+        session_cookie_secure=session_cookie_secure,
+        session_cookie_httponly=session_cookie_httponly,
+        cleanup_interval=session_cleanup_interval,
+    )
+
+    return app  # type: ignore[return-value]
+
+
+def run_app(app_module: str = &quot;app:app&quot;, host: str = &quot;0.0.0.0&quot;, port: int = 8000, reload: bool = True):
+    &quot;&quot;&quot;Run the FastAPI application using Uvicorn.
+
+    Args:
+        app_module: Uvicorn app module string (e.g., &quot;app:app&quot;)
+        host: Host to bind to
+        port: Port to bind to
+        reload: Enable auto-reload in development
+    &quot;&quot;&quot;
+    import uvicorn
+
+    uvicorn.run(app_module, host=host, port=port, reload=reload)
+
+
+def redirect(url: str, status_code: int = 302):
+    &quot;&quot;&quot;Perform an HTTP redirect to the specified URL.
+
+    Args:
+        url: The URL to redirect to
+        status_code: HTTP status code (302 for temporary redirect, 301 for permanent)
+
+    Returns:
+        RedirectResponse: FastAPI redirect response
+    &quot;&quot;&quot;
+    from fastapi.responses import RedirectResponse
+
+    return RedirectResponse(url=url, status_code=status_code)
+</doc><doc title="HTMX helpers" desc="update_components() — renders components as OOB HTML for partial page updates">&quot;&quot;&quot;
+HTMX helper functions for inguitive.
+&quot;&quot;&quot;
+
+from inguitive.session import _get_component_registry
+
+
+def update_components(*component_ids: str) -&gt; str:
+    &quot;&quot;&quot;Render multiple components as OOB HTML for HTMX updates.
+
+    Args:
+        *component_ids: Component IDs to update
+
+    Returns:
+        Concatenated HTML string with hx-swap-oob attributes
+    &quot;&quot;&quot;
+    html_parts: list[str] = []
+    component_registry = _get_component_registry()
+    for cid in component_ids:
+        if cid in component_registry:
+            html_parts.append(component_registry[cid].update())
+    return &quot;&quot;.join(html_parts)
+</doc><doc title="Trigger" desc="get_trigger_args() — access trigger_args dict inside a trigger handler">&quot;&quot;&quot;
+Trigger argument context management for inguitive framework.
+
+Provides context-local storage for trigger_args passed from Components to trigger handlers,
+allowing handlers to access these arguments without requiring form_data or request parameters.
+&quot;&quot;&quot;
+
+from contextlib import contextmanager
+from contextvars import ContextVar
+
+# Context variable to store trigger_args for current request
+_trigger_args_var: ContextVar[dict[str, str]] = ContextVar(
+    &quot;trigger_args&quot;,
+    default={},
+)
+
+
+def get_trigger_args() -&gt; dict[str, str]:
+    &quot;&quot;&quot;Get trigger_args dictionary for the current trigger handler execution.
+
+    Returns the dictionary of trigger arguments that were passed via Component&#x27;s
+    trigger_args parameter. Returns an empty dict if no trigger_args were passed
+    or if called outside of a trigger handler context.
+
+    Example:
+        @app.trigger_handler
+        def my_handler():
+            args = get_trigger_args()
+            column = args.get(&quot;column&quot;)
+
+    Returns:
+        Dict[str, str]: The trigger arguments dictionary.
+    &quot;&quot;&quot;
+    return _trigger_args_var.get()
+
+
+@contextmanager
+def _trigger_args_context(args: dict[str, str]):
+    &quot;&quot;&quot;Context manager to temporarily set trigger_args for handler execution.
+
+    This is used internally by the framework to populate trigger_args from URL
+    query parameters before calling a trigger handler, and to clean up
+    afterwards.
+
+    Args:
+        args: Dictionary of trigger argument key-value pairs.
+    &quot;&quot;&quot;
+    token = _trigger_args_var.set(args.copy())
+    try:
+        yield
+    finally:
+        _trigger_args_var.reset(token)
+</doc><doc title="Utils" desc="nl2br() and other general helpers">&quot;&quot;&quot;Utility functions for inguitive framework.&quot;&quot;&quot;
+
+
+def nl2br(text: str | None) -&gt; str:
+    &quot;&quot;&quot;Convert newline characters to HTML line break tags.
+
+    Args:
+        text: Input string potentially containing newline characters.
+        May be None, which returns an empty string.
+
+    Returns:
+        String with all newline characters replaced by &lt;br&gt; tags.
+        None input returns empty string.
+
+    Example:
+        &gt;&gt;&gt; nl2br(&quot;Line 1\nLine 2&quot;)
+        &#x27;Line 1&lt;br&gt;Line 2&#x27;
+
+        &gt;&gt;&gt; nl2br(&quot;Hello\n\nWorld&quot;)
+        &#x27;Hello&lt;br&gt;&lt;br&gt;World&#x27;
+
+        &gt;&gt;&gt; nl2br(None)
+        &#x27;&#x27;
+    &quot;&quot;&quot;
+    if text is None:
+        return &quot;&quot;
+    return text.replace(&quot;\n&quot;, &quot;&lt;br&gt;&quot;)
+</doc><doc title="Counter app" desc="Per-session counter with theme toggle — demonstrates State, listen_to, and dynamic CSS">&quot;&quot;&quot;
+Counter example application using inguitive framework.
+
+Run with: uvicorn examples.counter_app:app --reload
+
+Per-Session Isolation Demonstration
+-----------------------------------
+This example demonstrates inguitive&#x27;s per-session state isolation.
+Each browser session maintains its own independent counter and theme state.
+
+To test:
+1. Open this app in one regular browser window and one incognito/private window
+2. Note the unique Session ID displayed in each window
+3. Increment the counter in Window 1 - Window 2&#x27;s counter remains unchanged
+4. Toggle theme in Window 1 - Window 2&#x27;s theme remains unchanged
+
+This proves that State values are fully isolated per user session.
+&quot;&quot;&quot;
+
+from pathlib import Path
+
+from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
+from inguitive.svg import MOON, SUN
+
+# --- App Setup ---
+app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+
+
+# --- State Instances ---
+counter_state = State(0, &quot;counter_state&quot;)
+theme_state = State(&quot;light&quot;, &quot;theme_state&quot;)
+
+
+# --- CSS ---
+COLOR_BASE = &quot;slate&quot;
+COLOR_100 = f&quot;{COLOR_BASE}-100&quot;
+COLOR_300 = f&quot;{COLOR_BASE}-300&quot;
+COLOR_400 = f&quot;{COLOR_BASE}-400&quot;
+COLOR_600 = f&quot;{COLOR_BASE}-600&quot;
+COLOR_900 = f&quot;{COLOR_BASE}-900&quot;
+COLOR_BRAND_1 = &quot;blue-700&quot;
+COLOR_BRAND_2 = &quot;fuchsia-600&quot;
+BUTTON_SHAPE = &quot;p-3 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none&quot;
+BUTTON_PRIMARY = f&quot;{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100}&quot;
+BUTTON_SECONDARY = f&quot;{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900}&quot;
+
+
+# --- Trigger Handlers ---
+@app.trigger_handler
+def increment():
+    counter_state.set(counter_state.get() + 1)
+    return update_components(*counter_state.listeners)
+
+
+@app.trigger_handler
+def reset():
+    counter_state.set(0)
+    return update_components(*counter_state.listeners)
+
+
+@app.trigger_handler
+def toggle_theme():
+    &quot;&quot;&quot;Toggle between light and dark theme.&quot;&quot;&quot;
+    current: str = theme_state.get()
+    new_theme: str = &quot;dark&quot; if current == &quot;light&quot; else &quot;light&quot;
+    theme_state.set(new_theme)
+    return update_components(*theme_state.listeners)
+
+
+# --- Counter Component ---
+def Counter() -&gt; Div:  # noqa: N802
+    &quot;&quot;&quot;Main counter component demonstrating inguitive features.&quot;&quot;&quot;
+
+    def dynamic_icon() -&gt; str:
+        &quot;&quot;&quot;Dynamic icon based on theme state.&quot;&quot;&quot;
+        return MOON if theme_state.get() == &quot;light&quot; else SUN
+
+    def dynamic_text() -&gt; str:
+        &quot;&quot;&quot;Dynamic text based on counter state.&quot;&quot;&quot;
+        return f&quot;Count: {counter_state.get()}&quot;
+
+    def dynamic_text_css() -&gt; str:
+        &quot;&quot;&quot;Dynamic styling based on counter value.&quot;&quot;&quot;
+        count = counter_state.get()
+        base = &quot;text-xl text-center&quot;
+        if count &gt; 5:
+            return f&quot;{base} text-red-500 font-bold&quot;
+        return f&quot;{base} text-{COLOR_900}&quot;
+
+    def dynamic_div_css() -&gt; str:
+        &quot;&quot;&quot;Dynamic styling based on theme state.&quot;&quot;&quot;
+        bg = f&quot;bg-{COLOR_100}&quot; if theme_state.get() == &quot;light&quot; else f&quot;bg-{COLOR_900}&quot;
+        return f&quot;{bg} w-full min-h-screen flex items-center justify-center&quot;
+
+    return Div(
+        Div(
+            Div(
+                Button(
+                    Icon(
+                        dynamic_icon,
+                        css=&quot;w-6 h-6&quot;,
+                    ),
+                    trigger=&quot;toggle_theme&quot;,
+                    id=&quot;theme-toggle&quot;,
+                    css=BUTTON_PRIMARY,
+                ),
+                css=&quot;w-full flex justify-end&quot;,
+            ),
+            Text(
+                text=dynamic_text,
+                id=&quot;counter-label&quot;,
+                css=dynamic_text_css,
+                listen_to=&quot;counter_state&quot;,
+            ),
+            Button(
+                &quot;+1&quot;,
+                trigger=&quot;increment&quot;,
+                css=f&quot;{BUTTON_PRIMARY} w-full&quot;,
+            ),
+            Button(
+                &quot;Reset&quot;,
+                trigger=&quot;reset&quot;,
+                css=f&quot;{BUTTON_SECONDARY} w-full&quot;,
+            ),
+            Text(
+                f&quot;Session: {get_session_id()}&quot;,
+                css=f&quot;text-sm text-center text-{COLOR_600}&quot;,
+            ),
+            id=&quot;counter-card&quot;,
+            css=&quot;overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm&quot;,
+        ),
+        id=&quot;theme-container&quot;,
+        css=dynamic_div_css,
+        listen_to=&quot;theme_state&quot;,
+    )
+
+
+# --- Routes ---
+@app.page(&quot;/&quot;)
+def home():
+    return Counter()
+
+
+# --- Start ---
+if __name__ == &quot;__main__&quot;:
+    import uvicorn
+
+    uvicorn.run(&quot;examples.counter_app:app&quot;, host=&quot;0.0.0.0&quot;, port=8000, reload=True)
+</doc><doc title="Todo app" desc="CRUD with filtering and real-time count — demonstrates list state and conditional rendering">&quot;&quot;&quot;
+Todo App example using inguitive framework.
+
+Demonstrates CRUD operations (Create, Read, Update, Delete) with reactive state management.
+
+Features:
+- Add new todos
+- Mark todos as complete/incomplete
+- Delete todos
+- Filter by status (All/Active/Completed)
+- Clear all completed todos
+- Real-time count of remaining items
+- Session isolation (each browser tab has independent state)
+
+Run with: uvicorn examples.todo_app:app --reload
+&quot;&quot;&quot;
+
+import uuid
+from pathlib import Path
+
+from inguitive import (
+    Button,
+    Checkbox,
+    Div,
+    Form,
+    Input,
+    State,
+    Text,
+    create_app,
+    update_components,
+)
+
+# --- App Setup ---
+app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+
+
+# --- State Instances ---
+# Single state for all todo data: {&quot;todos&quot;: [...], &quot;filter&quot;: &quot;all&quot; | &quot;active&quot; | &quot;completed&quot;}
+todo_state = State({&quot;todos&quot;: [], &quot;filter&quot;: &quot;all&quot;}, &quot;todo_state&quot;)
+
+
+# --- CSS ---
+COLOR_PRIMARY = &quot;slate-600&quot;
+COLOR_SECONDARY = &quot;slate-300&quot;
+COLOR_ACTIVE = &quot;amber-300&quot;
+BUTTON_SHAPE = &quot;px-3 py-2 rounded-md font-semibold cursor-pointer&quot;
+
+
+# --- Trigger Handlers ---
+@app.trigger_handler
+async def add_todo(form_data: dict) -&gt; str:
+    &quot;&quot;&quot;Add a new todo item to the list.&quot;&quot;&quot;
+    current = todo_state.get()
+    new_todo = {
+        &quot;id&quot;: str(uuid.uuid4()),
+        &quot;title&quot;: form_data.get(&quot;title&quot;, &quot;&quot;).strip(),
+        &quot;completed&quot;: False,
+    }
+    # Only add if title is not empty
+    if new_todo[&quot;title&quot;]:
+        current[&quot;todos&quot;].append(new_todo)
+        todo_state.set(current)
+        return update_components(*todo_state.listeners)
+    return &quot;&quot;
+
+
+@app.trigger_handler
+async def toggle_todo(form_data: dict) -&gt; str:
+    &quot;&quot;&quot;Toggle the completed status of a todo.&quot;&quot;&quot;
+    current = todo_state.get()
+    todo_id = form_data.get(&quot;id&quot;)
+    if todo_id:
+        for todo in current[&quot;todos&quot;]:
+            if todo[&quot;id&quot;] == todo_id:
+                todo[&quot;completed&quot;] = not todo[&quot;completed&quot;]
+                break
+        todo_state.set(current)
+        return update_components(*todo_state.listeners)
+    return &quot;&quot;
+
+
+@app.trigger_handler
+async def delete_todo(form_data: dict) -&gt; str:
+    &quot;&quot;&quot;Delete a todo item from the list.&quot;&quot;&quot;
+    current = todo_state.get()
+    todo_id = form_data.get(&quot;id&quot;)
+    if todo_id:
+        current[&quot;todos&quot;] = [t for t in current[&quot;todos&quot;] if t[&quot;id&quot;] != todo_id]
+        todo_state.set(current)
+        return update_components(*todo_state.listeners)
+    return &quot;&quot;
+
+
+@app.trigger_handler
+async def set_filter(form_data: dict) -&gt; str:
+    &quot;&quot;&quot;Set the filter for the todo list (all/active/completed).&quot;&quot;&quot;
+    current = todo_state.get()
+    new_filter = form_data.get(&quot;filter&quot;, &quot;all&quot;)
+    if new_filter in (&quot;all&quot;, &quot;active&quot;, &quot;completed&quot;):
+        current[&quot;filter&quot;] = new_filter
+        todo_state.set(current)
+        return update_components(*todo_state.listeners)
+    return &quot;&quot;
+
+
+@app.trigger_handler
+async def clear_completed(form_data: dict) -&gt; str:
+    &quot;&quot;&quot;Remove all completed todos from the list.&quot;&quot;&quot;
+    current = todo_state.get()
+    current[&quot;todos&quot;] = [t for t in current[&quot;todos&quot;] if not t[&quot;completed&quot;]]
+    todo_state.set(current)
+    return update_components(*todo_state.listeners)
+
+
+# --- Component Functions ---
+
+
+def TodoItem(todo: dict) -&gt; Div:  # noqa: N802
+    &quot;&quot;&quot;Render a single todo item with checkbox, title, and delete button.&quot;&quot;&quot;
+
+    def todo_checked():
+        return todo[&quot;completed&quot;]
+
+    def todo_title():
+        return todo[&quot;title&quot;]
+
+    def todo_styles():
+        return &quot;flex-1&quot; + (&quot; line-through&quot; if todo[&quot;completed&quot;] else &quot;&quot;)
+
+    def todo_div_css():
+        base = f&quot;flex items-center gap-3 p-3 border-b border-{COLOR_SECONDARY} last:border-b-0&quot;
+        if todo[&quot;completed&quot;]:
+            return f&quot;{base} bg-green-300&quot;
+        return base
+
+    return Div(
+        Checkbox(
+            id=f&quot;todo-{todo[&#x27;id&#x27;]}&quot;,
+            checked=todo_checked,
+            trigger=&quot;toggle_todo&quot;,
+            trigger_args={&quot;id&quot;: todo[&quot;id&quot;]},
+            name=&quot;completed&quot;,
+            css=&quot;h-5 w-5 cursor-pointer&quot;,
+        ),
+        Text(
+            todo_title,
+            css=todo_styles,
+        ),
+        Button(
+            &quot;Delete&quot;,
+            trigger=&quot;delete_todo&quot;,
+            trigger_args={&quot;id&quot;: todo[&quot;id&quot;]},
+            css=&quot;underline cursor-pointer&quot;,
+        ),
+        css=todo_div_css,
+    )
+
+
+def TodoForm() -&gt; Form:  # noqa: N802
+    &quot;&quot;&quot;Form for adding new todos.&quot;&quot;&quot;
+    return Form(
+        Input(
+            id=&quot;todo-input&quot;,
+            name=&quot;title&quot;,
+            placeholder=&quot;What needs to be done?&quot;,
+            css=f&quot;flex-1 p-2 border border-{COLOR_SECONDARY} rounded-md&quot;,
+        ),
+        Button(
+            &quot;Add&quot;,
+            type=&quot;submit&quot;,
+            css=f&quot;{BUTTON_SHAPE} bg-{COLOR_PRIMARY} text-white&quot;,
+        ),
+        trigger=&quot;add_todo&quot;,
+        css=&quot;flex gap-3&quot;,
+    )
+
+
+def TodoList() -&gt; Div:  # noqa: N802
+    &quot;&quot;&quot;Render the list of todos based on the current filter.&quot;&quot;&quot;
+
+    def todo_list_content() -&gt; list:
+        &quot;&quot;&quot;Return list of todo item components based on current state.&quot;&quot;&quot;
+        data = todo_state.get()
+        todos = data[&quot;todos&quot;]
+        filter_type = data[&quot;filter&quot;]
+
+        # Filter todos based on current filter
+        filtered_todos = {
+            &quot;all&quot;: todos,
+            &quot;active&quot;: [t for t in todos if not t[&quot;completed&quot;]],
+            &quot;completed&quot;: [t for t in todos if t[&quot;completed&quot;]],
+        }.get(filter_type, todos)
+
+        if not filtered_todos:
+            return [Text(&quot;No todos found.&quot;, css=&quot;p-3 text-center&quot;)]
+
+        return [TodoItem(todo) for todo in filtered_todos]
+
+    return Div(
+        todo_list_content,
+        id=&quot;todo_list&quot;,
+        listen_to=&quot;todo_state&quot;,
+        css=f&quot;border border-{COLOR_SECONDARY} rounded-md overflow-hidden&quot;,
+    )
+
+
+def TodoFilters() -&gt; Div:  # noqa: N802
+    &quot;&quot;&quot;Filter controls for the todo list.&quot;&quot;&quot;
+
+    def filter_all_css():
+        &quot;&quot;&quot;Return CSS classes for All filter button with active state.&quot;&quot;&quot;
+        current_filter = todo_state.get()[&quot;filter&quot;]
+        if current_filter == &quot;all&quot;:
+            return f&quot;{BUTTON_SHAPE} bg-{COLOR_ACTIVE}&quot;
+        return f&quot;{BUTTON_SHAPE} bg-{COLOR_SECONDARY}&quot;
+
+    def filter_active_css():
+        &quot;&quot;&quot;Return CSS classes for Active filter button with active state.&quot;&quot;&quot;
+        current_filter = todo_state.get()[&quot;filter&quot;]
+        if current_filter == &quot;active&quot;:
+            return f&quot;{BUTTON_SHAPE} bg-{COLOR_ACTIVE}&quot;
+        return f&quot;{BUTTON_SHAPE} bg-{COLOR_SECONDARY}&quot;
+
+    def filter_completed_css():
+        &quot;&quot;&quot;Return CSS classes for Completed filter button with active state.&quot;&quot;&quot;
+        current_filter = todo_state.get()[&quot;filter&quot;]
+        if current_filter == &quot;completed&quot;:
+            return f&quot;{BUTTON_SHAPE} bg-{COLOR_ACTIVE}&quot;
+        return f&quot;{BUTTON_SHAPE} bg-{COLOR_SECONDARY}&quot;
+
+    return Div(
+        Button(
+            &quot;All&quot;,
+            trigger=&quot;set_filter&quot;,
+            trigger_args={&quot;filter&quot;: &quot;all&quot;},
+            css=filter_all_css,
+            listen_to=&quot;todo_state&quot;,
+        ),
+        Button(
+            &quot;Active&quot;,
+            id=&quot;active_filter_button&quot;,
+            trigger=&quot;set_filter&quot;,
+            trigger_args={&quot;filter&quot;: &quot;active&quot;},
+            css=filter_active_css,
+            listen_to=&quot;todo_state&quot;,
+        ),
+        Button(
+            &quot;Completed&quot;,
+            trigger=&quot;set_filter&quot;,
+            trigger_args={&quot;filter&quot;: &quot;completed&quot;},
+            css=filter_completed_css,
+            listen_to=&quot;todo_state&quot;,
+        ),
+        css=&quot;grid grid-cols-3 gap-x-3&quot;,
+        id=&quot;filter_buttons&quot;,
+    )
+
+
+def TodoCount() -&gt; Text:  # noqa: N802
+    &quot;&quot;&quot;Display the count of remaining active todos.&quot;&quot;&quot;
+
+    def todo_count_text() -&gt; str:
+        todos = todo_state.get()[&quot;todos&quot;]
+        active_count = sum(1 for t in todos if not t[&quot;completed&quot;])
+        item_word = &quot;item&quot; if active_count == 1 else &quot;items&quot;
+        return f&quot;{active_count} {item_word} left&quot;
+
+    return Text(
+        todo_count_text,
+        id=&quot;todo_count&quot;,
+        listen_to=&quot;todo_state&quot;,
+    )
+
+
+def TodoApp() -&gt; Div:  # noqa: N802
+    &quot;&quot;&quot;Main todo application component.&quot;&quot;&quot;
+    return Div(
+        Div(
+            Text(&quot;Todo App&quot;, css=&quot;text-2xl font-bold mb-4 text-center&quot;),
+            TodoForm(),
+            TodoFilters(),
+            TodoCount(),
+            TodoList(),
+            Div(
+                Button(
+                    &quot;Clear Completed&quot;,
+                    trigger=&quot;clear_completed&quot;,
+                    css=f&quot;{BUTTON_SHAPE} bg-{COLOR_SECONDARY}&quot;,
+                ),
+                css=&quot;flex justify-center&quot;,
+            ),
+            id=&quot;todo_container&quot;,
+            css=&quot;max-w-md mx-auto p-6 bg-white rounded-xl shadow-md space-y-6 w-full&quot;,
+        ),
+        css=&quot;w-full min-h-screen flex items-center justify-center bg-slate-100&quot;,
+    )
+
+
+# --- Routes ---
+@app.page(&quot;/&quot;)
+def home():
+    return TodoApp()
+
+
+# --- Start ---
+if __name__ == &quot;__main__&quot;:
+    import uvicorn
+
+    uvicorn.run(&quot;examples.todo_app:app&quot;, host=&quot;0.0.0.0&quot;, port=8000, reload=True)
+</doc><doc title="Chat app" desc="Real-time chat — demonstrates shared state and append patterns">&quot;&quot;&quot;
+Chat App example using inguitive framework.
+
+Demonstrates:
+- Real-time chat interface with bot responses
+- State management for chat history
+- Form handling with trigger handlers
+
+Features:
+- User can type questions
+- Bot responds with funny answers
+- Chat history persists during the session
+
+Run with: uvicorn examples.chat_app:app --reload
+&quot;&quot;&quot;
+
+import random
+from pathlib import Path
+
+from inguitive import Button, Div, Form, Icon, Input, State, Text, create_app, update_components
+
+# --- App Setup ---
+app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+
+
+# --- CSS ---
+COLOR_BASE = &quot;slate&quot;
+COLOR_100 = f&quot;{COLOR_BASE}-100&quot;
+COLOR_900 = f&quot;{COLOR_BASE}-900&quot;
+COLOR_BRAND_1 = &quot;blue-700&quot;
+COLOR_BRAND_2 = &quot;fuchsia-600&quot;
+COLOR_BRAND_2_LIGHT = &quot;fuchsia-500&quot;
+BUTTON_SHAPE = &quot;p-3 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none&quot;
+BUTTON_PRIMARY = f&quot;{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT}&quot;
+
+
+# --- Icons ---
+ARROW_UP_ICON = f&quot;&quot;&quot;
+&lt;svg class=&quot;w-6 h-6 text-{COLOR_100}&quot; aria-hidden=&quot;true&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;24&quot; height=&quot;24&quot; fill=&quot;none&quot; viewBox=&quot;0 0 24 24&quot;&gt;
+  &lt;path stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;2&quot; d=&quot;M12 6v13m0-13 4 4m-4-4-4 4&quot;/&gt;
+&lt;/svg&gt;
+&quot;&quot;&quot;
+
+USER_ICON = f&quot;&quot;&quot;
+&lt;svg class=&quot;w-6 h-6 text-{COLOR_100}&quot; aria-hidden=&quot;true&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;24&quot; height=&quot;24&quot; fill=&quot;none&quot; viewBox=&quot;0 0 24 24&quot;&gt;
+  &lt;path stroke=&quot;currentColor&quot; stroke-width=&quot;2&quot; d=&quot;M7 17v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3Zm8-9a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z&quot;/&gt;
+&lt;/svg&gt;
+&quot;&quot;&quot;
+
+LIGHTBULB_ICON = f&quot;&quot;&quot;
+&lt;svg class=&quot;w-6 h-6 text-{COLOR_100}&quot; aria-hidden=&quot;true&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;24&quot; height=&quot;24&quot; fill=&quot;none&quot; viewBox=&quot;0 0 24 24&quot;&gt;
+  &lt;path stroke=&quot;currentColor&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;2&quot; d=&quot;M9 9a3 3 0 0 1 3-3m-2 15h4m0-3c0-4.1 4-4.9 4-9A6 6 0 1 0 6 9c0 4 4 5 4 9h4Z&quot;/&gt;
+&lt;/svg&gt;
+&quot;&quot;&quot;
+
+
+# --- Bot Responses ---
+answers = [
+    &quot;I have no idea.&quot;,
+    &quot;Sorry, I don&#x27;t know.&quot;,
+    &quot;Who knows, who knows...&quot;,
+    &quot;Great question! But can we talk about something else?&quot;,
+    &quot;I&#x27;m not sure. Maybe you should ask your neighbor.&quot;,
+    &quot;How am I supposed to know that?&quot;,
+    &quot;I always say, &#x27;There are no stupid questions, only stupid answers.&#x27; But right now, I&#x27;m not so sure about that anymore...&quot;,
+    &quot;Please ask me again tomorrow.&quot;,
+    &quot;Could you repeat the question?&quot;,
+    &quot;I don&#x27;t think there&#x27;s anyone out there who can answer that.&quot;,
+]
+
+
+# --- State Instance ---
+# State to store chat history as list of [speaker, message] pairs
+chat_history_state = State([[&quot;bot&quot;, &quot;Ask me anything!&quot;]], &quot;chat_history_state&quot;)
+
+
+@app.trigger_handler
+def generate_bot_response(form_data: dict):
+    &quot;&quot;&quot;Generate a bot response based on the user&#x27;s message.
+
+    Args:
+        form_data: Dictionary containing form submission data with &#x27;message&#x27; key
+
+    Returns:
+        str: HTMX update response for component listeners
+    &quot;&quot;&quot;
+    user_message = form_data.get(&quot;message&quot;, &quot;&quot;).strip()
+    if not user_message:
+        return &quot;&quot;
+
+    chat_history = chat_history_state.get()
+    chat_history.append([&quot;user&quot;, user_message])
+    if &quot;?&quot; in user_message:
+        answer = random.choice(answers)
+    else:
+        answer = &quot;I don&#x27;t think that&#x27;s a question... Could you ask me a question?&quot;
+    chat_history.append([&quot;bot&quot;, answer])
+    chat_history_state.set(chat_history)
+    return update_components(*chat_history_state.listeners)
+
+
+# --- Components ---
+def ChatBubble(speaker: str, message: str) -&gt; Div:  # noqa: N802
+    &quot;&quot;&quot;Create a chat bubble for the given speaker and message.
+
+    Args:
+        speaker: Either &#x27;user&#x27; or &#x27;bot&#x27; to determine bubble styling
+        message: The text content of the chat message
+
+    Returns:
+        Div: A styled chat bubble component with icon and message text
+    &quot;&quot;&quot;
+    text_css = f&quot;bg-{COLOR_100} text-{COLOR_900} rounded-md p-3&quot;
+    if speaker == &quot;user&quot;:
+        return Div(
+            Div(
+                Div(
+                    Icon(USER_ICON),
+                    css=f&quot;rounded-full bg-{COLOR_BRAND_2} p-3&quot;,
+                ),
+                Text(
+                    message,
+                    css=text_css,
+                ),
+                css=&quot;flex justify-end items-start gap-3&quot;,
+            ),
+            css=&quot;w-full pl-30&quot;,
+        )
+    else:
+        return Div(
+            Div(
+                Div(
+                    Icon(LIGHTBULB_ICON),
+                    css=f&quot;rounded-full bg-{COLOR_BRAND_1} p-3&quot;,
+                ),
+                Text(
+                    message,
+                    css=text_css,
+                ),
+                css=&quot;flex justify-start items-start gap-3&quot;,
+            ),
+            css=&quot;w-full pr-30&quot;,
+        )
+
+
+def ChatHistory() -&gt; Div:  # noqa: N802
+    &quot;&quot;&quot;Create the chat history display component.
+
+    Renders all chat bubbles from the chat history state and updates
+    when new messages are added.
+
+    Returns:
+        Div: A container with all chat bubble components
+    &quot;&quot;&quot;
+
+    def chat_bubbles():
+        &quot;&quot;&quot;Render chat bubbles from history state.
+
+        We use reversed() to iterate the list in reverse order. Combined with the
+        flex-col-reverse CSS on the parent ChatHistory Div, this ensures the latest
+        messages appear at the bottom of the chat while maintaining efficient append
+        operations when adding new messages.
+
+        Returns:
+            list: List of ChatBubble components in display order
+        &quot;&quot;&quot;
+        return [ChatBubble(speaker, message) for speaker, message in reversed(chat_history_state.get())]
+
+    return Div(
+        chat_bubbles,
+        listen_to=&quot;chat_history_state&quot;,
+        css=&quot;w-full flex flex-1 flex-col-reverse gap-6 overflow-y-auto&quot;,
+    )
+
+
+def MessageForm() -&gt; Form:  # noqa: N802
+    &quot;&quot;&quot;Create the chat message input form.
+
+    Returns:
+        Form: A form component with input field and submit button
+    &quot;&quot;&quot;
+    return Form(
+        Input(
+            name=&quot;message&quot;,
+            placeholder=&quot;Type your question here...&quot;,
+            css=f&quot;flex-grow p-3 bg-{COLOR_100} rounded-md border&quot;,
+        ),
+        Button(
+            Icon(ARROW_UP_ICON),
+            type=&quot;submit&quot;,
+            css=BUTTON_PRIMARY,
+        ),
+        trigger=&quot;generate_bot_response&quot;,
+        css=&quot;w-full flex flex-row gap-3&quot;,
+    )
+
+
+# --- Routes ---
+@app.page(&quot;/&quot;)
+def index():
+    &quot;&quot;&quot;Render the main chat application page.
+
+    Returns:
+        Div: The complete chat interface with history and input
+    &quot;&quot;&quot;
+    return Div(
+        Div(
+            Text(
+                &quot;Welcome to the Chat App!&quot;,
+                css=f&quot;text-2xl font-bold text-{COLOR_100} text-center&quot;,
+            ),
+            ChatHistory(),
+            MessageForm(),
+            css=&quot;w-full max-w-4xl h-screen mx-auto p-6 flex flex-col gap-12&quot;,
+        ),
+        css=f&quot;w-full bg-{COLOR_900}&quot;,
+    )
+
+
+# --- Start ---
+if __name__ == &quot;__main__&quot;:
+    import uvicorn
+
+    uvicorn.run(&quot;examples.chat_app:app&quot;, host=&quot;0.0.0.0&quot;, port=8000, reload=True)
+</doc><doc title="Data table app" desc="DataTable with sorting and filtering — demonstrates trigger_args and DataTable css dict">&quot;&quot;&quot;
+Data Table Example using inguitive framework.
+
+Demonstrates:
+- Rendering tabular data with the DataTable component
+- Using list of dictionaries as the data structure
+- Dynamic column ordering via state management
+- Dynamic CSS styling with dictionary-based css parameter
+- Dynamic data rendering with state management
+- Table sorting with toggleable ascending/descending order
+- Auto-propagation of state updates (automatic OOB response generation)
+- Using get_trigger_args() to access trigger arguments
+- Free-text filtering with conditional reset button and status display
+- State-based UI controls (show/hide status text and reset button)
+- Dynamic layout controls with custom column order and styling
+
+Features:
+- Displays a table of employee data
+- Sort controls with buttons for each column
+- Click a button to sort ascending, click again to sort descending
+- Free-text filter across all fields with status display and conditional reset button
+- Status text shows &quot;Filter is applied: &lt;text&gt;&quot; when a filter is active
+- Reset button appears only when filter is active
+- Single interactive table with dynamic column order and custom CSS styling controlled via layout controls
+- Table automatically updates when data or layout state changes
+- Auto-generated OOB responses from state mutations
+- Trigger handlers access arguments via get_trigger_args() without form_data parameter
+- Form submission with form_data for dynamic input
+
+Run with: uvicorn examples.data_table_app:app --reload
+&quot;&quot;&quot;
+
+from pathlib import Path
+
+from inguitive import Button, DataTable, Div, Form, Input, State, Text, create_app, get_trigger_args
+
+# --- App Setup ---
+app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+
+
+# --- CSS ---
+COLOR_BASE = &quot;slate&quot;
+COLOR_100 = f&quot;{COLOR_BASE}-100&quot;
+COLOR_200 = f&quot;{COLOR_BASE}-200&quot;
+COLOR_300 = f&quot;{COLOR_BASE}-300&quot;
+COLOR_400 = f&quot;{COLOR_BASE}-400&quot;
+COLOR_700 = f&quot;{COLOR_BASE}-700&quot;
+COLOR_900 = f&quot;{COLOR_BASE}-900&quot;
+COLOR_BRAND_1 = &quot;blue-700&quot;
+COLOR_BRAND_2 = &quot;fuchsia-600&quot;
+COLOR_BRAND_2_LIGHT = &quot;fuchsia-500&quot;
+BUTTON_SHAPE = &quot;px-3 py-2 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none&quot;
+BUTTON_PRIMARY = f&quot;{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT} active:to-{COLOR_BRAND_2}&quot;
+BUTTON_SECONDARY = f&quot;{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200} active:to-{COLOR_300}&quot;
+
+
+# --- Sample Data ---
+# Employee data as list of dictionaries
+EMPLOYEE_DATA = [
+    {&quot;id&quot;: 1, &quot;name&quot;: &quot;Alice Johnson&quot;, &quot;department&quot;: &quot;Engineering&quot;, &quot;salary&quot;: 75000, &quot;status&quot;: &quot;Active&quot;},
+    {&quot;id&quot;: 2, &quot;name&quot;: &quot;Charlie Brown&quot;, &quot;department&quot;: &quot;Sales&quot;, &quot;salary&quot;: 65000, &quot;status&quot;: &quot;Active&quot;},
+    {&quot;id&quot;: 3, &quot;name&quot;: &quot;Bob Smith&quot;, &quot;department&quot;: &quot;Engineering&quot;, &quot;salary&quot;: 80000, &quot;status&quot;: &quot;Active&quot;},
+    {&quot;id&quot;: 4, &quot;name&quot;: &quot;Diana Prince&quot;, &quot;department&quot;: &quot;Marketing&quot;, &quot;salary&quot;: 68000, &quot;status&quot;: &quot;On Leave&quot;},
+    {&quot;id&quot;: 5, &quot;name&quot;: &quot;Frank Castle&quot;, &quot;department&quot;: &quot;HR&quot;, &quot;salary&quot;: 72000, &quot;status&quot;: &quot;Active&quot;},
+    {&quot;id&quot;: 6, &quot;name&quot;: &quot;Eve Adams&quot;, &quot;department&quot;: &quot;Engineering&quot;, &quot;salary&quot;: 85000, &quot;status&quot;: &quot;Active&quot;},
+]
+
+# State to store table data (allows dynamic updates)
+employee_data_state = State(EMPLOYEE_DATA, &quot;employee_data_state&quot;)
+
+# State to track sort configuration
+sort_config_state = State({&quot;column&quot;: None, &quot;direction&quot;: &quot;asc&quot;}, &quot;sort_config_state&quot;)
+
+# State to track filter text (empty string = no filter)
+filter_text_state = State(&quot;&quot;, &quot;filter_text_state&quot;)
+
+# State for custom column order
+column_order_state: State[list[str] | None] = State(None, &quot;column_order_state&quot;)
+
+# State for custom styling (None = default, &quot;custom&quot; = custom CSS)
+styling_state: State[str | None] = State(None, &quot;styling_state&quot;)
+
+
+# --- Trigger Handlers ---
+@app.trigger_handler
+def sort_employees():
+    &quot;&quot;&quot;Sort employee table by specified column. Toggles direction on repeated clicks.
+
+    Demonstrates auto-propagation and get_trigger_args() for accessing
+    trigger arguments without form_data parameter.
+    &quot;&quot;&quot;
+    column = get_trigger_args().get(&quot;column&quot;)
+    if not column:
+        return &quot;&quot;
+
+    # Get current sort config
+    current_config = sort_config_state.get()
+    current_column = current_config.get(&quot;column&quot;)
+
+    # Determine new direction
+    if current_column == column:
+        # Same column: toggle direction
+        new_direction = &quot;desc&quot; if current_config.get(&quot;direction&quot;) == &quot;asc&quot; else &quot;asc&quot;
+    else:
+        # Different column: start with ascending
+        new_direction = &quot;asc&quot;
+
+    # Update sort config
+    sort_config_state.set({&quot;column&quot;: column, &quot;direction&quot;: new_direction})
+
+    # Sort the data (copy to avoid mutating original)
+    data = list(employee_data_state.get())
+    if column and column != &quot;none&quot;:
+        # Handle None values and missing keys safely
+        data.sort(key=lambda x: str(x.get(column, &quot;&quot;) or &quot;&quot;), reverse=(new_direction == &quot;desc&quot;))
+
+    # Update data state - auto-propagation will handle OOB response
+    employee_data_state.set(data)
+
+    # No explicit return - auto-propagation generates response automatically
+
+
+@app.trigger_handler
+def filter_employees(form_data: dict):
+    &quot;&quot;&quot;Filter employees by text search across all fields.
+
+    Searches all string values in each employee dictionary for the
+    filter text (case-insensitive). Sets filter_text_state to the search
+    text when filter is applied, empty string when cleared.
+
+    Demonstrates:
+    - Form data access via form_data parameter
+    - Free-text search across multiple fields
+    - State management for UI feedback
+    &quot;&quot;&quot;
+    search_text = form_data.get(&quot;filter-text&quot;, &quot;&quot;).lower()
+
+    if search_text:
+        # Filter data: search across all fields
+        filtered = [e for e in EMPLOYEE_DATA if any(search_text in str(v).lower() for v in e.values())]
+        filter_text_state.set(search_text)
+    else:
+        # Empty search = show all (clear filter)
+        filtered = list(EMPLOYEE_DATA)
+        filter_text_state.set(&quot;&quot;)
+
+    employee_data_state.set(filtered)
+
+    # Auto-propagation handles OOB response - no explicit return needed
+
+
+@app.trigger_handler
+def clear_filter():
+    &quot;&quot;&quot;Clear the current filter, showing all employees.
+
+    Resets employee data to full list and clears filter_text_state.
+    &quot;&quot;&quot;
+    filter_text_state.set(&quot;&quot;)
+    employee_data_state.set(list(EMPLOYEE_DATA))
+
+    # Auto-propagation handles OOB response - no explicit return needed
+
+
+@app.trigger_handler
+def reset_layout():
+    &quot;&quot;&quot;Reset table to original layout and default styling.&quot;&quot;&quot;
+    column_order_state.set(None)
+    styling_state.set(None)
+
+
+@app.trigger_handler
+def set_custom_column_order():
+    &quot;&quot;&quot;Set custom column order: name, department, salary, status (omitting id).&quot;&quot;&quot;
+    column_order_state.set([&quot;department&quot;, &quot;name&quot;, &quot;status&quot;, &quot;salary&quot;])
+
+
+@app.trigger_handler
+def set_custom_styling():
+    &quot;&quot;&quot;Set custom CSS styling for the table.&quot;&quot;&quot;
+    styling_state.set(&quot;custom&quot;)
+
+
+# --- Components ---
+def DynamicEmployeeTable():  # noqa: N802
+    &quot;&quot;&quot;Single table that responds to column_order_state and styling_state.
+
+    Demonstrates:
+    - Dynamic column ordering via state
+    - Dynamic CSS styling via state
+    - Single component responding to multiple states
+    &quot;&quot;&quot;
+
+    def dynamic_columns():
+        return column_order_state.get()
+
+    def dynamic_css():
+        styling = styling_state.get()
+        if styling == &quot;custom&quot;:
+            css_config = {
+                &quot;table&quot;: f&quot;w-full border-2 border-{COLOR_BRAND_1}&quot;,
+                &quot;header&quot;: f&quot;px-3 py-2 bg-{COLOR_BRAND_1} text-{COLOR_100} font-mono&quot;,
+                &quot;cell&quot;: f&quot;px-3 py-2 border border-{COLOR_700} text-{COLOR_100} font-mono&quot;,
+                &quot;row&quot;: f&quot;hover:bg-{COLOR_700} transition-colors&quot;,
+            }
+        else:
+            css_config = &quot;w-full&quot;
+        return css_config
+
+    return DataTable(
+        data=employee_data_state.get,
+        # Note that listen_to also accepts multiple state names.
+        listen_to=[&quot;employee_data_state&quot;, &quot;column_order_state&quot;, &quot;styling_state&quot;],
+        columns=dynamic_columns,
+        css=dynamic_css,
+    )
+
+
+def SortButtons():  # noqa: N802
+    &quot;&quot;&quot;Render sort buttons for each column in the employee table.&quot;&quot;&quot;
+    # Column names and their display labels
+    columns = [&quot;id&quot;, &quot;name&quot;, &quot;department&quot;, &quot;salary&quot;, &quot;status&quot;]
+    column_labels = [&quot;ID&quot;, &quot;Name&quot;, &quot;Department&quot;, &quot;Salary&quot;, &quot;Status&quot;]
+
+    buttons = []
+    for col, label in zip(columns, column_labels):
+        buttons.append(
+            Button(
+                label,
+                trigger=&quot;sort_employees&quot;,
+                trigger_args={&quot;column&quot;: col},
+                css=BUTTON_PRIMARY if col == &quot;id&quot; else BUTTON_SECONDARY,
+            )
+        )
+
+    return Div(
+        Text(
+            &quot;Sort tables by:&quot;,
+            css=f&quot;font-medium text-{COLOR_300}&quot;,
+        ),
+        Div(*buttons, css=&quot;flex flex-wrap gap-3&quot;),
+        css=&quot;space-y-3&quot;,
+    )
+
+
+def FilterControls():  # noqa: N802
+    &quot;&quot;&quot;Filter UI with input field, status text, and conditional reset button.
+
+    Demonstrates:
+    - Form component with Input and Button
+    - Conditional rendering based on state (status text and reset button)
+    - Trigger handlers for form submission
+    - Free-text search across all fields
+    - State-based conditional UI with text display
+    &quot;&quot;&quot;
+
+    def dynamic_text():
+        &quot;&quot;&quot;Return status text based on whether filter is applied.&quot;&quot;&quot;
+        filter_text = filter_text_state.get()
+        if filter_text:
+            return f&quot;Filter is applied: {filter_text}&quot;
+        return &quot;&quot;
+
+    def dynamic_css():
+        &quot;&quot;&quot;Return CSS for status div based on whether filter is applied.&quot;&quot;&quot;
+        if filter_text_state.get():
+            return &quot;flex items-center gap-3&quot;
+        return &quot;hidden&quot;
+
+    return Div(
+        Text(
+            &quot;Filter:&quot;,
+            css=f&quot;font-medium text-{COLOR_300}&quot;,
+        ),
+        Form(
+            Input(
+                id=&quot;filter-text&quot;,
+                name=&quot;filter-text&quot;,
+                placeholder=&quot;Filter by any keyword...&quot;,
+                css=f&quot;px-3 py-2 bg-{COLOR_300} rounded-md&quot;,
+            ),
+            Button(
+                &quot;Filter&quot;,
+                type=&quot;submit&quot;,
+                css=BUTTON_PRIMARY,
+            ),
+            trigger=&quot;filter_employees&quot;,
+            css=&quot;flex items-center gap-3&quot;,
+        ),
+        Div(
+            Text(
+                dynamic_text,
+                css=f&quot;text-{COLOR_300}&quot;,
+            ),
+            Button(
+                &quot;Reset&quot;,
+                trigger=&quot;clear_filter&quot;,
+                listen_to=&quot;filter_text_state&quot;,
+                css=BUTTON_SECONDARY,
+            ),
+            listen_to=&quot;filter_text_state&quot;,
+            css=dynamic_css,
+        ),
+        css=&quot;space-y-3&quot;,
+    )
+
+
+def LayoutControls():  # noqa: N802
+    &quot;&quot;&quot;Controls for toggling table column order and styling.
+
+    Demonstrates:
+    - Multiple buttons controlling different state aspects
+    - State-based layout customization
+    &quot;&quot;&quot;
+    return Div(
+        Text(
+            &quot;Customize table layout:&quot;,
+            css=f&quot;font-medium text-{COLOR_300}&quot;,
+        ),
+        Div(
+            Button(
+                &quot;Original Layout&quot;,
+                trigger=&quot;reset_layout&quot;,
+                css=BUTTON_PRIMARY,
+            ),
+            Button(
+                &quot;Custom Column Order&quot;,
+                trigger=&quot;set_custom_column_order&quot;,
+                css=BUTTON_SECONDARY,
+            ),
+            Button(
+                &quot;Custom Styling&quot;,
+                trigger=&quot;set_custom_styling&quot;,
+                css=BUTTON_SECONDARY,
+            ),
+            css=&quot;flex gap-3&quot;,
+        ),
+        css=&quot;space-y-3&quot;,
+    )
+
+
+# --- Pages ---
+@app.page(&quot;/&quot;)
+def index():
+    &quot;&quot;&quot;Render the main data table example page.&quot;&quot;&quot;
+    return Div(
+        Div(
+            Div(
+                Text(
+                    &quot;Data Table Example&quot;,
+                    css=f&quot;text-3xl font-bold text-{COLOR_100}&quot;,
+                ),
+                Text(
+                    &quot;Demonstrates the DataTable component with list of dictionaries data structure.&quot;,
+                    css=f&quot;text-lg text-{COLOR_300}&quot;,
+                ),
+            ),
+            Div(
+                # Sort controls
+                SortButtons(),
+                # Filter controls
+                FilterControls(),
+                # Layout controls
+                LayoutControls(),
+                css=f&quot;border-2 border-{COLOR_700} rounded-xl p-6 space-y-6&quot;,
+            ),
+            # Dynamic table demonstrating column order and styling
+            DynamicEmployeeTable(),
+            css=&quot;w-full max-w-6xl mx-auto p-6 space-y-6&quot;,
+        ),
+        css=f&quot;w-full bg-{COLOR_900} min-h-screen&quot;,
+    )
+
+
+# --- Start ---
+if __name__ == &quot;__main__&quot;:
+    import uvicorn
+
+    uvicorn.run(&quot;examples.data_table_app:app&quot;, host=&quot;0.0.0.0&quot;, port=8000, reload=True)
+</doc><doc title="Registration form" desc="Form handling — demonstrates Form, Input, Textarea, and form data access">&quot;&quot;&quot;
+Registration form example using inguitive framework.
+
+Demonstrates form components (Form, Input, Button, Label) with reactive state.
+
+Run with: uvicorn examples.registration_form:app --reload
+&quot;&quot;&quot;
+
+from pathlib import Path
+
+from inguitive import (
+    Button,
+    Checkbox,
+    Div,
+    Form,
+    Input,
+    Label,
+    Radio,
+    Select,
+    State,
+    Text,
+    Textarea,
+    create_app,
+    update_components,
+)
+
+# --- App Setup ---
+app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+
+# --- State Instances ---
+# Use collective State for form data (simpler pattern)
+form_state = State({}, &quot;form_state&quot;)
+
+
+# --- Trigger Handlers ---
+@app.trigger_handler
+async def register(form_data: dict) -&gt; str:
+    &quot;&quot;&quot;Handle form submission with auto-injected form_data.&quot;&quot;&quot;
+    current = form_state.get()
+    new_data = {**current, **form_data}
+
+    # Handle checkboxes: &quot;on&quot; -&gt; True
+    if &quot;terms&quot; in new_data:
+        new_data[&quot;terms&quot;] = new_data[&quot;terms&quot;] == &quot;on&quot;
+
+    form_state.set(new_data)
+    return update_components(&quot;form_display&quot;)
+
+
+# --- Helper Functions ---
+def GenderRadio(id: str, value: str, label: str) -&gt; Div:  # noqa: N802
+    return Div(Radio(id=id, name=&quot;gender&quot;, value=value), Label(label, for_=id), css=&quot;flex items-baseline gap-2&quot;)
+
+
+def name_text():
+    &quot;&quot;&quot;Return name text for display.&quot;&quot;&quot;
+    return f&quot;Name: {form_state.get().get(&#x27;name&#x27;, &#x27;&#x27;)}&quot; if form_state.get().get(&quot;name&quot;) else &quot;Name:&quot;
+
+
+def email_text():
+    &quot;&quot;&quot;Return email text for display.&quot;&quot;&quot;
+    return f&quot;Email: {form_state.get().get(&#x27;email&#x27;, &#x27;&#x27;)}&quot; if form_state.get().get(&quot;email&quot;) else &quot;Email:&quot;
+
+
+def password_text():
+    &quot;&quot;&quot;Return password text for display.&quot;&quot;&quot;
+    return f&quot;Password: {&#x27;*&#x27; * len(form_state.get().get(&#x27;password&#x27;, &#x27;&#x27;))}&quot; if form_state.get().get(&quot;password&quot;) else &quot;Password:&quot;
+
+
+def bio_text():
+    &quot;&quot;&quot;Return bio text for display.&quot;&quot;&quot;
+    return f&quot;Bio: {form_state.get().get(&#x27;bio&#x27;, &#x27;&#x27;)}&quot; if form_state.get().get(&quot;bio&quot;) else &quot;Bio:&quot;
+
+
+def country_text():
+    &quot;&quot;&quot;Return country text for display.&quot;&quot;&quot;
+    return f&quot;Country: {form_state.get().get(&#x27;country&#x27;, &#x27;&#x27;)}&quot; if form_state.get().get(&quot;country&quot;) else &quot;Country:&quot;
+
+
+def terms_text():
+    &quot;&quot;&quot;Return terms text for display.&quot;&quot;&quot;
+    return f&quot;Terms accepted: {&#x27;Yes&#x27; if form_state.get().get(&#x27;terms&#x27;) else &#x27;No&#x27;}&quot;
+
+
+def gender_text():
+    &quot;&quot;&quot;Return gender text for display.&quot;&quot;&quot;
+    return f&quot;Gender: {form_state.get().get(&#x27;gender&#x27;, &#x27;&#x27;)}&quot; if form_state.get().get(&quot;gender&quot;) else &quot;Gender:&quot;
+
+
+# --- Registration Form Component ---
+def RegistrationForm() -&gt; Div:  # noqa: N802
+    &quot;&quot;&quot;Registration form with reactive state updates.&quot;&quot;&quot;
+    return Div(
+        # Form
+        Form(
+            Input(
+                id=&quot;name&quot;,
+                placeholder=&quot;Enter your name&quot;,
+                css=&quot;w-full p-2 border border-zinc-500 rounded-md&quot;,
+            ),
+            Input(
+                id=&quot;email&quot;,
+                type=&quot;email&quot;,
+                placeholder=&quot;Enter your email&quot;,
+                css=&quot;w-full p-2 border border-zinc-500 rounded-md&quot;,
+            ),
+            Input(
+                id=&quot;password&quot;,
+                type=&quot;password&quot;,
+                placeholder=&quot;Enter your password&quot;,
+                css=&quot;w-full p-2 border border-zinc-500 rounded-md&quot;,
+            ),
+            Textarea(
+                id=&quot;bio&quot;,
+                placeholder=&quot;Tell us about yourself&quot;,
+                rows=3,
+                css=&quot;w-full p-2 border border-zinc-500 rounded-md&quot;,
+            ),
+            Select(
+                id=&quot;country&quot;,
+                options=[(&quot;us&quot;, &quot;United States&quot;), (&quot;de&quot;, &quot;Germany&quot;), (&quot;fr&quot;, &quot;France&quot;)],
+                css=&quot;w-full p-2 border border-zinc-500 rounded-md&quot;,
+            ),
+            Div(
+                Checkbox(id=&quot;terms&quot;, name=&quot;terms&quot;),
+                Label(&quot;I agree to the terms and conditions&quot;, for_=&quot;terms&quot;),
+                css=&quot;flex items-baseline gap-2&quot;,
+            ),
+            Div(
+                GenderRadio(id=&quot;gender-male&quot;, value=&quot;male&quot;, label=&quot;Male&quot;),
+                GenderRadio(id=&quot;gender-female&quot;, value=&quot;female&quot;, label=&quot;Female&quot;),
+                GenderRadio(id=&quot;gender-other&quot;, value=&quot;other&quot;, label=&quot;Other&quot;),
+                css=&quot;flex items-baseline gap-6&quot;,
+            ),
+            Button(
+                &quot;Register&quot;,
+                type=&quot;submit&quot;,
+                trigger=&quot;register&quot;,
+                css=&quot;w-full bg-blue-500 text-white font-bold p-2 rounded-md hover:bg-blue-600&quot;,
+            ),
+            css=&quot;space-y-6 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md&quot;,
+        ),
+        # Confirmation display
+        Div(
+            Text(
+                name_text,
+                css=&quot;text-center&quot;,
+            ),
+            Text(
+                email_text,
+                css=&quot;text-center&quot;,
+            ),
+            Text(
+                password_text,
+                css=&quot;text-center&quot;,
+            ),
+            Text(
+                bio_text,
+                css=&quot;text-center&quot;,
+            ),
+            Text(
+                country_text,
+                css=&quot;text-center&quot;,
+            ),
+            Text(terms_text, css=&quot;text-center&quot;),
+            Text(
+                gender_text,
+                css=&quot;text-center&quot;,
+            ),
+            id=&quot;form_display&quot;,
+            css=&quot;text-xl font-bold mt-6 space-y-3&quot;,
+        ),
+        css=&quot;w-full min-h-screen flex flex-col items-center justify-center p-6&quot;,
+    )
+
+
+# --- Routes ---
+@app.page(&quot;/&quot;)
+def home():
+    return RegistrationForm()
+
+
+# --- Start ---
+if __name__ == &quot;__main__&quot;:
+    import uvicorn
+
+    uvicorn.run(&quot;examples.registration_form:app&quot;, host=&quot;0.0.0.0&quot;, port=8000, reload=True)
+</doc><doc title="Navigation demo" desc="Link vs trigger patterns — demonstrates when to use Link(href=) vs trigger=">&quot;&quot;&quot;
+Navigation Demo example using inguitive framework.
+
+Demonstrates two approaches to navigation:
+1. Traditional multi-page navigation (URL changes)
+2. SPA-style content switching (URL stays constant, content changes)
+
+Run with: uvicorn examples.navigation_demo:app --reload
+&quot;&quot;&quot;
+
+from pathlib import Path
+
+from inguitive import Button, Div, Link, State, Text, create_app, redirect, update_components
+
+# --- App Setup ---
+app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+
+
+# --- CSS ---
+COLOR_BASE = &quot;slate&quot;
+COLOR_100 = f&quot;{COLOR_BASE}-100&quot;
+COLOR_200 = f&quot;{COLOR_BASE}-200&quot;
+COLOR_300 = f&quot;{COLOR_BASE}-300&quot;
+COLOR_400 = f&quot;{COLOR_BASE}-400&quot;
+COLOR_900 = f&quot;{COLOR_BASE}-900&quot;
+COLOR_BRAND_1 = &quot;blue-700&quot;
+COLOR_BRAND_2 = &quot;fuchsia-600&quot;
+COLOR_BRAND_2_LIGHT = &quot;fuchsia-500&quot;
+BUTTON_SHAPE = &quot;p-3 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none&quot;
+BUTTON_PRIMARY = f&quot;{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT}&quot;
+BUTTON_SECONDARY = f&quot;{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200}&quot;
+PAGE = f&quot;min-h-screen bg-{COLOR_900} flex justify-center items-center&quot;
+CARD = &quot;max-w-2xl mx-auto p-6 space-y-6 bg-white rounded-xl shadow-md&quot;
+TEXT_CONTAINER = &quot;w-full flex flex-grow p-6 rounded-lg bg-white justify-center items-center&quot;
+
+
+# --- State Instances ---
+# State to track which content variant is shown on page 1
+content_state = State(&quot;a&quot;, &quot;content_state&quot;)
+
+
+# --- Trigger Handler ---
+@app.trigger_handler
+def switch_content():
+    &quot;&quot;&quot;Toggle between content variants a and b.&quot;&quot;&quot;
+    current = content_state.get()
+    new = &quot;b&quot; if current == &quot;a&quot; else &quot;a&quot;
+    content_state.set(new)
+    return update_components(*content_state.listeners)
+
+
+# --- Component Functions ---
+def PageHeader(title: str, color: str = &quot;black&quot;) -&gt; Text:  # noqa: N802
+    &quot;&quot;&quot;Return a page header with the given title.&quot;&quot;&quot;
+    return Text(title, css=f&quot;text-3xl font-bold mb-6 text-center text-{color}&quot;)
+
+
+def Divider(color: str) -&gt; Div:  # noqa: N802
+    &quot;&quot;&quot;Return a horizontal divider.&quot;&quot;&quot;
+    return Div(
+        Div(&quot;&quot;, css=f&quot;border-t border-{color}/20 flex-1&quot;),
+        Text(&quot;OR&quot;, css=f&quot;text-center font-semibold text-{color}&quot;),
+        Div(&quot;&quot;, css=f&quot;border-t border-{color}/20 flex-1&quot;),
+        css=&quot;w-full flex flex-row items-center gap-3&quot;,
+    )
+
+
+def SwitchPageButton(href: str, label: str):  # noqa: N802
+    &quot;&quot;&quot;Return a button that navigates to a different page.&quot;&quot;&quot;
+    return Link(
+        Button(
+            label,
+            css=f&quot;{BUTTON_PRIMARY} w-full&quot;,
+        ),
+        href=href,
+        css=&quot;block&quot;,
+    )
+
+
+def SwitchContentButton():  # noqa: N802
+    &quot;&quot;&quot;Return a button that switches content on the same page.&quot;&quot;&quot;
+    return Button(
+        &quot;Switch Content&quot;,
+        trigger=&quot;switch_content&quot;,
+        css=f&quot;{BUTTON_SECONDARY} w-full&quot;,
+    )
+
+
+def ContentA():  # noqa: N802
+    &quot;&quot;&quot;Return content variant A.&quot;&quot;&quot;
+    return Div(
+        PageHeader(&quot;Page 1 - Content A&quot;),
+        # Hint for traditional navigation
+        Text(
+            &quot;Click &#x27;Go to Page 2&#x27; below to navigate to Page 2. &quot;
+            &quot;Watch how the URL in your browser&#x27;s address bar changes.&quot;
+        ),
+        # Link for traditional navigation (URL changes)
+        SwitchPageButton(href=&quot;/page2&quot;, label=&quot;Go to Page 2&quot;),
+        Divider(color=&quot;black&quot;),
+        # Hint for SPA content switching
+        Text(
+            &quot;Click &#x27;Switch Content&#x27; below to change the content on this page. &quot;
+            &quot;Notice how the content changes but the URL stays the same.&quot;
+        ),
+        # Button for SPA content switching (URL stays)
+        SwitchContentButton(),
+        css=CARD,
+    )
+
+
+def ContentB():  # noqa: N802
+    &quot;&quot;&quot;Return content variant B.&quot;&quot;&quot;
+    return Div(
+        PageHeader(&quot;Page 1 - Content B&quot;, color=&quot;white&quot;),
+        Div(SwitchPageButton(href=&quot;/page2&quot;, label=&quot;Go to Page 2&quot;), SwitchContentButton(), css=&quot;grid grid-cols-2 gap-6&quot;),
+        Div(
+            Text(
+                &quot;Click &#x27;Go to Page 2&#x27; to navigate to Page 2. Watch how the URL in your browser&#x27;s address bar changes.&quot;,
+                css=&quot;text-center&quot;,
+            ),
+            css=TEXT_CONTAINER,
+        ),
+        Divider(color=&quot;white&quot;),
+        Div(
+            Text(
+                &quot;Click &#x27;Switch Content&#x27; to change the content on this page. &quot;
+                &quot;Notice how the content changes but the URL stays the same.&quot;,
+                css=&quot;text-center&quot;,
+            ),
+            css=TEXT_CONTAINER,
+        ),
+        css=&quot;max-w-6xl min-h-screen mx-auto p-6 space-y-6 flex flex-col&quot;,
+    )
+
+
+# --- Page Component Functions ---
+# --- Helper Functions ---
+def dynamic_content():
+    &quot;&quot;&quot;Return content A or B based on content_state.&quot;&quot;&quot;
+    return ContentA() if content_state.get() == &quot;a&quot; else ContentB()
+
+def Page1():  # noqa: N802
+    &quot;&quot;&quot;Page 1 demonstrating traditional navigation and SPA content switching.&quot;&quot;&quot;
+    return Div(
+        dynamic_content,
+        css=PAGE,
+        listen_to=&quot;content_state&quot;,
+    )
+
+
+def Page2():  # noqa: N802
+    &quot;&quot;&quot;Page 2 demonstrating traditional navigation and SPA content switching.&quot;&quot;&quot;
+    return Div(
+        Div(
+            PageHeader(&quot;Page 2&quot;),
+            # Hint for traditional navigation
+            Text(
+                &quot;Click &#x27;Go to Page 1&#x27; below to navigate to Page 1. &quot;
+                &quot;Watch how the URL in your browser&#x27;s address bar changes.&quot;
+            ),
+            # Link for traditional navigation (URL changes)
+            SwitchPageButton(href=&quot;/page1&quot;, label=&quot;Go to Page 1&quot;),
+            css=CARD,
+        ),
+        css=PAGE,
+    )
+
+
+# --- Routes ---
+@app.page(&quot;/&quot;)
+def index():
+    &quot;&quot;&quot;Redirect to Page 1.&quot;&quot;&quot;
+    return redirect(&quot;/page1&quot;)
+
+
+@app.page(&quot;/page1&quot;)
+def page1():
+    &quot;&quot;&quot;Render Page 1.&quot;&quot;&quot;
+    return Page1()
+
+
+@app.page(&quot;/page2&quot;)
+def page2():
+    &quot;&quot;&quot;Render Page 2.&quot;&quot;&quot;
+    return Page2()
+
+
+# --- Start ---
+if __name__ == &quot;__main__&quot;:
+    import uvicorn
+
+    uvicorn.run(&quot;examples.navigation_demo:app&quot;, host=&quot;0.0.0.0&quot;, port=8000, reload=True)
+</doc></docs></project>
