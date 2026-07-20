@@ -20,7 +20,7 @@ This proves that State values are fully isolated per user session.
 from pathlib import Path
 
 from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
-from inguitive.svg import _MOON, _SUN
+from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
 app = create_app(template_dir=Path(__file__).parent.parent / "templates")
@@ -73,7 +73,7 @@ def Counter() -> Div:  # noqa: N802
 
     def dynamic_icon() -> str:
         """Dynamic icon based on theme state."""
-        return _MOON if theme_state.get() == "light" else _SUN
+        return MOON if theme_state.get() == "light" else SUN
 
     def dynamic_text() -> str:
         """Dynamic text based on counter state."""
