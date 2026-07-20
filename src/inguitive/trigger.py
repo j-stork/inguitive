@@ -1,5 +1,5 @@
 """
-Trigger argument context management for INGUITIVE framework.
+Trigger argument context management for inguitive framework.
 
 Provides context-local storage for trigger_args passed from Components to trigger handlers,
 allowing handlers to access these arguments without requiring form_data or request parameters.

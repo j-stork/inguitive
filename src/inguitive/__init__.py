@@ -1,5 +1,5 @@
 """
-INGUITIVE - A pure Python web framework combining intuitive syntax with HTMX and Tailwind CSS.
+inguitive - A pure Python web framework combining intuitive syntax with HTMX and Tailwind CSS.
 """
 
 from inguitive.components import (
