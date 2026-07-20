@@ -1,11 +1,11 @@
 """
-Counter example application using INGUITIVE framework.
+Counter example application using inguitive framework.
 
 Run with: uvicorn examples.counter_app:app --reload
 
 Per-Session Isolation Demonstration
 -----------------------------------
-This example demonstrates INGUITIVE's per-session state isolation.
+This example demonstrates inguitive's per-session state isolation.
 Each browser session maintains its own independent counter and theme state.
 
 To test:
@@ -69,7 +69,7 @@ def toggle_theme():
 
 # --- Counter Component ---
 def Counter() -> Div:  # noqa: N802
-    """Main counter component demonstrating INGUITIVE features."""
+    """Main counter component demonstrating inguitive features."""
 
     def dynamic_icon() -> str:
         """Dynamic icon based on theme state."""

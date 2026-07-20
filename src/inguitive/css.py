@@ -1,5 +1,5 @@
 """
-CSS class constants for INGUITIVE framework.
+CSS class constants for inguitive framework.
 
 This module contains Tailwind CSS class string constants for common UI elements.
 Users can extend this file with their own styling constants.

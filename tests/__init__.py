@@ -1,1 +1,1 @@
-"""Tests for INGUITIVE framework."""
+"""Tests for inguitive framework."""
