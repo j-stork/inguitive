@@ -1,5 +1,5 @@
 """
-Todo App example using INGUITIVE framework.
+Todo App example using inguitive framework.
 
 Demonstrates CRUD operations (Create, Read, Update, Delete) with reactive state management.
 

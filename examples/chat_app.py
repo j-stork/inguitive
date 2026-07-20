@@ -1,5 +1,5 @@
 """
-Chat App example using INGUITIVE framework.
+Chat App example using inguitive framework.
 
 Demonstrates:
 - Real-time chat interface with bot responses

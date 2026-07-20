@@ -1,4 +1,4 @@
-"""Tests for session isolation in INGUITIVE."""
+"""Tests for session isolation in inguitive."""
 
 from fastapi.testclient import TestClient
 
