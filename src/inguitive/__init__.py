@@ -39,6 +39,7 @@ from inguitive.session import (
 )
 from inguitive.state import State
 from inguitive.trigger import get_trigger_args
+from inguitive.utils import nl2br
 
 
 __all__ = [
@@ -82,6 +83,8 @@ __all__ = [
     "BUTTON_BASE_CSS",
     "BUTTON_PRIMARY_CSS",
     "BUTTON_SECONDARY_CSS",
+    # Utilities
+    "nl2br",
 ]
 
 __version__ = "0.1.0"
