@@ -1,0 +1,30 @@
+# inguitive
+
+> A pure Python web framework for building reactive, interactive web applications without writing JavaScript. Combines FastAPI, HTMX, and Tailwind CSS with a declarative component model and session-scoped reactive state management.
+
+inguitive lets Python developers define pages and trigger handlers entirely in Python. Components automatically re-render when state changes via HTMX out-of-band swaps. Each browser session has isolated state; no global mutable variables are needed. The public API is exported from `src/inguitive/__init__.py`.
+
+## Docs
+
+- [README](README.md): Full quick-start guide, component reference, session backend comparison, and production deployment checklist
+- [CHANGELOG](CHANGELOG.md): Version history and versioning policy (SemVer)
+
+## Source
+
+- [Public API](src/inguitive/__init__.py): All exported names — components, State, create_app, session backends, helpers
+- [Components](src/inguitive/components.py): All UI component classes (Div, Button, Input, DataTable, etc.) with render/update methods
+- [State](src/inguitive/state.py): Reactive State container with per-session isolation and auto-propagation of mutations
+- [Session](src/inguitive/session.py): Session dataclass, MemoryBackend, RedisBackend, and context-local session helpers
+- [FastAPI integration](src/inguitive/fastapi.py): create_app(), @app.page, @app.trigger_handler, SessionMiddleware
+- [HTMX helpers](src/inguitive/htmx.py): update_components() — renders components as OOB HTML for partial page updates
+- [Trigger](src/inguitive/trigger.py): get_trigger_args() — access trigger_args dict inside a trigger handler
+- [Utils](src/inguitive/utils.py): nl2br() and other general helpers
+
+## Examples
+
+- [Counter app](examples/counter_app.py): Per-session counter with theme toggle — demonstrates State, listen_to, and dynamic CSS
+- [Todo app](examples/todo_app.py): CRUD with filtering and real-time count — demonstrates list state and conditional rendering
+- [Chat app](examples/chat_app.py): Real-time chat — demonstrates shared state and append patterns
+- [Data table app](examples/data_table_app.py): DataTable with sorting and filtering — demonstrates trigger_args and DataTable css dict
+- [Registration form](examples/registration_form.py): Form handling — demonstrates Form, Input, Textarea, and form data access
+- [Navigation demo](examples/navigation_demo.py): Link vs trigger patterns — demonstrates when to use Link(href=) vs trigger=
