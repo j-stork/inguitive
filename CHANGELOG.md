@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-Created `llms.txt` and `llms-full.txt` files based on the proposed standards from https://llmstxt.org/ 
+- Created `llms.txt` and `llms-full.txt` files based on the proposed standards from https://llmstxt.org/
 
 ---
 
