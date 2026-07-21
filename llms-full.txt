@@ -451,7 +451,7 @@ __all__ = [
     &quot;nl2br&quot;,
 ]
 
-__version__ = &quot;0.1.0&quot;
+__version__ = "0.1.1"
 </doc><doc title="Components" desc="All UI component classes (Div, Button, Input, DataTable, etc.) with render/update methods">&quot;&quot;&quot;
 Component classes for inguitive framework.
 &quot;&quot;&quot;
