@@ -4,6 +4,7 @@ FastAPI integration for inguitive.
 
 from __future__ import annotations
 
+import importlib.resources
 import inspect
 import uuid
 from collections.abc import Callable
@@ -12,6 +13,7 @@ from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from jinja2 import ChoiceLoader, FileSystemLoader, PackageLoader
 from fastapi.templating import Jinja2Templates
 
 from inguitive.htmx import update_components
@@ -221,6 +223,49 @@ class SessionMiddleware:
             _clear_current_session()
 
 
+def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoader:
+    """Create a template loader that supports both local and bundled templates.
+    
+    Local templates (specified via template_dir) take precedence over bundled templates.
+    This allows users to customize templates while falling back to package defaults.
+    
+    Args:
+        template_dir: Directory containing Jinja2 templates (local path)
+        
+    Returns:
+        ChoiceLoader: A Jinja2 loader that checks local directory first, then bundled templates
+    """
+    # Convert to Path if it's a string
+    template_path = Path(template_dir) if isinstance(template_dir, str) else template_dir
+    
+    # Create list of loaders - local first, then bundled
+    loaders = []
+    
+    # Add FileSystemLoader for local templates if directory exists
+    if template_path.exists() and template_path.is_dir():
+        loaders.append(FileSystemLoader(str(template_path)))
+    
+    # Add PackageLoader for bundled templates from the inguitive package
+    # We try to add it unconditionally - if the package isn't installed or templates don't exist,
+    # Jinja2 will skip this loader when templates aren't found
+    try:
+        # Check if we can access the templates as a package resource
+        # This will work if inguitive is installed (even in editable mode)
+        importlib.resources.files("inguitive")
+        # If we get here, the package exists, so we can add the PackageLoader
+        loaders.append(PackageLoader("inguitive", "templates"))
+    except (ImportError, ModuleNotFoundError, AttributeError):
+        # Package not installed or not accessible - skip bundled templates
+        pass
+    
+    # If no loaders were added, use a default FileSystemLoader
+    if not loaders:
+        loaders.append(FileSystemLoader("templates"))
+    
+    # ChoiceLoader tries loaders in order, so local templates override bundled ones
+    return ChoiceLoader(loaders)
+
+
 def create_app(
     template_dir: str | Path = "templates",
     session_backend: SessionBackend | None = None,
@@ -233,7 +278,10 @@ def create_app(
     """Create and configure a FastAPI application for inguitive.
 
     Args:
-        template_dir: Directory containing Jinja2 templates
+        template_dir: Directory containing Jinja2 templates. If the directory exists,
+            it will be used first. If not found, bundled templates from the inguitive
+            package will be used as a fallback. This allows for template customization
+            while providing defaults out of the box.
         session_backend: Session backend to use (defaults to MemoryBackend)
         session_cookie_name: Name of the session cookie
         session_cookie_max_age: Cookie max age in seconds
@@ -246,7 +294,11 @@ def create_app(
         (trigger_handler and page) and templates accessible via app.state.templates
     """
     app = FastAPI()
-    templates = Jinja2Templates(directory=template_dir)
+    loader = _create_template_loader(template_dir)
+    # Create Jinja2 environment with our custom loader
+    from jinja2 import Environment
+    env = Environment(loader=loader)
+    templates = Jinja2Templates(env=env)
     app.state.templates = templates
 
     # Initialize per-app storage for handlers
