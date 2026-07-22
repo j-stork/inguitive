@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.1.3] - 2026-07-22
+
+### Added
+
+- Bundled templates with inguitive package for out-of-the-box functionality
+
+### Changed
+
+- Changed HTML language attribute from 'de' to 'en' in base template
+
+### Fixed
+
+- Fixed `nl2br()` to handle Windows (CRLF) and old Mac (CR) line endings
+- Fixed mypy type error for mixed loader types in fastapi.py
+- Applied ruff formatting fixes
+
+---
+
 ## [0.1.2] - 2026-07-21
 
 ### Added
