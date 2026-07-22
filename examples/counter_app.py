@@ -17,13 +17,12 @@ To test:
 This proves that State values are fully isolated per user session.
 """
 
-from pathlib import Path
-
 from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
 from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / "templates")
+# template_dir defaults to "templates" which will use bundled templates from the package
+app = create_app()
 
 
 # --- State Instances ---

@@ -16,7 +16,6 @@ Run with: uvicorn examples.todo_app:app --reload
 """
 
 import uuid
-from pathlib import Path
 
 from inguitive import (
     Button,
@@ -31,7 +30,8 @@ from inguitive import (
 )
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / "templates")
+# template_dir defaults to "templates" which will use bundled templates from the package
+app = create_app()
 
 
 # --- State Instances ---
