@@ -14,7 +14,7 @@ from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from jinja2 import ChoiceLoader, FileSystemLoader, PackageLoader
+from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
 
 from inguitive.htmx import update_components
 from inguitive.session import (
@@ -239,7 +239,7 @@ def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoa
     template_path = Path(template_dir) if isinstance(template_dir, str) else template_dir
 
     # Create list of loaders - local first, then bundled
-    loaders = []
+    loaders: list[BaseLoader] = []
 
     # Add FileSystemLoader for local templates if directory exists
     if template_path.exists() and template_path.is_dir():
