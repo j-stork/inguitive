@@ -19,9 +19,12 @@ def nl2br(text: str | None) -> str:
         >>> nl2br("Hello\n\nWorld")
         'Hello<br><br>World'
 
+        >>> nl2br("Line 1\r\nLine 2")
+        'Line 1<br>Line 2'
+
         >>> nl2br(None)
         ''
     """
     if text is None:
         return ""
-    return text.replace("\n", "<br>")
+    return text.replace("\r\n", "<br>").replace("\r", "<br>").replace("\n", "<br>")
