@@ -15,12 +15,12 @@ Run with: uvicorn examples.chat_app:app --reload
 """
 
 import random
-from pathlib import Path
 
 from inguitive import Button, Div, Form, Icon, Input, State, Text, create_app, update_components
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / "templates")
+# template_dir defaults to "templates" which will use bundled templates from the package
+app = create_app()
 
 
 # --- CSS ---
