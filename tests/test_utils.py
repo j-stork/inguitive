@@ -42,3 +42,23 @@ def test_nl2br_html_safe():
     """Test with existing HTML content."""
     # Note: This doesn't escape existing HTML - user's responsibility
     assert nl2br("<b>Bold\nNormal</b>") == "<b>Bold<br>Normal</b>"
+
+
+def test_nl2br_windows_line_endings():
+    """Test Windows CRLF line endings (\r\n) conversion."""
+    assert nl2br("Line 1\r\nLine 2") == "Line 1<br>Line 2"
+
+
+def test_nl2br_old_mac_line_endings():
+    """Test old Mac CR line endings (\r) conversion."""
+    assert nl2br("Line 1\rLine 2") == "Line 1<br>Line 2"
+
+
+def test_nl2br_mixed_line_endings():
+    """Test mixed line endings in the same string."""
+    assert nl2br("Line 1\r\nLine 2\nLine 3\rLine 4") == "Line 1<br>Line 2<br>Line 3<br>Line 4"
+
+
+def test_nl2br_crlf_only():
+    """Explicit test for CRLF only."""
+    assert nl2br("Hello\r\nWorld") == "Hello<br>World"
