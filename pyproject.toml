@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "inguitive"
-version = "0.1.2"
+version = "0.1.3"
 description = "A pure Python web framework combining intuitive syntax with HTMX for partial page reloads and Tailwind CSS for styling"
 readme = "README.md"
 license = "MIT"
