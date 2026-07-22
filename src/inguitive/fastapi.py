@@ -13,8 +13,8 @@ from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
-from jinja2 import ChoiceLoader, FileSystemLoader, PackageLoader
 from fastapi.templating import Jinja2Templates
+from jinja2 import ChoiceLoader, FileSystemLoader, PackageLoader
 
 from inguitive.htmx import update_components
 from inguitive.session import (
@@ -225,26 +225,26 @@ class SessionMiddleware:
 
 def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoader:
     """Create a template loader that supports both local and bundled templates.
-    
+
     Local templates (specified via template_dir) take precedence over bundled templates.
     This allows users to customize templates while falling back to package defaults.
-    
+
     Args:
         template_dir: Directory containing Jinja2 templates (local path)
-        
+
     Returns:
         ChoiceLoader: A Jinja2 loader that checks local directory first, then bundled templates
     """
     # Convert to Path if it's a string
     template_path = Path(template_dir) if isinstance(template_dir, str) else template_dir
-    
+
     # Create list of loaders - local first, then bundled
     loaders = []
-    
+
     # Add FileSystemLoader for local templates if directory exists
     if template_path.exists() and template_path.is_dir():
         loaders.append(FileSystemLoader(str(template_path)))
-    
+
     # Add PackageLoader for bundled templates from the inguitive package
     # We try to add it unconditionally - if the package isn't installed or templates don't exist,
     # Jinja2 will skip this loader when templates aren't found
@@ -257,11 +257,11 @@ def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoa
     except (ImportError, ModuleNotFoundError, AttributeError):
         # Package not installed or not accessible - skip bundled templates
         pass
-    
+
     # If no loaders were added, use a default FileSystemLoader
     if not loaders:
         loaders.append(FileSystemLoader("templates"))
-    
+
     # ChoiceLoader tries loaders in order, so local templates override bundled ones
     return ChoiceLoader(loaders)
 
@@ -297,6 +297,7 @@ def create_app(
     loader = _create_template_loader(template_dir)
     # Create Jinja2 environment with our custom loader
     from jinja2 import Environment
+
     env = Environment(loader=loader)
     templates = Jinja2Templates(env=env)
     app.state.templates = templates
