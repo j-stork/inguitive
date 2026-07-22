@@ -30,12 +30,11 @@ Features:
 Run with: uvicorn examples.data_table_app:app --reload
 """
 
-from pathlib import Path
-
 from inguitive import Button, DataTable, Div, Form, Input, State, Text, create_app, get_trigger_args
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / "templates")
+# template_dir defaults to "templates" which will use bundled templates from the package
+app = create_app()
 
 
 # --- CSS ---

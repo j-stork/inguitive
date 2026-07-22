@@ -8,12 +8,11 @@ Demonstrates two approaches to navigation:
 Run with: uvicorn examples.navigation_demo:app --reload
 """
 
-from pathlib import Path
-
 from inguitive import Button, Div, Link, State, Text, create_app, redirect, update_components
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / "templates")
+# template_dir defaults to "templates" which will use bundled templates from the package
+app = create_app()
 
 
 # --- CSS ---
