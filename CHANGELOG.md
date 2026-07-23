@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.2.0] - 2026-07-23
+
+### Added
+
+- Customizable page titles via `create_app(title="...")` for app-level defaults
+- Per-page title override via `@app.page("/path", title="Page Title")` decorator
+- Proper title fallback chain: page title → app title → default "inguitive"
+- Comprehensive test suite for title functionality (7 new tests in `TestPageTitles`)
+
+### Changed
+
+- Updated base.html template to use `{{ title }}` variable instead of hardcoded title
+- Updated `_PageDecorator` type alias to include title parameter
+- Added `# type: ignore[attr-defined]` annotations to suppress Pylance warnings for private function imports
+
+### Fixed
+
+- No bug fixes in this release
+
+---
+
 ## [0.1.3] - 2026-07-22
 
 ### Added
