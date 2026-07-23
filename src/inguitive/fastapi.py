@@ -38,7 +38,7 @@ _T = TypeVar("_T")
 
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
-_PageDecorator = Callable[[str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
+_PageDecorator = Callable[[str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
 
 
 @runtime_checkable
@@ -54,11 +54,18 @@ class InguitiveApp(Protocol[_P, _T]):
     page: _PageDecorator[_P, _T]
 
 
-def _register_page_route(app, path: str, handler: Callable[_P, _T]):
-    """Helper to register a page route on an app."""
+def _register_page_route(app, path: str, handler: Callable[_P, _T], page_title: str | None = None):
+    """Helper to register a page route on an app.
+    
+    Args:
+        app: The FastAPI application
+        path: The URL path for the route
+        handler: The handler function to call
+        page_title: Optional page-specific title. Falls back to app.state.title or "inguitive"
+    """
 
     @app.get(path, response_class=HTMLResponse)
-    async def route_wrapper(request: Request, h=handler):
+    async def route_wrapper(request: Request, h=handler, pt=page_title):
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
         needs_form_data = "form_data" in sig.parameters
@@ -85,9 +92,18 @@ def _register_page_route(app, path: str, handler: Callable[_P, _T]):
         else:
             content = str(result)
 
-        # Wrap in base template
+        # Resolve effective title with fallback chain:
+        # 1. Page-level title (from decorator)
+        # 2. App-level title (from create_app)
+        # 3. Default title
+        effective_title = pt or getattr(app.state, 'title', 'inguitive')
+
+        # Wrap in base template with title
         templates = app.state.templates
-        return templates.TemplateResponse(request, "base.html", {"content": content})
+        return templates.TemplateResponse(request, "base.html", {
+            "content": content,
+            "title": effective_title
+        })
 
 
 def _register_trigger_route(app, trigger_name: str, handler: Callable):
@@ -268,6 +284,7 @@ def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoa
 
 def create_app(
     template_dir: str | Path = "templates",
+    title: str = "inguitive",
     session_backend: SessionBackend | None = None,
     session_cookie_name: str = "inguitive_session_id",
     session_cookie_max_age: int = 3600,
@@ -282,6 +299,8 @@ def create_app(
             it will be used first. If not found, bundled templates from the inguitive
             package will be used as a fallback. This allows for template customization
             while providing defaults out of the box.
+        title: Default title for pages. Can be overridden per-page via the @app.page decorator.
+            Defaults to "inguitive".
         session_backend: Session backend to use (defaults to MemoryBackend)
         session_cookie_name: Name of the session cookie
         session_cookie_max_age: Cookie max age in seconds
@@ -302,16 +321,19 @@ def create_app(
     templates = Jinja2Templates(env=env)
     app.state.templates = templates
 
+    # Set the default title for pages
+    app.state.title = title
+
     # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
     app.state.page_routes = {}
 
     # Add app-scoped decorator methods
-    def _page_decorator(path: str | None = None):
+    def _page_decorator(path: str | None = None, title: str | None = None):
         def decorator(func: Callable):
             actual_path = path if path is not None else "/"
             app.state.page_routes[actual_path] = func
-            _register_page_route(app, actual_path, func)
+            _register_page_route(app, actual_path, func, title)
             return func
 
         return decorator
