@@ -247,3 +247,137 @@ class TestStateIntegration:
         response = client.get("/form-test")
         assert response.status_code == 200
         assert "Name: Test User" in response.text
+
+
+class TestPageTitles:
+    """Tests for page title functionality."""
+
+    def test_default_title(self):
+        """Test that default title 'inguitive' is used when no title is specified."""
+        app = create_app()
+
+        @app.page("/")
+        def root_page():
+            return Div(Text("Root"))
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "<title>inguitive</title>" in response.text
+
+    def test_app_level_title(self):
+        """Test that custom app-level title works."""
+        app = create_app(title="My App")
+
+        @app.page("/")
+        def root_page():
+            return Div(Text("Root"))
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert response.status_code == 200
+        assert "<title>My App</title>" in response.text
+
+    def test_page_level_title(self):
+        """Test that page-level title via @app.page decorator works."""
+        app = create_app()
+
+        @app.page("/login", title="Login Page")
+        def login():
+            return Div(Text("Login"))
+
+        client = TestClient(app)
+        response = client.get("/login")
+        assert response.status_code == 200
+        assert "<title>Login Page</title>" in response.text
+
+    def test_page_level_title_overrides_app_title(self):
+        """Test that page title overrides app title."""
+        app = create_app(title="My App")
+
+        @app.page("/login", title="Login Page")
+        def login():
+            return Div(Text("Login"))
+
+        client = TestClient(app)
+        response = client.get("/login")
+        assert response.status_code == 200
+        assert "<title>Login Page</title>" in response.text
+
+    def test_title_fallback_chain(self):
+        """Test the complete title fallback chain: page -> app -> default."""
+        # Test app-level fallback to default
+        app1 = create_app()
+
+        @app1.page("/test1")
+        def test1():
+            return Div(Text("Test 1"))
+
+        client1 = TestClient(app1)
+        response1 = client1.get("/test1")
+        assert "<title>inguitive</title>" in response1.text
+
+        # Test app-level title
+        app2 = create_app(title="Custom App")
+
+        @app2.page("/test2")
+        def test2():
+            return Div(Text("Test 2"))
+
+        client2 = TestClient(app2)
+        response2 = client2.get("/test2")
+        assert "<title>Custom App</title>" in response2.text
+
+        # Test page-level override
+        @app2.page("/test3", title="Page Title")
+        def test3():
+            return Div(Text("Test 3"))
+
+        response3 = client2.get("/test3")
+        assert "<title>Page Title</title>" in response3.text
+
+    def test_title_in_rendered_html(self):
+        """Test that title appears correctly in the rendered HTML."""
+        app = create_app(title="Test App")
+
+        @app.page("/title-test", title="Title Test Page")
+        def title_test():
+            return Div(Text("Content"))
+
+        client = TestClient(app)
+        response = client.get("/title-test")
+        assert response.status_code == 200
+        # Verify the title tag is properly formatted
+        assert "<title>Title Test Page</title>" in response.text
+        # Verify content is still rendered
+        assert "Content" in response.text
+
+    def test_mixed_titles(self):
+        """Test that different pages can have different titles."""
+        app = create_app(title="Default App")
+
+        @app.page("/")
+        def root():
+            return Div(Text("Root"))
+
+        @app.page("/login", title="Login")
+        def login():
+            return Div(Text("Login"))
+
+        @app.page("/about", title="About Us")
+        def about():
+            return Div(Text("About"))
+
+        client = TestClient(app)
+
+        # Root should use app title
+        response = client.get("/")
+        assert "<title>Default App</title>" in response.text
+
+        # Login should use page title
+        response = client.get("/login")
+        assert "<title>Login</title>" in response.text
+
+        # About should use page title
+        response = client.get("/about")
+        assert "<title>About Us</title>" in response.text
