@@ -56,7 +56,7 @@ class InguitiveApp(Protocol[_P, _T]):
 
 def _register_page_route(app, path: str, handler: Callable[_P, _T], page_title: str | None = None):
     """Helper to register a page route on an app.
-    
+
     Args:
         app: The FastAPI application
         path: The URL path for the route
@@ -96,14 +96,11 @@ def _register_page_route(app, path: str, handler: Callable[_P, _T], page_title: 
         # 1. Page-level title (from decorator)
         # 2. App-level title (from create_app)
         # 3. Default title
-        effective_title = pt or getattr(app.state, 'title', 'inguitive')
+        effective_title = pt or getattr(app.state, "title", "inguitive")
 
         # Wrap in base template with title
         templates = app.state.templates
-        return templates.TemplateResponse(request, "base.html", {
-            "content": content,
-            "title": effective_title
-        })
+        return templates.TemplateResponse(request, "base.html", {"content": content, "title": effective_title})
 
 
 def _register_trigger_route(app, trigger_name: str, handler: Callable):
