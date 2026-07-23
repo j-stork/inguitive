@@ -12,10 +12,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Bundled templates with inguitive package for out-of-the-box functionality
+- Updated Replit configuration
 
 ### Changed
 
 - Changed HTML language attribute from 'de' to 'en' in base template
+
+### Removed
+
+- Removed redundant root-level `templates/` directory (templates are now bundled with the package)
 
 ### Fixed
 
