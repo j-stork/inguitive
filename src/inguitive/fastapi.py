@@ -40,7 +40,7 @@ _T = TypeVar("_T")
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
 _PageDecorator = Callable[
-    [str | None, str | None, str | Path | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]
+    [str | None, str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]
 ]
 
 
@@ -62,7 +62,7 @@ def _register_page_route(
     path: str,
     handler: Callable[_P, _T],
     page_title: str | None = None,
-    page_favicon: str | Path | None = None,
+    page_favicon: str | None = None,
 ):
     """Helper to register a page route on an app.
 
@@ -302,7 +302,7 @@ def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoa
 def create_app(
     template_dir: str | Path = "templates",
     title: str = "inguitive",
-    favicon: str | Path | None = None,
+    favicon: str | None = None,
     session_backend: SessionBackend | None = None,
     session_cookie_name: str = "inguitive_session_id",
     session_cookie_max_age: int = 3600,
@@ -320,7 +320,7 @@ def create_app(
         title: Default title for pages. Can be overridden per-page via the @app.page decorator.
             Defaults to "inguitive".
         favicon: Default favicon path for pages. Can be overridden per-page via the @app.page
-            decorator. Can be a URL, filesystem path, or package-relative path.
+            decorator. Can be a URL path (e.g. /static/favicon.ico) or an absolute URL (e.g. https://...).
             Defaults to None, which uses the bundled INGUITIVE favicon at /static/inguitive_favicon.svg.
         session_backend: Session backend to use (defaults to MemoryBackend)
         session_cookie_name: Name of the session cookie
@@ -356,7 +356,7 @@ def create_app(
     def _page_decorator(
         path: str | None = None,
         title: str | None = None,
-        favicon: str | Path | None = None,
+        favicon: str | None = None,
     ):
         def decorator(func: Callable):
             actual_path = path if path is not None else "/"
