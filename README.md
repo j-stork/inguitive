@@ -29,7 +29,8 @@ from inguitive import Div, Button, Label, State, create_app
 from inguitive.css import BUTTON_PRIMARY_CSS
 
 # Create FastAPI app
-# Optionally, you can assign a title and/or favicon to the app (which will appear in the browser tab)
+# Optionally, you can assign a title and/or favicon to the app (which will appear
+# in the browser tab). Fallback to Inguitive's title and favicon when omitted.
 app = create_app(title="Counter App", favicon="path/to/favicon.svg")
 
 # Create reactive state
@@ -48,7 +49,9 @@ def Counter():
     )
 
 # Define a route function
-# Each page can optionally have its own title and/or favicon
+# Each page can optionally have its own title and/or favicon. 
+# Fallback to app-level title/favicon if defined, else Inguitive's title and favicon
+# are used by default.
 @app.page("/", title="Counter Page", favicon="/path/to/page_favicon.svg")
 def index():
     return Counter()
