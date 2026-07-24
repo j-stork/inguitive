@@ -7,6 +7,7 @@ from __future__ import annotations
 import importlib.resources
 import inspect
 import uuid
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
@@ -39,9 +40,7 @@ _T = TypeVar("_T")
 
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
-_PageDecorator = Callable[
-    [str | None, str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]
-]
+_PageDecorator = Callable[[str | None, str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
 
 
 @runtime_checkable
@@ -405,11 +404,7 @@ def create_app(
     )
 
     # Mount static files from the package
-    import warnings
-
     try:
-        import importlib.resources
-
         importlib.resources.files("inguitive")
         static_path = importlib.resources.files("inguitive").joinpath("static")
         app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
