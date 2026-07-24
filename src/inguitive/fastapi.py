@@ -405,17 +405,16 @@ def create_app(
     )
 
     # Mount static files from the package
+    import warnings
+
     try:
         import importlib.resources
 
         importlib.resources.files("inguitive")
         static_path = importlib.resources.files("inguitive").joinpath("static")
         app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
-    except (ImportError, AttributeError):
+    except (ImportError, AttributeError, RuntimeError):
         # Fallback: try to find static directory relative to __file__
-        import os
-        import warnings
-
         static_path = Path(__file__).parent / "static"
         if static_path.exists():
             app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
