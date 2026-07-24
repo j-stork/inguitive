@@ -414,10 +414,20 @@ def create_app(
     except (ImportError, AttributeError):
         # Fallback: try to find static directory relative to __file__
         import os
+        import warnings
 
         static_path = Path(__file__).parent / "static"
         if static_path.exists():
             app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+        else:
+            warnings.warn(
+                "Could not mount static files directory. "
+                "The default favicon at '/static/inguitive_favicon.svg' will not be available. "
+                "To fix this, either install the package properly or provide a custom favicon "
+                "path to create_app(favicon='...').",
+                UserWarning,
+                stacklevel=2,
+            )
 
     return app  # type: ignore[return-value]
 
