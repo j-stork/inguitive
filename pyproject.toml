@@ -76,3 +76,6 @@ ignore_missing_imports = true
 python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short"
 testpaths = ["tests"]
+
+[project.scripts]
+inguitive = "inguitive.cli:main"
