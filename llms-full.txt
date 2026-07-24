@@ -29,7 +29,9 @@ from inguitive import Div, Button, Label, State, create_app
 from inguitive.css import BUTTON_PRIMARY_CSS
 
 # Create FastAPI app
-app = create_app()
+# Optionally, you can assign a title and/or favicon to the app (which will appear
+# in the browser tab). Fallback to Inguitive&#x27;s title and favicon when omitted.
+app = create_app(title=&quot;Counter App&quot;, favicon=&quot;/path/to/favicon.svg&quot;)
 
 # Create reactive state
 counter_state = State(0, &quot;counter_state&quot;)
@@ -47,7 +49,10 @@ def Counter():
     )
 
 # Define a route function
-@app.page(&quot;/&quot;)
+# Each page can optionally have its own title and/or favicon. 
+# Fallback to app-level title/favicon if defined, else Inguitive&#x27;s title and favicon
+# are used by default.
+@app.page(&quot;/&quot;, title=&quot;Counter Page&quot;, favicon=&quot;/path/to/page_favicon.svg&quot;)
 def index():
     return Counter()
 ```
@@ -241,6 +246,8 @@ Before deploying your inguitive app to production, configure these security sett
 from inguitive import create_app, RedisBackend
 
 app = create_app(
+    title=&quot;My App&quot;,
+    favicon=&quot;/path/to/favicon.ico&quot;,
     session_backend=RedisBackend(redis_url=&quot;redis://localhost:6379&quot;),
     session_cookie_secure=True,      # Cookies only over HTTPS
     session_cookie_httponly=True,    # Prevent JavaScript access (default)
@@ -278,6 +285,66 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.2.0] - 2026-07-23
+
+### Added
+
+- Customizable page titles via `create_app(title=&quot;...&quot;)` for app-level defaults
+- Per-page title override via `@app.page(&quot;/path&quot;, title=&quot;Page Title&quot;)` decorator
+- Proper title fallback chain: page title → app title → default &quot;inguitive&quot;
+- Comprehensive test suite for title functionality (7 new tests in `TestPageTitles`)
+
+### Changed
+
+- Updated base.html template to use `{{ title }}` variable instead of hardcoded title
+- Updated `_PageDecorator` type alias to include title parameter
+- Added `# type: ignore[attr-defined]` annotations to suppress Pylance warnings for private function imports
+
+### Fixed
+
+- No bug fixes in this release
+
+---
+
+## [0.1.3] - 2026-07-22
+
+### Added
+
+- Bundled templates with inguitive package for out-of-the-box functionality
+- Updated Replit configuration
+
+### Changed
+
+- Changed HTML language attribute from &#x27;de&#x27; to &#x27;en&#x27; in base template
+
+### Removed
+
+- Removed redundant root-level `templates/` directory (templates are now bundled with the package)
+
+### Fixed
+
+- Fixed `nl2br()` to handle Windows (CRLF) and old Mac (CR) line endings
+- Fixed mypy type error for mixed loader types in fastapi.py
+- Applied ruff formatting fixes
+
+---
+
+## [0.1.2] - 2026-07-21
+
+### Added
+
+- Bumped version to 0.1.2 for PyPI re-upload
+
+---
+
+## [0.1.1] - 2026-07-20
+
+### Added
+
+- Created `llms.txt` and `llms-full.txt` files based on the proposed standards from https://llmstxt.org/
 
 ---
 
@@ -451,7 +518,7 @@ __all__ = [
     &quot;nl2br&quot;,
 ]
 
-__version__ = "0.1.3"
+__version__ = &quot;0.2.0&quot;
 </doc><doc title="Components" desc="All UI component classes (Div, Button, Input, DataTable, etc.) with render/update methods">&quot;&quot;&quot;
 Component classes for inguitive framework.
 &quot;&quot;&quot;
@@ -1893,15 +1960,19 @@ FastAPI integration for inguitive.
 
 from __future__ import annotations
 
+import importlib.resources
 import inspect
 import uuid
+import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
 
 from inguitive.htmx import update_components
 from inguitive.session import (
@@ -1925,7 +1996,7 @@ _T = TypeVar(&quot;_T&quot;)
 
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
-_PageDecorator = Callable[[str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
+_PageDecorator = Callable[[str | None, str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
 
 
 @runtime_checkable
@@ -1941,11 +2012,25 @@ class InguitiveApp(Protocol[_P, _T]):
     page: _PageDecorator[_P, _T]
 
 
-def _register_page_route(app, path: str, handler: Callable[_P, _T]):
-    &quot;&quot;&quot;Helper to register a page route on an app.&quot;&quot;&quot;
+def _register_page_route(
+    app,
+    path: str,
+    handler: Callable[_P, _T],
+    page_title: str | None = None,
+    page_favicon: str | None = None,
+):
+    &quot;&quot;&quot;Helper to register a page route on an app.
+
+    Args:
+        app: The FastAPI application
+        path: The URL path for the route
+        handler: The handler function to call
+        page_title: Optional page-specific title. Falls back to app.state.title or &quot;inguitive&quot;
+        page_favicon: Optional page-specific favicon. Falls back to app.state.favicon or default
+    &quot;&quot;&quot;
 
     @app.get(path, response_class=HTMLResponse)
-    async def route_wrapper(request: Request, h=handler):
+    async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon):
         sig = inspect.signature(h)
         needs_request = &quot;request&quot; in sig.parameters
         needs_form_data = &quot;form_data&quot; in sig.parameters
@@ -1972,9 +2057,25 @@ def _register_page_route(app, path: str, handler: Callable[_P, _T]):
         else:
             content = str(result)
 
-        # Wrap in base template
+        # Resolve effective title with fallback chain:
+        # 1. Page-level title (from decorator)
+        # 2. App-level title (from create_app)
+        # 3. Default title
+        effective_title = pt or getattr(app.state, &quot;title&quot;, &quot;inguitive&quot;)
+
+        # Resolve effective favicon with fallback chain:
+        # 1. Page-level favicon (from decorator)
+        # 2. App-level favicon (from create_app)
+        # 3. Default favicon
+        effective_favicon = pf or getattr(app.state, &quot;favicon&quot;, None) or &quot;/static/inguitive_favicon.svg&quot;
+
+        # Wrap in base template with title and favicon
         templates = app.state.templates
-        return templates.TemplateResponse(request, &quot;base.html&quot;, {&quot;content&quot;: content})
+        return templates.TemplateResponse(
+            request,
+            &quot;base.html&quot;,
+            {&quot;content&quot;: content, &quot;title&quot;: effective_title, &quot;favicon&quot;: effective_favicon},
+        )
 
 
 def _register_trigger_route(app, trigger_name: str, handler: Callable):
@@ -2110,8 +2211,53 @@ class SessionMiddleware:
             _clear_current_session()
 
 
+def _create_template_loader(template_dir: str | Path = &quot;templates&quot;) -&gt; ChoiceLoader:
+    &quot;&quot;&quot;Create a template loader that supports both local and bundled templates.
+
+    Local templates (specified via template_dir) take precedence over bundled templates.
+    This allows users to customize templates while falling back to package defaults.
+
+    Args:
+        template_dir: Directory containing Jinja2 templates (local path)
+
+    Returns:
+        ChoiceLoader: A Jinja2 loader that checks local directory first, then bundled templates
+    &quot;&quot;&quot;
+    # Convert to Path if it&#x27;s a string
+    template_path = Path(template_dir) if isinstance(template_dir, str) else template_dir
+
+    # Create list of loaders - local first, then bundled
+    loaders: list[BaseLoader] = []
+
+    # Add FileSystemLoader for local templates if directory exists
+    if template_path.exists() and template_path.is_dir():
+        loaders.append(FileSystemLoader(str(template_path)))
+
+    # Add PackageLoader for bundled templates from the inguitive package
+    # We try to add it unconditionally - if the package isn&#x27;t installed or templates don&#x27;t exist,
+    # Jinja2 will skip this loader when templates aren&#x27;t found
+    try:
+        # Check if we can access the templates as a package resource
+        # This will work if inguitive is installed (even in editable mode)
+        importlib.resources.files(&quot;inguitive&quot;)
+        # If we get here, the package exists, so we can add the PackageLoader
+        loaders.append(PackageLoader(&quot;inguitive&quot;, &quot;templates&quot;))
+    except (ImportError, ModuleNotFoundError, AttributeError):
+        # Package not installed or not accessible - skip bundled templates
+        pass
+
+    # If no loaders were added, use a default FileSystemLoader
+    if not loaders:
+        loaders.append(FileSystemLoader(&quot;templates&quot;))
+
+    # ChoiceLoader tries loaders in order, so local templates override bundled ones
+    return ChoiceLoader(loaders)
+
+
 def create_app(
     template_dir: str | Path = &quot;templates&quot;,
+    title: str = &quot;inguitive&quot;,
+    favicon: str | None = None,
     session_backend: SessionBackend | None = None,
     session_cookie_name: str = &quot;inguitive_session_id&quot;,
     session_cookie_max_age: int = 3600,
@@ -2122,7 +2268,15 @@ def create_app(
     &quot;&quot;&quot;Create and configure a FastAPI application for inguitive.
 
     Args:
-        template_dir: Directory containing Jinja2 templates
+        template_dir: Directory containing Jinja2 templates. If the directory exists,
+            it will be used first. If not found, bundled templates from the inguitive
+            package will be used as a fallback. This allows for template customization
+            while providing defaults out of the box.
+        title: Default title for pages. Can be overridden per-page via the @app.page decorator.
+            Defaults to &quot;inguitive&quot;.
+        favicon: Default favicon path for pages. Can be overridden per-page via the @app.page
+            decorator. Can be a URL path (e.g. /static/favicon.ico) or an absolute URL (e.g. https://...).
+            Defaults to None, which uses the bundled INGUITIVE favicon at /static/inguitive_favicon.svg.
         session_backend: Session backend to use (defaults to MemoryBackend)
         session_cookie_name: Name of the session cookie
         session_cookie_max_age: Cookie max age in seconds
@@ -2135,19 +2289,34 @@ def create_app(
         (trigger_handler and page) and templates accessible via app.state.templates
     &quot;&quot;&quot;
     app = FastAPI()
-    templates = Jinja2Templates(directory=template_dir)
+    loader = _create_template_loader(template_dir)
+    # Create Jinja2 environment with our custom loader
+    from jinja2 import Environment
+
+    env = Environment(loader=loader)
+    templates = Jinja2Templates(env=env)
     app.state.templates = templates
+
+    # Set the default title for pages
+    app.state.title = title
+
+    # Set the default favicon for pages
+    app.state.favicon = favicon
 
     # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
     app.state.page_routes = {}
 
     # Add app-scoped decorator methods
-    def _page_decorator(path: str | None = None):
+    def _page_decorator(
+        path: str | None = None,
+        title: str | None = None,
+        favicon: str | None = None,
+    ):
         def decorator(func: Callable):
             actual_path = path if path is not None else &quot;/&quot;
             app.state.page_routes[actual_path] = func
-            _register_page_route(app, actual_path, func)
+            _register_page_route(app, actual_path, func, title, favicon)
             return func
 
         return decorator
@@ -2189,6 +2358,26 @@ def create_app(
         session_cookie_httponly=session_cookie_httponly,
         cleanup_interval=session_cleanup_interval,
     )
+
+    # Mount static files from the package
+    try:
+        importlib.resources.files(&quot;inguitive&quot;)
+        static_path = importlib.resources.files(&quot;inguitive&quot;).joinpath(&quot;static&quot;)
+        app.mount(&quot;/static&quot;, StaticFiles(directory=str(static_path)), name=&quot;static&quot;)
+    except (ImportError, AttributeError, RuntimeError):
+        # Fallback: try to find static directory relative to __file__
+        static_path = Path(__file__).parent / &quot;static&quot;
+        if static_path.exists():
+            app.mount(&quot;/static&quot;, StaticFiles(directory=str(static_path)), name=&quot;static&quot;)
+        else:
+            warnings.warn(
+                &quot;Could not mount static files directory. &quot;
+                &quot;The default favicon at &#x27;/static/inguitive_favicon.svg&#x27; will not be available. &quot;
+                &quot;To fix this, either install the package properly or provide a custom favicon &quot;
+                &quot;path to create_app(favicon=&#x27;...&#x27;).&quot;,
+                UserWarning,
+                stacklevel=2,
+            )
 
     return app  # type: ignore[return-value]
 
@@ -2315,12 +2504,15 @@ def nl2br(text: str | None) -&gt; str:
         &gt;&gt;&gt; nl2br(&quot;Hello\n\nWorld&quot;)
         &#x27;Hello&lt;br&gt;&lt;br&gt;World&#x27;
 
+        &gt;&gt;&gt; nl2br(&quot;Line 1\r\nLine 2&quot;)
+        &#x27;Line 1&lt;br&gt;Line 2&#x27;
+
         &gt;&gt;&gt; nl2br(None)
         &#x27;&#x27;
     &quot;&quot;&quot;
     if text is None:
         return &quot;&quot;
-    return text.replace(&quot;\n&quot;, &quot;&lt;br&gt;&quot;)
+    return text.replace(&quot;\r\n&quot;, &quot;&lt;br&gt;&quot;).replace(&quot;\r&quot;, &quot;&lt;br&gt;&quot;).replace(&quot;\n&quot;, &quot;&lt;br&gt;&quot;)
 </doc><doc title="Counter app" desc="Per-session counter with theme toggle — demonstrates State, listen_to, and dynamic CSS">&quot;&quot;&quot;
 Counter example application using inguitive framework.
 
@@ -2340,13 +2532,12 @@ To test:
 This proves that State values are fully isolated per user session.
 &quot;&quot;&quot;
 
-from pathlib import Path
-
 from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
 from inguitive.svg import MOON, SUN
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+# template_dir defaults to &quot;templates&quot; which will use bundled templates from the package
+app = create_app()
 
 
 # --- State Instances ---
@@ -2487,7 +2678,6 @@ Run with: uvicorn examples.todo_app:app --reload
 &quot;&quot;&quot;
 
 import uuid
-from pathlib import Path
 
 from inguitive import (
     Button,
@@ -2502,7 +2692,8 @@ from inguitive import (
 )
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+# template_dir defaults to &quot;templates&quot; which will use bundled templates from the package
+app = create_app()
 
 
 # --- State Instances ---
@@ -2795,12 +2986,12 @@ Run with: uvicorn examples.chat_app:app --reload
 &quot;&quot;&quot;
 
 import random
-from pathlib import Path
 
 from inguitive import Button, Div, Form, Icon, Input, State, Text, create_app, update_components
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+# template_dir defaults to &quot;templates&quot; which will use bundled templates from the package
+app = create_app()
 
 
 # --- CSS ---
@@ -3034,12 +3225,11 @@ Features:
 Run with: uvicorn examples.data_table_app:app --reload
 &quot;&quot;&quot;
 
-from pathlib import Path
-
 from inguitive import Button, DataTable, Div, Form, Input, State, Text, create_app, get_trigger_args
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+# template_dir defaults to &quot;templates&quot; which will use bundled templates from the package
+app = create_app()
 
 
 # --- CSS ---
@@ -3388,8 +3578,6 @@ Demonstrates form components (Form, Input, Button, Label) with reactive state.
 Run with: uvicorn examples.registration_form:app --reload
 &quot;&quot;&quot;
 
-from pathlib import Path
-
 from inguitive import (
     Button,
     Checkbox,
@@ -3407,7 +3595,8 @@ from inguitive import (
 )
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+# template_dir defaults to &quot;templates&quot; which will use bundled templates from the package
+app = create_app()
 
 # --- State Instances ---
 # Use collective State for form data (simpler pattern)
@@ -3577,12 +3766,11 @@ Demonstrates two approaches to navigation:
 Run with: uvicorn examples.navigation_demo:app --reload
 &quot;&quot;&quot;
 
-from pathlib import Path
-
 from inguitive import Button, Div, Link, State, Text, create_app, redirect, update_components
 
 # --- App Setup ---
-app = create_app(template_dir=Path(__file__).parent.parent / &quot;templates&quot;)
+# template_dir defaults to &quot;templates&quot; which will use bundled templates from the package
+app = create_app()
 
 
 # --- CSS ---
