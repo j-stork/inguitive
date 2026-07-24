@@ -29,7 +29,7 @@ from inguitive import Div, Button, Label, State, create_app
 from inguitive.css import BUTTON_PRIMARY_CSS
 
 # Create FastAPI app
-app = create_app()
+app = create_app(title="Counter App")
 
 # Create reactive state
 counter_state = State(0, "counter_state")
@@ -47,7 +47,7 @@ def Counter():
     )
 
 # Define a route function
-@app.page("/")
+@app.page("/", title="Counter Page", favicon="/static/favicon.svg")
 def index():
     return Counter()
 ```
@@ -241,6 +241,8 @@ Before deploying your inguitive app to production, configure these security sett
 from inguitive import create_app, RedisBackend
 
 app = create_app(
+    title="My App",
+    favicon="/static/favicon.ico",
     session_backend=RedisBackend(redis_url="redis://localhost:6379"),
     session_cookie_secure=True,      # Cookies only over HTTPS
     session_cookie_httponly=True,    # Prevent JavaScript access (default)
