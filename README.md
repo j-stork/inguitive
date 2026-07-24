@@ -31,7 +31,7 @@ from inguitive.css import BUTTON_PRIMARY_CSS
 # Create FastAPI app
 # Optionally, you can assign a title and/or favicon to the app (which will appear
 # in the browser tab). Fallback to Inguitive's title and favicon when omitted.
-app = create_app(title="Counter App", favicon="path/to/favicon.svg")
+app = create_app(title="Counter App", favicon="/path/to/favicon.svg")
 
 # Create reactive state
 counter_state = State(0, "counter_state")
