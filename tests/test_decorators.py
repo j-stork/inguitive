@@ -517,3 +517,24 @@ class TestFavicon:
         # About should use page favicon
         response = client.get("/about")
         assert '<link rel="icon" href="/about/favicon.svg"' in response.text
+
+    def test_static_favicon_endpoint(self):
+        """Test that the default favicon file is actually served via the /static endpoint."""
+        app = create_app()
+
+        @app.page("/")
+        def root_page():
+            return Div(Text("Root"))
+
+        client = TestClient(app)
+
+        # Test that the static favicon endpoint returns 200
+        response = client.get("/static/inguitive_favicon.svg")
+        assert response.status_code == 200
+
+        # Test that the response has the correct content type
+        assert response.headers["content-type"] == "image/svg+xml"
+
+        # Test that the response body contains SVG content
+        assert "<svg" in response.text
+        assert "</svg>" in response.text
