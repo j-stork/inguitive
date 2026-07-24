@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-07-24
+
+### Added
+
+- Favicon parameter for `create_app()` to customize application favicon
+- Default favicon SVG included with the package
+- Warning message when static files cannot be mounted
+- Test coverage for static favicon endpoint
+
+### Changed
+
+- Improved static file mounting error handling
+- Code cleanup: consolidated imports, removed duplicates
+
+### Fixed
+
+- Fixed favicon link rendering (removed hardcoded type attribute)
+- Fixed favicon type annotation (removed incorrect Path type)
+- Fixed static mounting edge cases and RuntimeError handling
+
+---
+
 ## [0.2.0] - 2026-07-23
 
 ### Added
