@@ -29,7 +29,8 @@ from inguitive import Div, Button, Label, State, create_app
 from inguitive.css import BUTTON_PRIMARY_CSS
 
 # Create FastAPI app
-app = create_app(title="Counter App")
+# Optionally, you can assign a title and/or favicon to the app (which will appear in the browser tab)
+app = create_app(title="Counter App", favicon="path/to/favicon.svg")
 
 # Create reactive state
 counter_state = State(0, "counter_state")
@@ -47,7 +48,8 @@ def Counter():
     )
 
 # Define a route function
-@app.page("/", title="Counter Page", favicon="/static/favicon.svg")
+# Each page can optionally have its own title and/or favicon
+@app.page("/", title="Counter Page", favicon="/path/to/page_favicon.svg")
 def index():
     return Counter()
 ```
@@ -242,7 +244,7 @@ from inguitive import create_app, RedisBackend
 
 app = create_app(
     title="My App",
-    favicon="/static/favicon.ico",
+    favicon="/path/to/favicon.ico",
     session_backend=RedisBackend(redis_url="redis://localhost:6379"),
     session_cookie_secure=True,      # Cookies only over HTTPS
     session_cookie_httponly=True,    # Prevent JavaScript access (default)
