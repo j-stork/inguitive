@@ -381,3 +381,139 @@ class TestPageTitles:
         # About should use page title
         response = client.get("/about")
         assert "<title>About Us</title>" in response.text
+
+
+class TestFavicon:
+    """Tests for favicon functionality."""
+
+    def test_default_favicon(self):
+        """Test that default INGUITIVE favicon is used when no favicon is specified."""
+        app = create_app()
+
+        @app.page("/")
+        def root_page():
+            return Div(Text("Root"))
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert response.status_code == 200
+        # Default favicon should be /static/inguitive_favicon.svg
+        assert '<link rel="icon" href="/static/inguitive_favicon.svg"' in response.text
+
+    def test_custom_app_favicon(self):
+        """Test that custom app-level favicon works."""
+        app = create_app(favicon="/custom/favicon.ico")
+
+        @app.page("/")
+        def root_page():
+            return Div(Text("Root"))
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert response.status_code == 200
+        assert '<link rel="icon" href="/custom/favicon.ico"' in response.text
+
+    def test_page_level_favicon(self):
+        """Test that page-level favicon via @app.page decorator works."""
+        app = create_app()
+
+        @app.page("/login", favicon="/login/favicon.png")
+        def login():
+            return Div(Text("Login"))
+
+        client = TestClient(app)
+        response = client.get("/login")
+        assert response.status_code == 200
+        assert '<link rel="icon" href="/login/favicon.png"' in response.text
+
+    def test_page_favicon_overrides_app_favicon(self):
+        """Test that page favicon overrides app favicon."""
+        app = create_app(favicon="/app/favicon.ico")
+
+        @app.page("/login", favicon="/page/favicon.png")
+        def login():
+            return Div(Text("Login"))
+
+        client = TestClient(app)
+        response = client.get("/login")
+        assert response.status_code == 200
+        # Page-level favicon should override app-level
+        assert '<link rel="icon" href="/page/favicon.png"' in response.text
+
+    def test_favicon_fallback_chain(self):
+        """Test the complete favicon fallback chain: page -> app -> default."""
+        # Test app-level fallback to default
+        app1 = create_app()
+
+        @app1.page("/test1")
+        def test1():
+            return Div(Text("Test 1"))
+
+        client1 = TestClient(app1)
+        response1 = client1.get("/test1")
+        assert '<link rel="icon" href="/static/inguitive_favicon.svg"' in response1.text
+
+        # Test app-level favicon
+        app2 = create_app(favicon="/custom/favicon.svg")
+
+        @app2.page("/test2")
+        def test2():
+            return Div(Text("Test 2"))
+
+        client2 = TestClient(app2)
+        response2 = client2.get("/test2")
+        assert '<link rel="icon" href="/custom/favicon.svg"' in response2.text
+
+        # Test page-level override
+        @app2.page("/test3", favicon="/page/favicon.ico")
+        def test3():
+            return Div(Text("Test 3"))
+
+        response3 = client2.get("/test3")
+        assert '<link rel="icon" href="/page/favicon.ico"' in response3.text
+
+    def test_favicon_in_rendered_html(self):
+        """Test that favicon link appears correctly in the rendered HTML."""
+        app = create_app(favicon="/test/favicon.svg")
+
+        @app.page("/favicon-test", favicon="/page/favicon.png")
+        def favicon_test():
+            return Div(Text("Content"))
+
+        client = TestClient(app)
+        response = client.get("/favicon-test")
+        assert response.status_code == 200
+        # Verify the favicon link is properly formatted
+        assert '<link rel="icon" href="/page/favicon.png"' in response.text
+        # Verify content is still rendered
+        assert "Content" in response.text
+
+    def test_mixed_favicons(self):
+        """Test that different pages can have different favicons."""
+        app = create_app(favicon="/default/favicon.ico")
+
+        @app.page("/")
+        def root():
+            return Div(Text("Root"))
+
+        @app.page("/login", favicon="/login/favicon.png")
+        def login():
+            return Div(Text("Login"))
+
+        @app.page("/about", favicon="/about/favicon.svg")
+        def about():
+            return Div(Text("About"))
+
+        client = TestClient(app)
+
+        # Root should use app favicon
+        response = client.get("/")
+        assert '<link rel="icon" href="/default/favicon.ico"' in response.text
+
+        # Login should use page favicon
+        response = client.get("/login")
+        assert '<link rel="icon" href="/login/favicon.png"' in response.text
+
+        # About should use page favicon
+        response = client.get("/about")
+        assert '<link rel="icon" href="/about/favicon.svg"' in response.text

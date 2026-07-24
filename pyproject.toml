@@ -53,7 +53,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 "*" = ["*.html", "*.svg", "py.typed"]
-"inguitive" = ["templates/*"]
+"inguitive" = ["templates/*", "static/*"]
 
 [tool.black]
 line-length = 100
