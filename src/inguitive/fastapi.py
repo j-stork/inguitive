@@ -13,6 +13,7 @@ from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
 
@@ -38,7 +39,9 @@ _T = TypeVar("_T")
 
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
-_PageDecorator = Callable[[str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
+_PageDecorator = Callable[
+    [str | None, str | None, str | Path | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]
+]
 
 
 @runtime_checkable
@@ -54,7 +57,13 @@ class InguitiveApp(Protocol[_P, _T]):
     page: _PageDecorator[_P, _T]
 
 
-def _register_page_route(app, path: str, handler: Callable[_P, _T], page_title: str | None = None):
+def _register_page_route(
+    app,
+    path: str,
+    handler: Callable[_P, _T],
+    page_title: str | None = None,
+    page_favicon: str | Path | None = None,
+):
     """Helper to register a page route on an app.
 
     Args:
@@ -62,10 +71,11 @@ def _register_page_route(app, path: str, handler: Callable[_P, _T], page_title: 
         path: The URL path for the route
         handler: The handler function to call
         page_title: Optional page-specific title. Falls back to app.state.title or "inguitive"
+        page_favicon: Optional page-specific favicon. Falls back to app.state.favicon or default
     """
 
     @app.get(path, response_class=HTMLResponse)
-    async def route_wrapper(request: Request, h=handler, pt=page_title):
+    async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon):
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
         needs_form_data = "form_data" in sig.parameters
@@ -98,9 +108,19 @@ def _register_page_route(app, path: str, handler: Callable[_P, _T], page_title: 
         # 3. Default title
         effective_title = pt or getattr(app.state, "title", "inguitive")
 
-        # Wrap in base template with title
+        # Resolve effective favicon with fallback chain:
+        # 1. Page-level favicon (from decorator)
+        # 2. App-level favicon (from create_app)
+        # 3. Default favicon
+        effective_favicon = pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
+
+        # Wrap in base template with title and favicon
         templates = app.state.templates
-        return templates.TemplateResponse(request, "base.html", {"content": content, "title": effective_title})
+        return templates.TemplateResponse(
+            request,
+            "base.html",
+            {"content": content, "title": effective_title, "favicon": effective_favicon},
+        )
 
 
 def _register_trigger_route(app, trigger_name: str, handler: Callable):
@@ -282,6 +302,7 @@ def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoa
 def create_app(
     template_dir: str | Path = "templates",
     title: str = "inguitive",
+    favicon: str | Path | None = None,
     session_backend: SessionBackend | None = None,
     session_cookie_name: str = "inguitive_session_id",
     session_cookie_max_age: int = 3600,
@@ -298,6 +319,9 @@ def create_app(
             while providing defaults out of the box.
         title: Default title for pages. Can be overridden per-page via the @app.page decorator.
             Defaults to "inguitive".
+        favicon: Default favicon path for pages. Can be overridden per-page via the @app.page
+            decorator. Can be a URL, filesystem path, or package-relative path.
+            Defaults to None, which uses the bundled INGUITIVE favicon at /static/inguitive_favicon.svg.
         session_backend: Session backend to use (defaults to MemoryBackend)
         session_cookie_name: Name of the session cookie
         session_cookie_max_age: Cookie max age in seconds
@@ -321,16 +345,23 @@ def create_app(
     # Set the default title for pages
     app.state.title = title
 
+    # Set the default favicon for pages
+    app.state.favicon = favicon
+
     # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
     app.state.page_routes = {}
 
     # Add app-scoped decorator methods
-    def _page_decorator(path: str | None = None, title: str | None = None):
+    def _page_decorator(
+        path: str | None = None,
+        title: str | None = None,
+        favicon: str | Path | None = None,
+    ):
         def decorator(func: Callable):
             actual_path = path if path is not None else "/"
             app.state.page_routes[actual_path] = func
-            _register_page_route(app, actual_path, func, title)
+            _register_page_route(app, actual_path, func, title, favicon)
             return func
 
         return decorator
@@ -372,6 +403,21 @@ def create_app(
         session_cookie_httponly=session_cookie_httponly,
         cleanup_interval=session_cleanup_interval,
     )
+
+    # Mount static files from the package
+    try:
+        import importlib.resources
+
+        importlib.resources.files("inguitive")
+        static_path = importlib.resources.files("inguitive").joinpath("static")
+        app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+    except (ImportError, AttributeError):
+        # Fallback: try to find static directory relative to __file__
+        import os
+
+        static_path = Path(__file__).parent / "static"
+        if static_path.exists():
+            app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
 
     return app  # type: ignore[return-value]
 
