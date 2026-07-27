@@ -15,7 +15,7 @@ def error_display(message: str, title: str = "Error", exit_code: int | None = No
     """Display an error message in a styled panel and optionally exit."""
     panel = Panel(
         message,
-        title="[bold red]" + title + "[/bold red]",
+        title="[bold]" + title + "[/bold]",
         title_align="left",
         border_style="red"
     )
