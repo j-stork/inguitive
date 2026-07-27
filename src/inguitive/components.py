@@ -8,6 +8,7 @@ import uuid
 from collections.abc import Callable, Mapping
 
 import jinja2
+import markupsafe
 
 from inguitive.session import _get_component_registry
 
@@ -50,9 +51,24 @@ class Component:
                 if state is not None:
                     state.add_listener(self.id)
 
-    def _resolve(self, value: str | Callable[[], str]) -> str:
-        """Resolve a potentially dynamic value (callable or static)."""
-        return value() if callable(value) else value
+    def _resolve(self, value: str | Callable[[], str] | list | dict | tuple) -> str | list | dict | tuple:
+        """Resolve a potentially dynamic value (callable or static) and escape strings for HTML output."""
+        resolved = value() if callable(value) else value
+        if isinstance(resolved, markupsafe.Markup):
+            # Already marked as safe, don't escape
+            return resolved
+        elif isinstance(resolved, str):
+            return markupsafe.escape(resolved)
+        elif isinstance(resolved, list):
+            # For lists, recursively resolve each element
+            return [self._resolve(item) for item in resolved]
+        elif isinstance(resolved, dict):
+            # For dicts, recursively resolve values
+            return {k: self._resolve(v) for k, v in resolved.items()}
+        elif isinstance(resolved, tuple):
+            # For tuples, recursively resolve each element
+            return tuple(self._resolve(item) for item in resolved)
+        return resolved
 
     def _get_attrs_str(self) -> str:
         """Convert attributes to HTML string, handling css -> class conversion and dynamic values."""
@@ -65,7 +81,8 @@ class Component:
             filtered_attrs["class"] = resolved_css
         # Add id if present
         if self.id:
-            filtered_attrs["id"] = self.id
+            resolved_id = self._resolve(self.id)
+            filtered_attrs["id"] = resolved_id if isinstance(resolved_id, markupsafe.Markup) else markupsafe.escape(str(resolved_id))
         return " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
 
     def _render_children(self) -> str:
@@ -90,7 +107,7 @@ class Component:
                     if isinstance(resolved, Component):
                         children_html_parts.append(resolved.render())
                     else:
-                        children_html_parts.append(str(resolved))
+                        children_html_parts.append(resolved)
         return "".join(children_html_parts)
 
     def _oob_attrs_str(self) -> str:
@@ -513,12 +530,21 @@ class Select(Component):
 
     def _render_options(self) -> str:
         """Render all option elements."""
-        resolved_options = self._resolve(self.options) if self.options else []  # type: ignore
-        resolved_value = self._resolve(self.value) if self.value else None
+        # Get raw options for comparison (before resolving)
+        raw_options = self.options() if callable(self.options) else self.options
+        raw_value = self.value() if callable(self.value) else self.value
+        # Get resolved options for rendering
+        resolved_options = self._resolve(raw_options) if raw_options else []  # type: ignore
         option_tags = []
-        for val, text in resolved_options:  # type: ignore[str-unpack]
-            selected = " selected" if val == resolved_value else ""
-            option_tags.append(f'<option value="{val}"{selected}>{text}</option>')
+        # Iterate through both raw and resolved options in parallel
+        for (raw_val, raw_text), (val, text) in zip(raw_options or [], resolved_options or []):  # type: ignore[str-unpack]
+            # val and text are already resolved (and escaped if they were strings)
+            # For attribute values, we need to ensure they're strings
+            str_val = str(val) if val is not None else ""
+            str_text = str(text) if text is not None else ""
+            # Compare raw values to determine if selected
+            selected = " selected" if raw_val == raw_value else ""
+            option_tags.append(f'<option value="{str_val}"{selected}>{str_text}</option>')
         return "".join(option_tags)
 
     def render(self) -> str:
@@ -975,7 +1001,8 @@ class DataTable(Component):
         value = row.get(column, "")
         if value is None:
             return ""
-        return str(value)
+        # Escape the value for HTML output
+        return markupsafe.escape(str(value))
 
     def _render_table(self, resolved_data: list[dict], element_css: dict[str, str]) -> str:
         """Render the HTML table structure with resolved data and CSS."""
@@ -986,8 +1013,8 @@ class DataTable(Component):
         cell_css = element_css.get("cell", self._DEFAULT_ELEMENT_CSS["cell"])
         row_css = element_css.get("row", self._DEFAULT_ELEMENT_CSS["row"])
 
-        # Render thead
-        header_cells = "".join(f'<th class="{header_css}">{col}</th>' for col in columns)
+        # Render thead - escape column names
+        header_cells = "".join(f'<th class="{header_css}">{markupsafe.escape(str(col))}</th>' for col in columns)
         thead = f"<thead><tr>{header_cells}</tr></thead>"
 
         # Render tbody
