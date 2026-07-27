@@ -1,7 +1,6 @@
 """Command-line interface for inguitive."""
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
 
@@ -36,6 +35,8 @@ def init_command(args):
 
 def run_command(args):
     """Handle the run command - executes the app via uvicorn."""
+    from inguitive import run_app
+
     target = args.module if args.module else "app:app"
 
     # Handle file path conversion
@@ -45,19 +46,25 @@ def run_command(args):
     else:
         uvicorn_target = target
 
-    # Build command
-    cmd = ["uvicorn", uvicorn_target]
-    if not args.no_reload:
-        cmd.append("--reload")
+    # Map CLI args to run_app parameters
+    host = args.host if hasattr(args, 'host') else '0.0.0.0'
+    port = args.port if hasattr(args, 'port') else 8000
+    reload = not args.no_reload
 
-    # Execute with same stdout/stderr
     try:
-        subprocess.run(cmd, check=True)
+        run_app(
+            app_module=uvicorn_target,
+            host=host,
+            port=port,
+            reload=reload
+        )
     except KeyboardInterrupt:
         pass
-    except FileNotFoundError:
-        print("Error: uvicorn not found. Make sure uvicorn is installed.", file=sys.stderr)
-        sys.exit(1)
+    except ImportError as e:
+        if "uvicorn" in str(e):
+            print("Error: uvicorn not found. Make sure uvicorn is installed.", file=sys.stderr)
+            sys.exit(1)
+        raise
 
 
 def main():
@@ -90,6 +97,17 @@ def main():
         action="store_true",
         default=False,
         help="Disable auto-reload",
+    )
+    run_parser.add_argument(
+        "--host",
+        default="0.0.0.0",
+        help="Host to bind to (default: 0.0.0.0)",
+    )
+    run_parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind to (default: 8000)",
     )
     run_parser.set_defaults(func=run_command)
 
