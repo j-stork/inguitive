@@ -69,9 +69,17 @@ def run_command(args):
 
 def main():
     """Main entry point for the inguitive CLI."""
+    from inguitive import __version__
+    
     parser = argparse.ArgumentParser(
         prog="inguitive",
         description="inguitive - A pure Python web framework",
+    )
+    parser.add_argument(
+        "--version",
+        "-v",
+        action="version",
+        version=f"%(prog)s {__version__}",
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
