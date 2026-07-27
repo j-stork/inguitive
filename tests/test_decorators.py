@@ -1,6 +1,5 @@
 """Tests for @app.page and @app.trigger_handler decorator wiring in inguitive."""
 
-
 from fastapi.testclient import TestClient
 
 from inguitive import Div, State, Text, create_app, update_components
@@ -200,7 +199,7 @@ class TestStateIntegration:
         def counter_page():
             return Div(
                 Text(lambda: f"Count: {counter_state.get()}", listen_to="counter_state"),
-                id="counter-display"
+                id="counter-display",
             )
 
         @app.trigger_handler
@@ -235,7 +234,7 @@ class TestStateIntegration:
         def form_page():
             return Div(
                 Text(lambda: f"Name: {form_state.get().get('name', '')}", listen_to="form_state"),
-                id="form-display"
+                id="form-display",
             )
 
         client = TestClient(app)

@@ -35,12 +35,10 @@ class TestBasicFormData:
             return "OK"
 
         client = TestClient(app)
-        client.post("/_trigger/handle_multiple", data={
-            "name": "John",
-            "email": "john@example.com",
-            "age": "30",
-            "subscribe": "yes"
-        })
+        client.post(
+            "/_trigger/handle_multiple",
+            data={"name": "John", "email": "john@example.com", "age": "30", "subscribe": "yes"},
+        )
 
         assert received["name"] == "John"
         assert received["email"] == "john@example.com"
@@ -98,8 +96,7 @@ class TestQueryParamsMerging:
         client = TestClient(app)
         # POST with form data AND query params
         response = client.post(
-            "/_trigger/handle_mixed?from_url=query_value",
-            data={"from_form": "form_value"}
+            "/_trigger/handle_mixed?from_url=query_value", data={"from_form": "form_value"}
         )
 
         assert response.status_code == 200
@@ -175,11 +172,14 @@ class TestSpecialCases:
             return "OK"
 
         client = TestClient(app)
-        client.post("/_trigger/handle_special", data={
-            "message": "Hello & goodbye",
-            "email": "test@example.com",
-            "url": "https://example.com?param=value"
-        })
+        client.post(
+            "/_trigger/handle_special",
+            data={
+                "message": "Hello & goodbye",
+                "email": "test@example.com",
+                "url": "https://example.com?param=value",
+            },
+        )
 
         assert received["message"] == "Hello & goodbye"
         assert received["email"] == "test@example.com"
@@ -196,10 +196,7 @@ class TestSpecialCases:
             return "OK"
 
         client = TestClient(app)
-        client.post("/_trigger/handle_unicode", data={
-            "greeting": "Hello 世界",
-            "emoji": "👋🌍"
-        })
+        client.post("/_trigger/handle_unicode", data={"greeting": "Hello 世界", "emoji": "👋🌍"})
 
         assert received["greeting"] == "Hello 世界"
         assert received["emoji"] == "👋🌍"
@@ -220,7 +217,7 @@ class TestSpecialCases:
         client = TestClient(app)
 
         # Create a temporary file
-        with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
             f.write("test content")
             temp_path = f.name
 
@@ -228,8 +225,7 @@ class TestSpecialCases:
             # Send multipart form data with a file
             with open(temp_path, "rb") as f:
                 response = client.post(
-                    "/_trigger/handle_file",
-                    files={"file": ("test.txt", f, "text/plain")}
+                    "/_trigger/handle_file", files={"file": ("test.txt", f, "text/plain")}
                 )
 
             assert response.status_code == 200

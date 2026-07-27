@@ -40,7 +40,9 @@ _T = TypeVar("_T")
 
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
-_PageDecorator = Callable[[str | None, str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
+_PageDecorator = Callable[
+    [str | None, str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]
+]
 
 
 @runtime_checkable
@@ -111,7 +113,9 @@ def _register_page_route(
         # 1. Page-level favicon (from decorator)
         # 2. App-level favicon (from create_app)
         # 3. Default favicon
-        effective_favicon = pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
+        effective_favicon = (
+            pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
+        )
 
         # Wrap in base template with title and favicon
         templates = app.state.templates
@@ -426,7 +430,9 @@ def create_app(
     return app  # type: ignore[return-value]
 
 
-def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True):
+def run_app(
+    app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True
+):
     """Run the FastAPI application using Uvicorn.
 
     Args:

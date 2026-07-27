@@ -164,7 +164,9 @@ def ChatHistory() -> Div:  # noqa: N802
         Returns:
             list: List of ChatBubble components in display order
         """
-        return [ChatBubble(speaker, message) for speaker, message in reversed(chat_history_state.get())]
+        return [
+            ChatBubble(speaker, message) for speaker, message in reversed(chat_history_state.get())
+        ]
 
     return Div(
         chat_bubbles,

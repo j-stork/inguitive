@@ -92,8 +92,7 @@ class TestQueryParameterExtraction:
 
         client = TestClient(app)
         client.post(
-            "/_trigger/mixed_handler?trigger_param=trigger_value",
-            data={"form_param": "form_value"}
+            "/_trigger/mixed_handler?trigger_param=trigger_value", data={"form_param": "form_value"}
         )
 
         assert trigger_result["trigger_param"] == "trigger_value"
@@ -169,8 +168,7 @@ class TestBackwardCompatibility:
 
         client = TestClient(app)
         client.post(
-            "/_trigger/coexist_handler?trigger_key=trigger_val",
-            data={"form_key": "form_val"}
+            "/_trigger/coexist_handler?trigger_key=trigger_val", data={"form_key": "form_val"}
         )
 
         assert trigger_values["trigger_key"] == "trigger_val"

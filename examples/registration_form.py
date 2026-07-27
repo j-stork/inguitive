@@ -48,7 +48,11 @@ async def register(form_data: dict) -> str:
 
 # --- Helper Functions ---
 def GenderRadio(id: str, value: str, label: str) -> Div:  # noqa: N802
-    return Div(Radio(id=id, name="gender", value=value), Label(label, for_=id), css="flex items-baseline gap-2")
+    return Div(
+        Radio(id=id, name="gender", value=value),
+        Label(label, for_=id),
+        css="flex items-baseline gap-2",
+    )
 
 
 def name_text():
@@ -58,12 +62,18 @@ def name_text():
 
 def email_text():
     """Return email text for display."""
-    return f"Email: {form_state.get().get('email', '')}" if form_state.get().get("email") else "Email:"
+    return (
+        f"Email: {form_state.get().get('email', '')}" if form_state.get().get("email") else "Email:"
+    )
 
 
 def password_text():
     """Return password text for display."""
-    return f"Password: {'*' * len(form_state.get().get('password', ''))}" if form_state.get().get("password") else "Password:"
+    return (
+        f"Password: {'*' * len(form_state.get().get('password', ''))}"
+        if form_state.get().get("password")
+        else "Password:"
+    )
 
 
 def bio_text():
@@ -73,7 +83,11 @@ def bio_text():
 
 def country_text():
     """Return country text for display."""
-    return f"Country: {form_state.get().get('country', '')}" if form_state.get().get("country") else "Country:"
+    return (
+        f"Country: {form_state.get().get('country', '')}"
+        if form_state.get().get("country")
+        else "Country:"
+    )
 
 
 def terms_text():
@@ -83,7 +97,11 @@ def terms_text():
 
 def gender_text():
     """Return gender text for display."""
-    return f"Gender: {form_state.get().get('gender', '')}" if form_state.get().get("gender") else "Gender:"
+    return (
+        f"Gender: {form_state.get().get('gender', '')}"
+        if form_state.get().get("gender")
+        else "Gender:"
+    )
 
 
 # --- Registration Form Component ---
