@@ -4,14 +4,17 @@ import argparse
 import sys
 from pathlib import Path
 
-STARTER_TEMPLATE = '''from inguitive import Text, create_app
+STARTER_TEMPLATE = '''from inguitive import create_app, Div, Text
 
 app = create_app()
 
 
 @app.page("/")
 def home():
-    return Text("Welcome!")
+    return Div(
+        Text("Welcome!"),
+        css="w-full min-h-screen flex justify-center items-center,
+    )
 
 
 if __name__ == "__main__":
