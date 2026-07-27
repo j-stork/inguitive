@@ -14,13 +14,8 @@ app = create_app()
 def home():
     return Div(
         Text("Welcome!"),
-        css="w-full min-h-screen flex justify-center items-center,
+        css="w-full min-h-screen flex justify-center items-center",
     )
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
 """
 
 
