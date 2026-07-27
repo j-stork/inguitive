@@ -4,6 +4,7 @@ Component classes for inguitive framework.
 
 from __future__ import annotations
 
+import re
 import uuid
 from collections.abc import Callable, Mapping
 
@@ -268,8 +269,20 @@ class Link(Component):
         """
         super().__init__(id=id, css=css, **attrs)
         if href:
-            self.attrs["href"] = href
+            self.attrs["href"] = self._safe_url(href)
         self.children = self._normalize_children(children)
+
+    @staticmethod
+    def _safe_url(url: str) -> str:
+        """Return the URL if its scheme is safe, otherwise return '#'.
+
+        Blocks javascript:, vbscript:, and data: URIs that can execute
+        arbitrary code. Leading whitespace is stripped before the check
+        because browsers ignore it when interpreting the scheme.
+        """
+        if re.match(r"(?i)^\s*(javascript|vbscript|data)\s*:", url):
+            return "#"
+        return url
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
