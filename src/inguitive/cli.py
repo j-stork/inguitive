@@ -51,7 +51,13 @@ def run_command(args):
         cmd.append("--reload")
 
     # Execute with same stdout/stderr
-    subprocess.run(cmd, check=True)
+    try:
+        subprocess.run(cmd, check=True)
+    except KeyboardInterrupt:
+        pass
+    except FileNotFoundError:
+        print("Error: uvicorn not found. Make sure uvicorn is installed.", file=sys.stderr)
+        sys.exit(1)
 
 
 def main():
