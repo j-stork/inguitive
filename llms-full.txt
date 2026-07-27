@@ -288,6 +288,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.3.0] - 2026-07-24
+
+### Added
+
+- Favicon parameter for `create_app()` to customize application favicon
+- Default favicon SVG included with the package
+- Warning message when static files cannot be mounted
+- Test coverage for static favicon endpoint
+- Command-line interface (`inguitive init`, `inguitive run`, `inguitive --version`)
+
+### Changed
+
+- Improved static file mounting error handling
+- Code cleanup: consolidated imports, removed duplicates
+
+### Fixed
+
+- Fixed favicon link rendering (removed hardcoded type attribute)
+- Fixed favicon type annotation (removed incorrect Path type)
+- Fixed static mounting edge cases and RuntimeError handling
+
+---
+
 ## [0.2.0] - 2026-07-23
 
 ### Added
@@ -518,7 +541,7 @@ __all__ = [
     &quot;nl2br&quot;,
 ]
 
-__version__ = &quot;0.2.0&quot;
+__version__ = &quot;0.3.0&quot;
 </doc><doc title="Components" desc="All UI component classes (Div, Button, Input, DataTable, etc.) with render/update methods">&quot;&quot;&quot;
 Component classes for inguitive framework.
 &quot;&quot;&quot;
@@ -2513,6 +2536,160 @@ def nl2br(text: str | None) -&gt; str:
     if text is None:
         return &quot;&quot;
     return text.replace(&quot;\r\n&quot;, &quot;&lt;br&gt;&quot;).replace(&quot;\r&quot;, &quot;&lt;br&gt;&quot;).replace(&quot;\n&quot;, &quot;&lt;br&gt;&quot;)
+</doc><doc title="CLI" desc="inguitive command-line interface — init (scaffold app.py) and run (start uvicorn) commands">&quot;&quot;&quot;Command-line interface for inguitive.&quot;&quot;&quot;
+
+import argparse
+import sys
+from pathlib import Path
+
+from rich.console import Console
+from rich.panel import Panel
+
+console = Console()
+error_console = Console(file=sys.stderr)
+
+
+def error_display(message: str, title: str = &quot;Error&quot;):
+    &quot;&quot;&quot;Display an error message in a styled panel.&quot;&quot;&quot;
+    panel = Panel(
+        message,
+        title=&quot;[bold]&quot; + title + &quot;[/bold]&quot;,
+        title_align=&quot;left&quot;,
+        border_style=&quot;red&quot;,
+    )
+    error_console.print(panel)
+
+
+STARTER_TEMPLATE = &quot;&quot;&quot;from inguitive import create_app, Div, Text
+
+app = create_app()
+
+
+@app.page(&quot;/&quot;)
+def home():
+    return Div(
+        Text(&quot;Welcome!&quot;),
+        css=&quot;w-full min-h-screen flex justify-center items-center&quot;,
+    )
+&quot;&quot;&quot;
+
+
+def init_command(args):
+    &quot;&quot;&quot;Handle the init command - creates a new app.py file.&quot;&quot;&quot;
+    target_file = Path(&quot;app.py&quot;)
+
+    if target_file.exists():
+        error_display(
+            &quot;Aborting to avoid overwriting existing file.&quot;,
+            title=f&quot;{target_file} already exists&quot;,
+        )
+        sys.exit(1)
+
+    target_file.write_text(STARTER_TEMPLATE)
+    console.print(f&quot;Created {target_file}&quot;)
+    console.print(&quot;\nRun your app with &#x27;[bold]inguitive run[/bold]&#x27;&quot;)
+
+
+def run_command(args):
+    &quot;&quot;&quot;Handle the run command - executes the app via uvicorn.&quot;&quot;&quot;
+    from inguitive import run_app
+
+    target = args.module if args.module else &quot;app:app&quot;
+
+    # Handle file path conversion
+    if target.endswith(&quot;.py&quot;) and &quot;:&quot; not in target:
+        module_name = target[:-3]  # Remove .py
+        uvicorn_target = f&quot;{module_name}:app&quot;
+    else:
+        uvicorn_target = target
+
+    # Map CLI args to run_app parameters
+    host = args.host if hasattr(args, &quot;host&quot;) else &quot;0.0.0.0&quot;
+    port = args.port if hasattr(args, &quot;port&quot;) else 8000
+    reload = not args.no_reload
+
+    try:
+        run_app(
+            app_module=uvicorn_target,
+            host=host,
+            port=port,
+            reload=reload,
+        )
+    except KeyboardInterrupt:
+        pass
+    except ImportError as e:
+        if &quot;uvicorn&quot; in str(e):
+            error_display(
+                &quot;Make sure uvicorn is installed.&quot;,
+                title=&quot;uvicorn not found&quot;,
+            )
+            sys.exit(1)
+        raise
+
+
+def main():
+    &quot;&quot;&quot;Main entry point for the inguitive CLI.&quot;&quot;&quot;
+    from inguitive import __version__
+
+    parser = argparse.ArgumentParser(
+        prog=&quot;inguitive&quot;,
+        description=&quot;inguitive - A pure Python web framework&quot;,
+    )
+    parser.add_argument(
+        &quot;--version&quot;,
+        &quot;-v&quot;,
+        action=&quot;version&quot;,
+        version=f&quot;%(prog)s {__version__}&quot;,
+    )
+
+    subparsers = parser.add_subparsers(dest=&quot;command&quot;, help=&quot;Available commands&quot;)
+
+    init_parser = subparsers.add_parser(
+        &quot;init&quot;,
+        help=&quot;Create a new inguitive app in the current directory&quot;,
+    )
+    init_parser.set_defaults(func=init_command)
+
+    run_parser = subparsers.add_parser(
+        &quot;run&quot;,
+        help=&quot;Run the inguitive app using uvicorn&quot;,
+    )
+    run_parser.add_argument(
+        &quot;module&quot;,
+        nargs=&quot;?&quot;,
+        default=None,
+        help=&quot;Module:instance to run (e.g., &#x27;app:app&#x27; or &#x27;myapp.py&#x27;). Defaults to &#x27;app:app&#x27;&quot;,
+    )
+    run_parser.add_argument(
+        &quot;--no-reload&quot;,
+        action=&quot;store_true&quot;,
+        default=False,
+        help=&quot;Disable auto-reload&quot;,
+    )
+    run_parser.add_argument(
+        &quot;--host&quot;,
+        default=&quot;0.0.0.0&quot;,
+        help=&quot;Host to bind to (default: 0.0.0.0)&quot;,
+    )
+    run_parser.add_argument(
+        &quot;--port&quot;,
+        type=int,
+        default=8000,
+        help=&quot;Port to bind to (default: 8000)&quot;,
+    )
+    run_parser.set_defaults(func=run_command)
+
+    args = parser.parse_args()
+
+    if args.command is None:
+        parser.print_help()
+        sys.exit(1)
+
+    args.func(args)
+
+
+if __name__ == &quot;__main__&quot;:
+    main()
 </doc><doc title="Counter app" desc="Per-session counter with theme toggle — demonstrates State, listen_to, and dynamic CSS">&quot;&quot;&quot;
 Counter example application using inguitive framework.
 
