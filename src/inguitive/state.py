@@ -20,7 +20,9 @@ _LISTENERS_PREFIX = "__listeners__"
 _state_name_registry: dict[str, State] = {}
 
 # Context variable to track mutated state keys during request handling
-_mutated_states: contextvars.ContextVar[set[str]] = contextvars.ContextVar("mutated_states", default=set())
+_mutated_states: contextvars.ContextVar[set[str]] = contextvars.ContextVar(
+    "mutated_states", default=set()
+)
 
 
 @contextmanager

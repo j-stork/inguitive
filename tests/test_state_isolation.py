@@ -108,7 +108,9 @@ class TestListenerIsolation:
         state.remove_listener("shared-comp")
 
         _set_current_session(session_a)
-        assert "shared-comp" in state.listeners, "Removing listener in Session B should not affect Session A"
+        assert "shared-comp" in state.listeners, (
+            "Removing listener in Session B should not affect Session A"
+        )
 
 
 class TestGlobalNameRegistry:

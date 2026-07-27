@@ -121,7 +121,8 @@ class MemoryBackend(SessionBackend):
 
         # Collect expired session IDs
         expired_ids = [
-            session_id for session_id, session in self._sessions.items()
+            session_id
+            for session_id, session in self._sessions.items()
             if session.last_accessed < expiry_threshold
         ]
 
@@ -135,7 +136,9 @@ class MemoryBackend(SessionBackend):
 class RedisBackend(SessionBackend):
     """Redis-based session backend for production."""
 
-    def __init__(self, redis_url: str = "redis://localhost:6379", ttl_seconds: int = 3600, db: int = 0):
+    def __init__(
+        self, redis_url: str = "redis://localhost:6379", ttl_seconds: int = 3600, db: int = 0
+    ):
         """
         Initialize Redis backend.
 
@@ -155,9 +158,13 @@ class RedisBackend(SessionBackend):
             try:
                 import redis
 
-                self._client = redis.Redis.from_url(self._redis_url, db=self._db, decode_responses=True)
+                self._client = redis.Redis.from_url(
+                    self._redis_url, db=self._db, decode_responses=True
+                )
             except ImportError:
-                raise ImportError("Redis backend requires 'redis' package. Install with: pip install redis")
+                raise ImportError(
+                    "Redis backend requires 'redis' package. Install with: pip install redis"
+                )
         return self._client
 
     def _make_key(self, session_id: SessionId) -> str:

@@ -52,7 +52,9 @@ class Component:
                 if state is not None:
                     state.add_listener(self.id)
 
-    def _resolve(self, value: str | Callable[[], str] | list | dict | tuple) -> str | list | dict | tuple:
+    def _resolve(
+        self, value: str | Callable[[], str] | list | dict | tuple
+    ) -> str | list | dict | tuple:
         """Resolve a potentially dynamic value (callable or static) and escape strings for HTML output."""
         resolved = value() if callable(value) else value
         if isinstance(resolved, markupsafe.Markup):
@@ -83,7 +85,11 @@ class Component:
         # Add id if present
         if self.id:
             resolved_id = self._resolve(self.id)
-            filtered_attrs["id"] = resolved_id if isinstance(resolved_id, markupsafe.Markup) else markupsafe.escape(str(resolved_id))
+            filtered_attrs["id"] = (
+                resolved_id
+                if isinstance(resolved_id, markupsafe.Markup)
+                else markupsafe.escape(str(resolved_id))
+            )
         return " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
 
     def _render_children(self) -> str:
@@ -143,7 +149,9 @@ class Component:
 class Div(Component):
     """HTML div component."""
 
-    def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
+    def __init__(
+        self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs
+    ):
         super().__init__(id=id, css=css, **attrs)
         self.children = self._normalize_children(children)
 
@@ -170,7 +178,9 @@ class Button(Component):
     - redirect: Immediate browser redirect
     """
 
-    def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
+    def __init__(
+        self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs
+    ):
         super().__init__(id=id, css=css, **attrs)
         self.children = self._normalize_children(children)
 
@@ -311,7 +321,11 @@ class Text(Component):
     """
 
     def __init__(
-        self, text: str | Callable[[], str], id: str | None = None, css: str | Callable[[], str] | None = None, **attrs
+        self,
+        text: str | Callable[[], str],
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        **attrs,
     ):
         """Initialize a Text component.
 
@@ -341,7 +355,9 @@ class Text(Component):
 class Icon(Component):
     """SVG icon component."""
 
-    def __init__(self, svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs):
+    def __init__(
+        self, svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs
+    ):
         super().__init__(css=css, **attrs)
         self.svg = svg
 
@@ -392,7 +408,9 @@ class Icon(Component):
         # Resolve the callable if needed, then ensure it is treated as trusted
         # by wrapping in Markup so it is never HTML-escaped.
         raw_svg = self.svg() if callable(self.svg) else self.svg
-        resolved_svg = raw_svg if isinstance(raw_svg, markupsafe.Markup) else markupsafe.Markup(raw_svg)
+        resolved_svg = (
+            raw_svg if isinstance(raw_svg, markupsafe.Markup) else markupsafe.Markup(raw_svg)
+        )
 
         if self.css:
             resolved_css: str = self._resolve(self.css)
@@ -844,7 +862,9 @@ class TemplateComponent(Component):
             resolved_context["css"] = self._resolve(self.css)
 
         # Create Jinja2 environment and render
-        env = jinja2.Environment(loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape(["html", "xml"]))
+        env = jinja2.Environment(
+            loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape(["html", "xml"])
+        )
         template = env.from_string(self.template_str)
         return template.render(**resolved_context)
 
@@ -854,7 +874,9 @@ class TemplateComponent(Component):
             return self.render()
         attrs = self._oob_attrs_str()
         # Render template content
-        env = jinja2.Environment(loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape(["html", "xml"]))
+        env = jinja2.Environment(
+            loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape(["html", "xml"])
+        )
         template = env.from_string(self.template_str)
         resolved_context = {}
         for key, value in self.context.items():
@@ -924,7 +946,10 @@ class DataTable(Component):
         data: list[dict] | Callable[[], list[dict]],
         columns: list[str] | Callable[[], list[str] | None] | None = None,
         id: str | None = None,
-        css: str | Mapping[str, str | Callable[[], str]] | Callable[[], str | Mapping[str, str | Callable[[], str]]] | None = None,
+        css: str
+        | Mapping[str, str | Callable[[], str]]
+        | Callable[[], str | Mapping[str, str | Callable[[], str]]]
+        | None = None,
         listen_to: str | list[str] | None = None,
         **attrs,
     ):
@@ -1031,7 +1056,9 @@ class DataTable(Component):
         row_css = element_css.get("row", self._DEFAULT_ELEMENT_CSS["row"])
 
         # Render thead - escape column names
-        header_cells = "".join(f'<th class="{header_css}">{markupsafe.escape(str(col))}</th>' for col in columns)
+        header_cells = "".join(
+            f'<th class="{header_css}">{markupsafe.escape(str(col))}</th>' for col in columns
+        )
         thead = f"<thead><tr>{header_cells}</tr></thead>"
 
         # Render tbody
@@ -1040,7 +1067,9 @@ class DataTable(Component):
         else:
             rows_html = []
             for row in resolved_data:
-                cells = "".join(f'<td class="{cell_css}">{self._get_value(row, col)}</td>' for col in columns)
+                cells = "".join(
+                    f'<td class="{cell_css}">{self._get_value(row, col)}</td>' for col in columns
+                )
                 rows_html.append(f'<tr class="{row_css}">{cells}</tr>')
             tbody = f"<tbody>{''.join(rows_html)}</tbody>"
 
@@ -1071,7 +1100,11 @@ class DataTable(Component):
         # Add id if present
         if self.id:
             resolved_id = self._resolve(self.id)
-            filtered_attrs["id"] = resolved_id if isinstance(resolved_id, markupsafe.Markup) else markupsafe.escape(str(resolved_id))
+            filtered_attrs["id"] = (
+                resolved_id
+                if isinstance(resolved_id, markupsafe.Markup)
+                else markupsafe.escape(str(resolved_id))
+            )
 
         attrs = " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
 

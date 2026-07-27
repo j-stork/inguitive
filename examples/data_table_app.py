@@ -56,12 +56,36 @@ BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_3
 # --- Sample Data ---
 # Employee data as list of dictionaries
 EMPLOYEE_DATA = [
-    {"id": 1, "name": "Alice Johnson", "department": "Engineering", "salary": 75000, "status": "Active"},
+    {
+        "id": 1,
+        "name": "Alice Johnson",
+        "department": "Engineering",
+        "salary": 75000,
+        "status": "Active",
+    },
     {"id": 2, "name": "Charlie Brown", "department": "Sales", "salary": 65000, "status": "Active"},
-    {"id": 3, "name": "Bob Smith", "department": "Engineering", "salary": 80000, "status": "Active"},
-    {"id": 4, "name": "Diana Prince", "department": "Marketing", "salary": 68000, "status": "On Leave"},
+    {
+        "id": 3,
+        "name": "Bob Smith",
+        "department": "Engineering",
+        "salary": 80000,
+        "status": "Active",
+    },
+    {
+        "id": 4,
+        "name": "Diana Prince",
+        "department": "Marketing",
+        "salary": 68000,
+        "status": "On Leave",
+    },
     {"id": 5, "name": "Frank Castle", "department": "HR", "salary": 72000, "status": "Active"},
-    {"id": 6, "name": "Eve Adams", "department": "Engineering", "salary": 85000, "status": "Active"},
+    {
+        "id": 6,
+        "name": "Eve Adams",
+        "department": "Engineering",
+        "salary": 85000,
+        "status": "Active",
+    },
 ]
 
 # State to store table data (allows dynamic updates)
@@ -136,7 +160,9 @@ def filter_employees(form_data: dict):
 
     if search_text:
         # Filter data: search across all fields
-        filtered = [e for e in EMPLOYEE_DATA if any(search_text in str(v).lower() for v in e.values())]
+        filtered = [
+            e for e in EMPLOYEE_DATA if any(search_text in str(v).lower() for v in e.values())
+        ]
         filter_text_state.set(search_text)
     else:
         # Empty search = show all (clear filter)
