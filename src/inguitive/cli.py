@@ -4,6 +4,10 @@ import argparse
 import sys
 from pathlib import Path
 
+from rich.console import Console
+
+console = Console()
+
 STARTER_TEMPLATE = """from inguitive import create_app, Div, Text
 
 app = create_app()
@@ -23,13 +27,13 @@ def init_command(args):
     target_file = Path("app.py")
 
     if target_file.exists():
-        print(f"Error: {target_file} already exists.", file=sys.stderr)
-        print("Aborting to avoid overwriting existing file.", file=sys.stderr)
+        console.print(f"Error: {target_file} already exists.", file=sys.stderr)
+        console.print("Aborting to avoid overwriting existing file.", file=sys.stderr)
         sys.exit(1)
 
     target_file.write_text(STARTER_TEMPLATE)
-    print(f"Created {target_file}")
-    print("\nRun your app with 'inguitive run'")
+    console.print(f"Created {target_file}")
+    console.print("\nRun your app with '[bold]inguitive run[/bold]'")
 
 
 def run_command(args):
@@ -61,7 +65,7 @@ def run_command(args):
         pass
     except ImportError as e:
         if "uvicorn" in str(e):
-            print("Error: uvicorn not found. Make sure uvicorn is installed.", file=sys.stderr)
+            console.print("Error: uvicorn not found. Make sure uvicorn is installed.", file=sys.stderr)
             sys.exit(1)
         raise
 
