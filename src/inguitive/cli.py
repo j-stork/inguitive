@@ -1,10 +1,11 @@
 """Command-line interface for inguitive."""
 
 import argparse
+import subprocess
 import sys
 from pathlib import Path
 
-STARTER_TEMPLATE = '''from inguitive import create_app, Div, Text
+STARTER_TEMPLATE = """from inguitive import create_app, Div, Text
 
 app = create_app()
 
@@ -20,7 +21,7 @@ def home():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
-'''
+"""
 
 
 def init_command(args):
@@ -38,6 +39,26 @@ def init_command(args):
     print("  uvicorn app:app --reload")
 
 
+def run_command(args):
+    """Handle the run command - executes the app via uvicorn."""
+    target = args.module if args.module else "app:app"
+
+    # Handle file path conversion
+    if target.endswith(".py") and ":" not in target:
+        module_name = target[:-3]  # Remove .py
+        uvicorn_target = f"{module_name}:app"
+    else:
+        uvicorn_target = target
+
+    # Build command
+    cmd = ["uvicorn", uvicorn_target]
+    if not args.no_reload:
+        cmd.append("--reload")
+
+    # Execute with same stdout/stderr
+    subprocess.run(cmd, check=True)
+
+
 def main():
     """Main entry point for the inguitive CLI."""
     parser = argparse.ArgumentParser(
@@ -52,6 +73,24 @@ def main():
         help="Create a new inguitive app in the current directory",
     )
     init_parser.set_defaults(func=init_command)
+
+    run_parser = subparsers.add_parser(
+        "run",
+        help="Run the inguitive app using uvicorn",
+    )
+    run_parser.add_argument(
+        "module",
+        nargs="?",
+        default=None,
+        help="Module:instance to run (e.g., 'app:app' or 'myapp.py'). Defaults to 'app:app'",
+    )
+    run_parser.add_argument(
+        "--no-reload",
+        action="store_true",
+        default=False,
+        help="Disable auto-reload",
+    )
+    run_parser.set_defaults(func=run_command)
 
     args = parser.parse_args()
 
