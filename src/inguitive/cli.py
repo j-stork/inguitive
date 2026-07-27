@@ -5,8 +5,23 @@ import sys
 from pathlib import Path
 
 from rich.console import Console
+from rich.panel import Panel
 
 console = Console()
+error_console = Console(file=sys.stderr)
+
+
+def error_display(message: str, title: str = "Error", exit_code: int | None = None):
+    """Display an error message in a styled panel and optionally exit."""
+    panel = Panel(
+        message,
+        title="[bold red]" + title + "[/bold red]",
+        title_align="left",
+        border_style="red"
+    )
+    error_console.print(panel)
+    if exit_code is not None:
+        sys.exit(exit_code)
 
 STARTER_TEMPLATE = """from inguitive import create_app, Div, Text
 
@@ -27,9 +42,11 @@ def init_command(args):
     target_file = Path("app.py")
 
     if target_file.exists():
-        console.print(f"Error: {target_file} already exists.", file=sys.stderr)
-        console.print("Aborting to avoid overwriting existing file.", file=sys.stderr)
-        sys.exit(1)
+        error_display(
+            "Aborting to avoid overwriting existing file.",
+            title=f"{target_file} already exists",
+            exit_code=1
+        )
 
     target_file.write_text(STARTER_TEMPLATE)
     console.print(f"Created {target_file}")
@@ -65,8 +82,11 @@ def run_command(args):
         pass
     except ImportError as e:
         if "uvicorn" in str(e):
-            console.print("Error: uvicorn not found. Make sure uvicorn is installed.", file=sys.stderr)
-            sys.exit(1)
+            error_display(
+                "Make sure uvicorn is installed.",
+                title="uvicorn not found",
+                exit_code=1
+            )
         raise
 
 
