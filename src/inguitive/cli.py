@@ -66,7 +66,9 @@ def run_command(args):
     cwd = str(Path.cwd())
     existing_pythonpath = os.environ.get("PYTHONPATH", "")
     if cwd not in existing_pythonpath.split(os.pathsep):
-        os.environ["PYTHONPATH"] = f"{cwd}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else cwd
+        os.environ["PYTHONPATH"] = (
+            f"{cwd}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else cwd
+        )
 
     target = args.module if args.module else "app:app"
 

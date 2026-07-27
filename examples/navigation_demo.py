@@ -112,7 +112,11 @@ def ContentB():  # noqa: N802
     """Return content variant B."""
     return Div(
         PageHeader("Page 1 - Content B", color="white"),
-        Div(SwitchPageButton(href="/page2", label="Go to Page 2"), SwitchContentButton(), css="grid grid-cols-2 gap-6"),
+        Div(
+            SwitchPageButton(href="/page2", label="Go to Page 2"),
+            SwitchContentButton(),
+            css="grid grid-cols-2 gap-6",
+        ),
         Div(
             Text(
                 "Click 'Go to Page 2' to navigate to Page 2. Watch how the URL in your browser's address bar changes.",
@@ -138,6 +142,7 @@ def ContentB():  # noqa: N802
 def dynamic_content():
     """Return content A or B based on content_state."""
     return ContentA() if content_state.get() == "a" else ContentB()
+
 
 def Page1():  # noqa: N802
     """Page 1 demonstrating traditional navigation and SPA content switching."""

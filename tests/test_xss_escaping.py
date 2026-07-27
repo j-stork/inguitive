@@ -27,7 +27,7 @@ from inguitive.session import (
     set_session_backend,
 )
 from inguitive.state import State
-from inguitive.svg import MOON, SUN
+from inguitive.svg import MOON
 
 
 @pytest.fixture(autouse=True)
@@ -267,7 +267,7 @@ class TestCheckboxRadioComponents:
 
     def test_checkbox_id_escaping(self):
         """Test that Checkbox id is escaped."""
-        component = Checkbox(id='<script>alert(1)</script>', checked=True)
+        component = Checkbox(id="<script>alert(1)</script>", checked=True)
         html = component.render()
         assert "&lt;script&gt;" in html
         assert "<script>" not in html
@@ -292,7 +292,7 @@ class TestIconComponent:
 
     def test_icon_with_css_escaping(self):
         """Test that CSS class is escaped."""
-        component = Icon(MOON, css='<script>alert(1)</script>')
+        component = Icon(MOON, css="<script>alert(1)</script>")
         html = component.render()
         # The CSS should be escaped in the class attribute
         assert "&lt;script&gt;" in html
@@ -356,11 +356,11 @@ class TestStateBasedContent:
         """Test that state updates still escape content."""
         state = State("<script>alert(1)</script>", "test_state")
         component = Text(state.get, listen_to="test_state")
-        
+
         # Initial render
         html1 = component.render()
         assert "&lt;script&gt;" in html1
-        
+
         # Update state
         state.set("<img src=x onerror=alert(1)>")
         html2 = component.render()
@@ -373,7 +373,7 @@ class TestNoDoubleEscaping:
 
     def test_already_escaped_content(self):
         """Test that already-escaped content is escaped again (expected behavior).
-        
+
         To avoid double-escaping, use markupsafe.Markup to wrap pre-escaped content.
         """
         already_escaped = "&lt;script&gt;alert(1)&lt;/script&gt;"

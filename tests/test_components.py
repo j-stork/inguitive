@@ -268,7 +268,12 @@ class TestDataTable:
         from inguitive.components import DataTable
 
         data = [{"name": "Alice", "age": 30}]
-        css_dict = {"table": "w-full border-2", "header": "bg-blue-500 text-white", "cell": "p-2", "row": "bg-gray-100"}
+        css_dict = {
+            "table": "w-full border-2",
+            "header": "bg-blue-500 text-white",
+            "cell": "p-2",
+            "row": "bg-gray-100",
+        }
         table = DataTable(data=data, css=css_dict)
         html = table.render()
 
@@ -347,7 +352,9 @@ class TestDataTable:
         from inguitive.state import State
 
         state = State([{"name": "Alice"}], "test_table_state")
-        table = DataTable(data=state.get, listen_to="test_table_state", css={"header": "bg-orange-500"})
+        table = DataTable(
+            data=state.get, listen_to="test_table_state", css={"header": "bg-orange-500"}
+        )
         html = table.render()
 
         assert "Alice" in html

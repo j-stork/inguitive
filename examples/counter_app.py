@@ -40,8 +40,12 @@ COLOR_900 = f"{COLOR_BASE}-900"
 COLOR_BRAND_1 = "blue-700"
 COLOR_BRAND_2 = "fuchsia-600"
 BUTTON_SHAPE = "p-3 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
-BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100}"
-BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900}"
+BUTTON_PRIMARY = (
+    f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100}"
+)
+BUTTON_SECONDARY = (
+    f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900}"
+)
 
 
 # --- Trigger Handlers ---
