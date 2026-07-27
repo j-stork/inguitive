@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-07-27
+
+### Added
+
+- Command-line interface (`inguitive init`, `inguitive run`, `inguitive --version`)
+- `inguitive init` scaffolds a ready-to-run `app.py` in the current directory
+- `inguitive run` starts uvicorn with auto-reload; supports `--host`, `--port`, and `--no-reload` flags
+- Rich-styled error panels for all CLI error output
+
+---
+
 ## [0.3.0] - 2026-07-24
 
 ### Added
