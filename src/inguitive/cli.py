@@ -1,6 +1,7 @@
 """Command-line interface for inguitive."""
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -55,6 +56,17 @@ def init_command(args):
 def run_command(args):
     """Handle the run command - executes the app via uvicorn."""
     from inguitive import run_app
+
+    # Ensure the CWD is importable by uvicorn's reloader subprocess.
+    # Mirrors what the uvicorn CLI does; also sets PYTHONPATH so that
+    # subprocess spawned via multiprocessing 'spawn' (macOS, Windows)
+    # inherits the path without relying on sys.path propagation.
+    if "" not in sys.path:
+        sys.path.insert(0, "")
+    cwd = str(Path.cwd())
+    existing_pythonpath = os.environ.get("PYTHONPATH", "")
+    if cwd not in existing_pythonpath.split(os.pathsep):
+        os.environ["PYTHONPATH"] = f"{cwd}{os.pathsep}{existing_pythonpath}" if existing_pythonpath else cwd
 
     target = args.module if args.module else "app:app"
 
