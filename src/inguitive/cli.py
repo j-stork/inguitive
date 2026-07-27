@@ -17,11 +17,12 @@ def error_display(message: str, title: str = "Error", exit_code: int | None = No
         message,
         title="[bold]" + title + "[/bold]",
         title_align="left",
-        border_style="red"
+        border_style="red",
     )
     error_console.print(panel)
     if exit_code is not None:
         sys.exit(exit_code)
+
 
 STARTER_TEMPLATE = """from inguitive import create_app, Div, Text
 
@@ -45,7 +46,7 @@ def init_command(args):
         error_display(
             "Aborting to avoid overwriting existing file.",
             title=f"{target_file} already exists",
-            exit_code=1
+            exit_code=1,
         )
 
     target_file.write_text(STARTER_TEMPLATE)
@@ -67,8 +68,8 @@ def run_command(args):
         uvicorn_target = target
 
     # Map CLI args to run_app parameters
-    host = args.host if hasattr(args, 'host') else '0.0.0.0'
-    port = args.port if hasattr(args, 'port') else 8000
+    host = args.host if hasattr(args, "host") else "0.0.0.0"
+    port = args.port if hasattr(args, "port") else 8000
     reload = not args.no_reload
 
     try:
@@ -76,7 +77,7 @@ def run_command(args):
             app_module=uvicorn_target,
             host=host,
             port=port,
-            reload=reload
+            reload=reload,
         )
     except KeyboardInterrupt:
         pass
@@ -85,15 +86,16 @@ def run_command(args):
             error_display(
                 "Make sure uvicorn is installed.",
                 title="uvicorn not found",
-                exit_code=1
+                exit_code=1,
             )
+            sys.exit(1)
         raise
 
 
 def main():
     """Main entry point for the inguitive CLI."""
     from inguitive import __version__
-    
+
     parser = argparse.ArgumentParser(
         prog="inguitive",
         description="inguitive - A pure Python web framework",
