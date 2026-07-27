@@ -29,8 +29,7 @@ def init_command(args):
 
     target_file.write_text(STARTER_TEMPLATE)
     print(f"Created {target_file}")
-    print("\nTo run your app:")
-    print("  inguitive run")
+    print("\nRun your app with 'inguitive run'")
 
 
 def run_command(args):
