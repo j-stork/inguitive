@@ -288,6 +288,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.1] - 2026-07-27
+
+### Fixed
+
+- Fixed `inguitive run` failing to import the app module on all platforms by inserting CWD into `sys.path` and `PYTHONPATH` before starting uvicorn
+
+---
+
 ## [0.4.0] - 2026-07-27
 
 ### Added
