@@ -30,7 +30,7 @@ def init_command(args):
     target_file.write_text(STARTER_TEMPLATE)
     print(f"Created {target_file}")
     print("\nTo run your app:")
-    print("  uvicorn app:app --reload")
+    print("  inguitive run")
 
 
 def run_command(args):
