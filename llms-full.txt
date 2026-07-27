@@ -288,6 +288,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-07-27
+
+### Added
+
+- Command-line interface (`inguitive init`, `inguitive run`, `inguitive --version`)
+- `inguitive init` scaffolds a ready-to-run `app.py` in the current directory
+- `inguitive run` starts uvicorn with auto-reload; supports `--host`, `--port`, and `--no-reload` flags
+- Rich-styled error panels for all CLI error output
+
+---
+
 ## [0.3.0] - 2026-07-24
 
 ### Added
@@ -541,7 +552,7 @@ __all__ = [
     &quot;nl2br&quot;,
 ]
 
-__version__ = &quot;0.3.0&quot;
+__version__ = &quot;0.4.0&quot;
 </doc><doc title="Components" desc="All UI component classes (Div, Button, Input, DataTable, etc.) with render/update methods">&quot;&quot;&quot;
 Component classes for inguitive framework.
 &quot;&quot;&quot;
