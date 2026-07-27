@@ -1053,7 +1053,8 @@ class DataTable(Component):
 
         # Add id if present
         if self.id:
-            filtered_attrs["id"] = self.id
+            resolved_id = self._resolve(self.id)
+            filtered_attrs["id"] = resolved_id if isinstance(resolved_id, markupsafe.Markup) else markupsafe.escape(str(resolved_id))
 
         attrs = " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
 
