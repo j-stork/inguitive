@@ -19,6 +19,7 @@ inguitive lets Python developers define pages and trigger handlers entirely in P
 - [HTMX helpers](src/inguitive/htmx.py): update_components() — renders components as OOB HTML for partial page updates
 - [Trigger](src/inguitive/trigger.py): get_trigger_args() — access trigger_args dict inside a trigger handler
 - [Utils](src/inguitive/utils.py): nl2br() and other general helpers
+- [CLI](src/inguitive/cli.py): inguitive command-line interface — init (scaffold app.py) and run (start uvicorn) commands
 
 ## Examples
 
