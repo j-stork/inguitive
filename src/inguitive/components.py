@@ -375,7 +375,11 @@ class Icon(Component):
         return f'<svg class="{css_value}">{svg_str}'
 
     def render(self) -> str:
-        resolved_svg: str = self._resolve(self.svg)
+        # SVG content is always developer-supplied markup, never user input.
+        # Resolve the callable if needed, then ensure it is treated as trusted
+        # by wrapping in Markup so it is never HTML-escaped.
+        raw_svg = self.svg() if callable(self.svg) else self.svg
+        resolved_svg = raw_svg if isinstance(raw_svg, markupsafe.Markup) else markupsafe.Markup(raw_svg)
 
         if self.css:
             resolved_css: str = self._resolve(self.css)
