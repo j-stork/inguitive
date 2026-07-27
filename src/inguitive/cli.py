@@ -11,8 +11,8 @@ console = Console()
 error_console = Console(file=sys.stderr)
 
 
-def error_display(message: str, title: str = "Error", exit_code: int | None = None):
-    """Display an error message in a styled panel and optionally exit."""
+def error_display(message: str, title: str = "Error"):
+    """Display an error message in a styled panel."""
     panel = Panel(
         message,
         title="[bold]" + title + "[/bold]",
@@ -20,8 +20,6 @@ def error_display(message: str, title: str = "Error", exit_code: int | None = No
         border_style="red",
     )
     error_console.print(panel)
-    if exit_code is not None:
-        sys.exit(exit_code)
 
 
 STARTER_TEMPLATE = """from inguitive import create_app, Div, Text
@@ -46,8 +44,8 @@ def init_command(args):
         error_display(
             "Aborting to avoid overwriting existing file.",
             title=f"{target_file} already exists",
-            exit_code=1,
         )
+        sys.exit(1)
 
     target_file.write_text(STARTER_TEMPLATE)
     console.print(f"Created {target_file}")
@@ -86,7 +84,6 @@ def run_command(args):
             error_display(
                 "Make sure uvicorn is installed.",
                 title="uvicorn not found",
-                exit_code=1,
             )
             sys.exit(1)
         raise
