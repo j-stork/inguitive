@@ -1,5 +1,6 @@
 """Comprehensive XSS escaping tests for inguitive components."""
 
+import markupsafe
 import pytest
 
 from inguitive.components import (
@@ -385,7 +386,6 @@ class TestNoDoubleEscaping:
 
     def test_markup_content(self):
         """Test that Markup content is not escaped."""
-        import markupsafe
         markup = markupsafe.Markup("<b>Bold</b>")
         component = Text(markup)
         html = component.render()
@@ -433,7 +433,3 @@ class TestEdgeCases:
         html = component.render()
         assert "&lt;script&gt;" in html
         assert "<script>" not in html
-
-
-# Import markupsafe for use in tests
-import markupsafe
