@@ -41,10 +41,7 @@ class TestAsyncPageHandlers:
 
         @app.page("/async-component")
         async def async_component_page():
-            return Div(
-                Text("Async Component"),
-                Button("Click me")
-            )
+            return Div(Text("Async Component"), Button("Click me"))
 
         client = TestClient(app)
         response = client.get("/async-component")
@@ -80,7 +77,7 @@ class TestAsyncTriggerHandlers:
         def counter_page():
             return Div(
                 Text(lambda: f"Count: {counter_state.get()}", listen_to="counter_state"),
-                id="async-counter-display"
+                id="async-counter-display",
             )
 
         @app.trigger_handler
@@ -128,12 +125,15 @@ class TestAsyncTriggerHandlers:
             return "OK"
 
         client = TestClient(app)
-        response = client.post("/_trigger/async_complex_handler", data={
-            "user_name": "John",
-            "user_email": "john@example.com",
-            "settings_theme": "dark",
-            "settings_notifications": "enabled"
-        })
+        response = client.post(
+            "/_trigger/async_complex_handler",
+            data={
+                "user_name": "John",
+                "user_email": "john@example.com",
+                "settings_theme": "dark",
+                "settings_notifications": "enabled",
+            },
+        )
         assert response.status_code == 200
         assert received["user_name"] == "John"
         assert received["user_email"] == "john@example.com"

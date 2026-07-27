@@ -18,19 +18,19 @@ class TestRedisBackendSerialization:
         """
         # Create a session with components in registry
         session = _create_session()
-        session.component_registry['test_button'] = Button('Test')
-        session.state_registry['test_state'] = 'some_state'
-        session.data_registry['test_data'] = 'some_data'
+        session.component_registry["test_button"] = Button("Test")
+        session.state_registry["test_state"] = "some_state"
+        session.data_registry["test_data"] = "some_data"
 
         # Should serialize without TypeError
         serialized = session.to_dict()
         json_str = json.dumps(serialized)  # This would fail before the fix
 
         # Verify only session_id and data_registry are serialized
-        assert 'session_id' in serialized
-        assert 'data_registry' in serialized
-        assert 'component_registry' not in serialized
-        assert 'state_registry' not in serialized
+        assert "session_id" in serialized
+        assert "data_registry" in serialized
+        assert "component_registry" not in serialized
+        assert "state_registry" not in serialized
 
         # Should deserialize correctly
         deserialized = Session.from_dict(json.loads(json_str))
@@ -42,11 +42,11 @@ class TestRedisBackendSerialization:
     def test_session_with_complex_data_serialization(self):
         """Test serialization with various data types in data_registry."""
         session = _create_session()
-        session.data_registry['string'] = 'test'
-        session.data_registry['number'] = 42
-        session.data_registry['list'] = [1, 2, 3]
-        session.data_registry['dict'] = {'key': 'value'}
-        session.data_registry['nested'] = {'list': [1, 2], 'dict': {'a': 1}}
+        session.data_registry["string"] = "test"
+        session.data_registry["number"] = 42
+        session.data_registry["list"] = [1, 2, 3]
+        session.data_registry["dict"] = {"key": "value"}
+        session.data_registry["nested"] = {"list": [1, 2], "dict": {"a": 1}}
 
         # Should serialize without error
         serialized = session.to_dict()
@@ -73,7 +73,7 @@ class TestMemoryBackendInstanceIsolation:
 
         # Save a session to backend1
         session1 = _create_session()
-        session1.data_registry['test'] = 'value1'
+        session1.data_registry["test"] = "value1"
         backend1.save_session(session1)
 
         # backend2 should NOT have this session
@@ -82,11 +82,11 @@ class TestMemoryBackendInstanceIsolation:
         # backend1 should have it
         retrieved1 = backend1.get_session(session1.session_id)
         assert retrieved1 is not None
-        assert retrieved1.data_registry['test'] == 'value1'
+        assert retrieved1.data_registry["test"] == "value1"
 
         # Save a session to backend2
         session2 = _create_session()
-        session2.data_registry['test'] = 'value2'
+        session2.data_registry["test"] = "value2"
         backend2.save_session(session2)
 
         # backend1 should still NOT have session2
@@ -94,7 +94,7 @@ class TestMemoryBackendInstanceIsolation:
         # backend2 should have session2
         retrieved2 = backend2.get_session(session2.session_id)
         assert retrieved2 is not None
-        assert retrieved2.data_registry['test'] == 'value2'
+        assert retrieved2.data_registry["test"] == "value2"
 
     def test_multiple_instances_independent(self):
         """Test that operations on one backend don't affect others."""
@@ -134,13 +134,13 @@ class TestMemoryBackendBasicOperations:
 
         # Create and save a session
         session = _create_session()
-        session.data_registry['key'] = 'value'
+        session.data_registry["key"] = "value"
         backend.save_session(session)
 
         # Retrieve the session
         retrieved = backend.get_session(session.session_id)
         assert retrieved is not None
-        assert retrieved.data_registry['key'] == 'value'
+        assert retrieved.data_registry["key"] == "value"
 
     def test_delete_session(self):
         """Test session deletion."""
@@ -163,29 +163,29 @@ class TestMemoryBackendBasicOperations:
 
         # Create and save a session
         session = _create_session()
-        session.data_registry['key'] = 'original'
+        session.data_registry["key"] = "original"
         backend.save_session(session)
 
         # Modify and save again
-        session.data_registry['key'] = 'updated'
+        session.data_registry["key"] = "updated"
         backend.save_session(session)
 
         # Retrieve and verify update
         retrieved = backend.get_session(session.session_id)
         assert retrieved is not None
-        assert retrieved.data_registry['key'] == 'updated'
+        assert retrieved.data_registry["key"] == "updated"
 
     def test_get_nonexistent_session(self):
         """Test that getting a non-existent session returns None."""
         backend = MemoryBackend()
-        assert backend.get_session('nonexistent-id') is None
+        assert backend.get_session("nonexistent-id") is None
 
     def test_delete_nonexistent_session(self):
         """Test that deleting a non-existent session doesn't raise an error."""
         backend = MemoryBackend()
         # Should not raise
-        backend.delete_session('nonexistent-id')
-        assert backend.get_session('nonexistent-id') is None
+        backend.delete_session("nonexistent-id")
+        assert backend.get_session("nonexistent-id") is None
 
 
 class TestMemoryBackendSessionExpiry:
@@ -357,8 +357,8 @@ class TestMemoryBackendSessionExpiry:
 
         # Serialize
         serialized = session.to_dict()
-        assert 'last_accessed' in serialized
-        assert serialized['last_accessed'] == original_timestamp
+        assert "last_accessed" in serialized
+        assert serialized["last_accessed"] == original_timestamp
 
         # Deserialize
         json_str = json.dumps(serialized)
