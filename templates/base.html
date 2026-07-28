@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="de">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>INGUITIVE + HTMX</title>
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- HTMX -->
+        <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    </head>
+    <body>
+        {{ content | safe }}  <!-- WICHTIG: | safe, damit HTML nicht escaped wird! -->
+        <!-- Dummy target for HTMX POST requests -->
+        <div id="hx-target" style="display: none;"></div>
+    </body>
+</html>
+

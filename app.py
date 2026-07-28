@@ -25,6 +25,7 @@ class Component:
     def render(self) -> str:
         raise NotImplementedError
 
+
 class Div(Component):
     def __init__(self, children=None, cls: str = "", **attrs):
         super().__init__(cls=cls, **attrs)
@@ -38,6 +39,7 @@ class Div(Component):
         )
         return f"<div {attrs}>{children_html}</div>"
 
+
 class Button(Component):
     def __init__(self, text: str, cls: str = "", **attrs):
         super().__init__(cls=cls, **attrs)
@@ -46,6 +48,7 @@ class Button(Component):
     def render(self) -> str:
         attrs = self._get_attrs_str()
         return f"<button {attrs}>{self.text}</button>"
+
 
 class Label(Component):
     def __init__(self, text: str, cls: str = "", **attrs):
@@ -56,32 +59,34 @@ class Label(Component):
         attrs = self._get_attrs_str()
         return f"<p {attrs}>{self.text}</p>"
 
-# --- Counter-Component (mit HTMX) ---
+
+# --- Counter-Component (with HTMX) ---
 def Counter():
     return Div([
-        # Label mit ID für HTMX-Targeting
+        # Label with ID for HTMX targeting
         Label(f"Count: {counter_state['count']}", id="counter-label", cls="text-xl"),
-        # Button mit HTMX-Attributen
+        # Button with HTMX attributes
         Button(
             "+1",
             **{
-                "hx-post": "/increment",      # POST an /increment
-                "hx-target": "#counter-label", # Ziel: das Label mit ID "counter-label"
-                "hx-swap": "innerHTML",        # Ersetze nur den Inhalt des Labels
+                "hx-post": "/increment",
+                "hx-target": "#hx-target",
+                "hx-swap-oob": "true",
                 "cls": "bg-blue-500 text-white p-2 rounded mt-2"
             }
         ),
-        # Button zum Zurücksetzen
+        # Reset button
         Button(
             "Reset",
             **{
-                "hx-post": "/reset",          # POST an /reset
-                "hx-target": "#counter-label", # Ziel: das Label mit ID "counter-label"
-                "hx-swap": "innerHTML",        # Ersetze nur den Inhalt des Labels
+                "hx-post": "/reset",
+                "hx-target": "#hx-target",
+                "hx-swap-oob": "true",
                 "cls": "bg-red-500 text-white p-2 rounded mt-2"
             }
         )
     ], cls="p-4 max-w-xs mx-auto")
+
 
 # --- Routes ---
 @app.get("/", response_class=HTMLResponse)
@@ -91,17 +96,20 @@ def home(request: Request):
         {"request": request, "content": Counter().render()}
     )
 
+
 @app.post("/increment", response_class=HTMLResponse)
 def increment():
     counter_state["count"] += 1
-    # Gib NUR den neuen Inhalt des Labels zurück (kein vollständiges HTML!)
-    return f'<p class="text-xl">Count: {counter_state["count"]}</p>'
+    # Return OOB HTML to update the label
+    return f'<p id="counter-label" class="text-xl" hx-swap-oob="true">Count: {counter_state["count"]}</p>'
+
 
 @app.post("/reset", response_class=HTMLResponse)
 def reset():
     counter_state["count"] = 0
-    # Gib NUR den neuen Inhalt des Labels zurück (kein vollständiges HTML!)
-    return f'<p class="text-xl">Count: {counter_state["count"]}</p>'
+    # Return OOB HTML to update the label
+    return f'<p id="counter-label" class="text-xl" hx-swap-oob="true">Count: {counter_state["count"]}</p>'
+
 
 # --- Start ---
 if __name__ == "__main__":
