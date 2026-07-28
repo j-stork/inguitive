@@ -48,6 +48,9 @@ class Component:
         resolved_cls = self._resolve(self.cls)
         if resolved_cls:
             filtered_attrs['class'] = resolved_cls
+        # Add id if present
+        if self.id:
+            filtered_attrs['id'] = self.id
         return " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
 
     def render(self) -> str:
@@ -95,9 +98,7 @@ class Label(Component):
             return self.render()
         resolved_text = self._resolve(self.text)
         attrs = self._get_attrs_str()
-        # Ensure id is present and add hx-swap-oob
-        if 'id=' not in attrs:
-            attrs = f'id="{self.id}" {attrs}'.strip()
+        # Add hx-swap-oob attribute
         attrs = f'hx-swap-oob="true" {attrs}'.strip()
         return f"<p {attrs}>{resolved_text}</p>"
 
