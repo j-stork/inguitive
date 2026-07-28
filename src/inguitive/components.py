@@ -2,6 +2,8 @@
 Component classes for INGUITIVE framework.
 """
 
+from __future__ import annotations
+
 import uuid
 from typing import Callable
 from inguitive.session import get_component_registry, get_state_registry
