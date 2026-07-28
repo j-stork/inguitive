@@ -144,28 +144,6 @@ Button("Save", trigger="save_form")
 Button("Like", trigger="like_post", trigger_args={"id": "123"})
 ```
 
-## Comparison with FastHTML
-
-INGUITIVE and FastHTML both enable Python-only web development, but they have different architectures and trade-offs.
-
-| Feature | INGUITIVE | FastHTML |
-|---------|-----------|----------|
-| **Paradigm** | Component-based with reactive state | Direct HTML generation with functional helpers |
-| **State Management** | Automatic - components re-render when observed state changes | Manual - you control when and how HTML is regenerated |
-| **Component Model** | Class-based components with `render()` and `update()` methods | Function-based with `htmx` attributes added directly |
-| **Reactivity** | Built-in via `State` objects and `listen_to` parameter | Manual - you write the update logic explicitly |
-| **Routing** | Decorator-based (`@app.page`, `@app.trigger_handler`) | Route functions return HTML strings |
-| **Session Isolation** | Automatic per-user session registries | Manual or framework-agnostic |
-| **Styling** | Tailwind CSS first-class support | Any CSS works, Tailwind common |
-| **Learning Curve** | Higher - requires understanding component lifecycle | Lower - more direct and explicit |
-| **Best For** | SPAs, complex stateful apps, teams wanting structure | Simple sites, maximum control, minimal abstractions |
-
-**Choose INGUITIVE when:** You want reactive components that automatically update, clean separation of UI and business logic, and are building applications with complex state interactions.
-
-**Choose FastHTML when:** You prefer explicit control over every HTML generation, want minimal framework overhead, or are building content-heavy sites where manual control is preferred.
-
-Both frameworks can coexist - INGUITIVE's reactive components can be used alongside FastHTML's direct approach in the same project.
-
 ## Project Structure
 
 ```
