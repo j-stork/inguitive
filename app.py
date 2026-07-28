@@ -156,19 +156,15 @@ def get_counter_style():
     return base
 
 
-# --- Counter Label (fully dynamic) ---
-CounterLabel = Label(
-    text=lambda: f"Count: {counter_state.get()}",
-    id="counter-label",
-    cls=get_counter_style,
-    listen_to="counter"  # Listen to state named "counter"
-)
-
-
 # --- Counter Component ---
 def Counter():
     return Div([
-        CounterLabel,
+        Label(
+            text=lambda: f"Count: {counter_state.get()}",
+            id="counter-label",
+            cls=get_counter_style,
+            listen_to="counter"
+        ),
         Button("+1", on_click="increment", cls="bg-blue-500 text-white p-2 rounded mt-2"),
         Button("Reset", on_click="reset", cls="bg-red-500 text-white p-2 rounded mt-2")
     ], id="counter", cls="p-4 max-w-xs mx-auto")
