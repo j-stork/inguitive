@@ -204,7 +204,7 @@ INGUITIVE sessions are created automatically on first request and persist across
 **Session Persistence:** Sessions persist across page reloads and browser navigation within the same domain. The session cookie maintains the session ID, allowing the framework to restore the user's state.
 
 **Session Expiry:**
-- **MemoryBackend:** Sessions expire after `ttl_seconds` (default: 3600 = 1 hour) of inactivity. Expired sessions are automatically cleaned up every N requests (configurable via `cleanup_interval`).
+- **MemoryBackend:** Sessions expire after `ttl_seconds` (default: 3600 = 1 hour) of inactivity. Expired sessions are automatically cleaned up every N requests (configurable via `session_cleanup_interval`).
 - **RedisBackend:** Sessions are stored in Redis with a TTL. Redis automatically expires keys after the configured `ttl_seconds`, providing automatic cleanup.
 
 **Differences Between Backends:**
