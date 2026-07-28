@@ -10,11 +10,11 @@ import uuid
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any
 
 # Type aliases
 SessionId = str
-SessionData = Dict[str, Any]
+SessionData = dict[str, Any]
 
 
 @dataclass
@@ -76,7 +76,7 @@ class MemoryBackend(SessionBackend):
 
     def __init__(self, ttl_seconds: int = 3600):
         """Initialize memory backend.
-        
+
         Args:
             ttl_seconds: Session timeout in seconds (default: 3600 = 1 hour).
                         Sessions older than this will be cleaned up.
@@ -106,29 +106,29 @@ class MemoryBackend(SessionBackend):
 
     def cleanup_expired(self) -> int:
         """Clean up expired sessions.
-        
+
         Removes all sessions that have not been accessed within the TTL period.
         Returns the number of sessions deleted.
-        
+
         Note: If ttl_seconds is 0 or negative, no sessions are cleaned up.
         """
         if self._ttl_seconds <= 0:
             # No expiry configured
             return 0
-            
+
         current_time = time.time()
         expiry_threshold = current_time - self._ttl_seconds
-        
+
         # Collect expired session IDs
         expired_ids = [
             session_id for session_id, session in self._sessions.items()
             if session.last_accessed < expiry_threshold
         ]
-        
+
         # Delete expired sessions
         for session_id in expired_ids:
             del self._sessions[session_id]
-        
+
         return len(expired_ids)
 
 
