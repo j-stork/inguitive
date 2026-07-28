@@ -1,8 +1,9 @@
 """Tests for State mutation warnings."""
 
 import warnings
+
 import pytest
-from inguitive.state import State, enable_dev_mode_warnings
+
 from inguitive.session import (
     MemoryBackend,
     Session,
@@ -10,6 +11,7 @@ from inguitive.session import (
     _set_current_session,
     set_session_backend,
 )
+from inguitive.state import State, enable_dev_mode_warnings
 
 
 @pytest.fixture(autouse=True)
@@ -29,6 +31,7 @@ def reset_dev_mode():
     """Reset dev mode flag before and after each test."""
     # Save original state
     import inguitive.state as state_module
+
     original = state_module._dev_mode_warnings_enabled
 
     # Reset to False before test
@@ -73,6 +76,7 @@ class TestStateWarnings:
         """Test that no warning is emitted when dev mode is explicitly disabled."""
         # Explicitly ensure dev mode is off
         import inguitive.state as state_module
+
         state_module._dev_mode_warnings_enabled = False
 
         state = State(0, "test_state")
