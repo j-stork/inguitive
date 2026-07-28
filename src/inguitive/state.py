@@ -74,7 +74,7 @@ class State(Generic[_T]):
 
     def get(self) -> _T:
         """Return the current value for the active session."""
-        return _get_data_registry().get(self._key, self._initial_value)
+        return _get_data_registry().get(self._key, self._initial_value)  # type: ignore[no-any-return]
 
     def set(self, new_value: _T) -> None:
         """Write a new value into the active session's data registry."""
@@ -83,18 +83,18 @@ class State(Generic[_T]):
         _mutated_states.get().add(self._key)
 
     @property
-    def listeners(self) -> set[str]:
+    def listeners(self) -> set[str]:  # type: ignore[valid-type]
         """Return the set of component IDs listening to this state in the active session."""
         listeners_key = f"{_LISTENERS_PREFIX}{self._key}"
         data = _get_data_registry()
         if listeners_key not in data:
             data[listeners_key] = set()
-        return data[listeners_key]
+        return data[listeners_key]  # type: ignore[no-any-return]
 
     def add_listener(self, component_id: str) -> None:
         """Register a component ID as a listener for the active session."""
-        self.listeners.add(component_id)
+        self.listeners.add(component_id)  # type: ignore[attr-defined]
 
     def remove_listener(self, component_id: str) -> None:
         """Remove a component ID from the listeners for the active session."""
-        self.listeners.discard(component_id)
+        self.listeners.discard(component_id)  # type: ignore[attr-defined]

@@ -68,8 +68,8 @@ class TestSessionIsolation:
         # User 1 toggles to dark theme
         client1.post("/_trigger/toggle_theme", cookies=cookies1)
         response1 = client1.get("/", cookies=cookies1)
-        # Dark theme should be active (bg-slate-800)
-        assert "bg-slate-800" in response1.text
+        # Dark theme should be active (bg-slate-900)
+        assert "bg-slate-900" in response1.text
 
         # User 2 with fresh client should have light theme
         client2 = get_client()
@@ -80,11 +80,11 @@ class TestSessionIsolation:
         # User 2 toggles to dark theme
         client2.post("/_trigger/toggle_theme", cookies=cookies2)
         response2 = client2.get("/", cookies=cookies2)
-        assert "bg-slate-800" in response2.text
+        assert "bg-slate-900" in response2.text
 
         # User 1 should still have dark theme
         response1 = client1.get("/", cookies=cookies1)
-        assert "bg-slate-800" in response1.text
+        assert "bg-slate-900" in response1.text
 
     def test_session_persistence_across_requests(self):
         """Verify that session state persists across multiple requests."""
