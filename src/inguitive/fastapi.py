@@ -403,6 +403,7 @@ def create_app(
     # Enable dev mode warnings if requested (default: True)
     if dev_mode:
         from inguitive.state import enable_dev_mode_warnings
+
         enable_dev_mode_warnings()
 
     # Add session middleware
