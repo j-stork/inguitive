@@ -10,6 +10,7 @@ Unlike traditional request-response frameworks, INGUITIVE provides reactive stat
 - **HTMX Integration**: Out-of-band swaps for seamless partial page updates
 - **Component-Based**: Composable UI components with clean Python syntax
 - **Dynamic Attributes**: All component attributes can be static strings or callables
+- **Trigger Arguments**: Pass data from components to handlers via `trigger_args` and `get_trigger_args()`
 - **Type Safe**: Full type hints throughout the codebase
 - **Tailwind CSS**: First-class support for utility-first styling
 
@@ -50,6 +51,32 @@ def Counter():
 def index():
     return Counter()
 ```
+
+### Trigger Arguments
+
+Pass data from a component to its handler using `trigger_args` on the component and `get_trigger_args()` in the handler:
+
+```python
+from inguitive import Button, Div, State, Text, create_app, get_trigger_args
+
+app, templates = create_app()
+selected_state = State("none", "selected_state")
+
+@app.trigger_handler
+def select_item():
+    item_id = get_trigger_args().get("id")
+    selected_state.set(item_id)
+
+@app.page("/")
+def index():
+    return Div(
+        Button("Select A", trigger="select_item", trigger_args={"id": "a"}),
+        Button("Select B", trigger="select_item", trigger_args={"id": "b"}),
+        Text(lambda: f"Selected: {selected_state.get()}", listen_to="selected_state"),
+    )
+```
+
+`trigger_args` are passed as URL query parameters; `get_trigger_args()` returns them as a `dict[str, str]` inside the handler.
 
 ## Component Reference
 
