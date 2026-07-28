@@ -77,7 +77,7 @@ def _register_page_route(app, path: str, handler: Callable[P, T]):
 
         # Wrap in base template
         templates = app.state.templates
-        return templates.TemplateResponse("base.html", {"request": request, "content": content})
+        return templates.TemplateResponse(request, "base.html", {"content": content})
 
 
 def _register_trigger_route(app, trigger_name: str, handler: Callable):
