@@ -6,14 +6,34 @@ from fastapi.templating import Jinja2Templates
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# --- Simple State (for Demo without Redis) ---
+# --- Component Registry ---
+_component_registry = {}  # {id: component_instance}
+
+# --- Simple State ---
 counter_state = {"count": 0}
+
+# --- Helper Functions ---
+def render_components_oob(*component_ids):
+    """Render multiple components as OOB HTML for HTMX"""
+    html_parts = []
+    for cid in component_ids:
+        if cid in _component_registry:
+            component = _component_registry[cid]
+            if hasattr(component, 'render_oob'):
+                html_parts.append(component.render_oob())
+            else:
+                html_parts.append(component.render())
+    return "".join(html_parts)
+
 
 # --- Components ---
 class Component:
     def __init__(self, cls: str = "", **attrs):
         self.cls = cls
         self.attrs = attrs
+        self.id = attrs.get("id")
+        if self.id:
+            _component_registry[self.id] = self
 
     def _get_attrs_str(self) -> str:
         """Convert attributes to HTML string, handling cls -> class conversion"""
@@ -51,37 +71,53 @@ class Button(Component):
 
 
 class Label(Component):
-    def __init__(self, text: str, cls: str = "", **attrs):
+    def __init__(self, get_text, cls: str = "", **attrs):
         super().__init__(cls=cls, **attrs)
-        self.text = text
+        self.get_text = get_text  # Callable that returns current text
 
     def render(self) -> str:
+        text = self.get_text()
         attrs = self._get_attrs_str()
-        return f"<p {attrs}>{self.text}</p>"
+        return f"<p {attrs}>{text}</p>"
+
+    def render_oob(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates"""
+        if not self.id:
+            return self.render()
+        text = self.get_text()
+        attrs = self._get_attrs_str()
+        # Ensure id is present and add hx-swap-oob
+        if 'id=' not in attrs:
+            attrs = f'id="{self.id}" {attrs}'.strip()
+        attrs = f'hx-swap-oob="true" {attrs}'.strip()
+        return f"<p {attrs}>{text}</p>"
 
 
-# --- Counter-Component (with HTMX) ---
+# --- Counter Label (dynamic) ---
+CounterLabel = Label(
+    lambda: f"Count: {counter_state['count']}",
+    id="counter-label",
+    cls="text-xl"
+)
+
+
+# --- Counter Component ---
 def Counter():
     return Div([
-        # Label with ID for HTMX targeting
-        Label(f"Count: {counter_state['count']}", id="counter-label", cls="text-xl"),
-        # Button with HTMX attributes
+        CounterLabel,
         Button(
             "+1",
             **{
                 "hx-post": "/increment",
                 "hx-target": "#hx-target",
-                "hx-swap-oob": "true",
                 "cls": "bg-blue-500 text-white p-2 rounded mt-2"
             }
         ),
-        # Reset button
         Button(
             "Reset",
             **{
                 "hx-post": "/reset",
                 "hx-target": "#hx-target",
-                "hx-swap-oob": "true",
                 "cls": "bg-red-500 text-white p-2 rounded mt-2"
             }
         )
@@ -100,15 +136,13 @@ def home(request: Request):
 @app.post("/increment", response_class=HTMLResponse)
 def increment():
     counter_state["count"] += 1
-    # Return OOB HTML to update the label
-    return f'<p id="counter-label" class="text-xl" hx-swap-oob="true">Count: {counter_state["count"]}</p>'
+    return render_components_oob("counter-label")
 
 
 @app.post("/reset", response_class=HTMLResponse)
 def reset():
     counter_state["count"] = 0
-    # Return OOB HTML to update the label
-    return f'<p id="counter-label" class="text-xl" hx-swap-oob="true">Count: {counter_state["count"]}</p>'
+    return render_components_oob("counter-label")
 
 
 # --- Start ---
