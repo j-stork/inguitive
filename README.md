@@ -2,7 +2,7 @@
 
 A pure Python web framework combining intuitive syntax with **HTMX** for partial page reloads and **Tailwind CSS** for styling.
 
-INGUITIVE is a pure Python web framework that combines intuitive component-based UI construction with HTMX for seamless partial page updates and Tailwind CSS for styling. Unlike traditional request-response frameworks, INGUITIVE provides reactive state management where components automatically re-render when state changes, eliminating the need for manual DOM manipulation or JavaScript. It is designed for Python developers who want to build interactive web applications using only Python, without sacrificing the dynamic feel of modern SPAs.
+Unlike traditional request-response frameworks, INGUITIVE provides reactive state management where components automatically re-render when state changes, eliminating the need for manual DOM manipulation or JavaScript. It is designed for Python developers who want to build interactive web applications using only Python, without sacrificing the dynamic feel of modern SPAs.
 
 ## Features
 
