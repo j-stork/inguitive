@@ -516,7 +516,7 @@ class Select(Component):
         resolved_options = self._resolve(self.options) if self.options else []  # type: ignore
         resolved_value = self._resolve(self.value) if self.value else None
         option_tags = []
-        for val, text in resolved_options:
+        for val, text in resolved_options:  # type: ignore[str-unpack]
             selected = " selected" if val == resolved_value else ""
             option_tags.append(f'<option value="{val}"{selected}>{text}</option>')
         return "".join(option_tags)

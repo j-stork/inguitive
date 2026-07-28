@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from inguitive import Button, Div, State, Text, create_app, get_trigger_args
+from inguitive import create_app, get_trigger_args
 
 
 class TestGetTriggerArgsBasic:
@@ -91,7 +91,7 @@ class TestQueryParameterExtraction:
             return "OK"
 
         client = TestClient(app)
-        response = client.post(
+        client.post(
             "/_trigger/mixed_handler?trigger_param=trigger_value",
             data={"form_param": "form_value"}
         )

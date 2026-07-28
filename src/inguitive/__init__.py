@@ -41,7 +41,6 @@ from inguitive.state import State
 from inguitive.trigger import get_trigger_args
 from inguitive.utils import nl2br
 
-
 __all__ = [
     # Components
     "Component",

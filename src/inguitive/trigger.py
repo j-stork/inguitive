@@ -7,16 +7,15 @@ allowing handlers to access these arguments without requiring form_data or reque
 
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Dict
 
 # Context variable to store trigger_args for current request
-_trigger_args_var: ContextVar[Dict[str, str]] = ContextVar(
+_trigger_args_var: ContextVar[dict[str, str]] = ContextVar(
     "trigger_args",
     default={},
 )
 
 
-def get_trigger_args() -> Dict[str, str]:
+def get_trigger_args() -> dict[str, str]:
     """Get trigger_args dictionary for the current trigger handler execution.
 
     Returns the dictionary of trigger arguments that were passed via Component's
@@ -36,7 +35,7 @@ def get_trigger_args() -> Dict[str, str]:
 
 
 @contextmanager
-def _trigger_args_context(args: Dict[str, str]):
+def _trigger_args_context(args: dict[str, str]):
     """Context manager to temporarily set trigger_args for handler execution.
 
     This is used internally by the framework to populate trigger_args from URL
