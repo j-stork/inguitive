@@ -2,18 +2,20 @@
 Session management with pluggable backends for INGUITIVE.
 """
 
+from __future__ import annotations
+
 import uuid
 import pickle
 import json
 from abc import ABC, abstractmethod
 from contextvars import ContextVar
-from typing import Optional, Any, Protocol
+from typing import Optional, Any, Protocol, Dict
 from dataclasses import dataclass, field
 
 
 # Type aliases
 SessionId = str
-SessionData = dict[str, Any]
+SessionData = Dict[str, Any]
 
 
 @dataclass
