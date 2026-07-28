@@ -128,15 +128,19 @@ def Counter():
         CounterLabel,
         Button(
             "+1",
-            hx_post="/increment",
-            hx_target="#hx-target",
-            cls="bg-blue-500 text-white p-2 rounded mt-2"
+            **{
+                "hx-post": "/increment",
+                "hx-target": "#hx-target",
+                "cls": "bg-blue-500 text-white p-2 rounded mt-2"
+            }
         ),
         Button(
             "Reset",
-            hx_post="/reset",
-            hx_target="#hx-target",
-            cls="bg-red-500 text-white p-2 rounded mt-2"
+            **{
+                "hx-post": "/reset",
+                "hx-target": "#hx-target",
+                "cls": "bg-red-500 text-white p-2 rounded mt-2"
+            }
         )
     ], id="counter", cls="p-4 max-w-xs mx-auto")
 
