@@ -312,6 +312,7 @@ def create_app(
     session_cookie_secure: bool = False,
     session_cookie_httponly: bool = True,
     session_cleanup_interval: int = 100,
+    dev_mode: bool = True,
 ) -> InguitiveApp[_P, _T]:
     """Create and configure a FastAPI application for inguitive.
 
@@ -331,6 +332,8 @@ def create_app(
         session_cookie_secure: Whether cookie is secure (HTTPS only)
         session_cookie_httponly: Whether cookie is HTTP-only
         session_cleanup_interval: Call cleanup_expired() every N requests (default: 100)
+        dev_mode: Enable development mode warnings (default: True). Set to False in production
+            to disable warnings about state mutations with no listeners.
 
     Returns:
         InguitiveApp - the FastAPI application with inguitive decorators
@@ -396,6 +399,11 @@ def create_app(
     # Configure session backend
     if session_backend is not None:
         set_session_backend(session_backend)
+
+    # Enable dev mode warnings if requested (default: True)
+    if dev_mode:
+        from inguitive.state import enable_dev_mode_warnings
+        enable_dev_mode_warnings()
 
     # Add session middleware
     app.add_middleware(
