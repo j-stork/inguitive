@@ -29,7 +29,7 @@ from inguitive import Div, Button, Label, State, create_app
 from inguitive.css import BUTTON_PRIMARY_CSS
 
 # Create FastAPI app
-app, templates = create_app()
+app, templates = create_app()  # templates is used in @app.page routes for Jinja2 rendering
 
 # Create reactive state
 counter_state = State(0, "counter_state")
