@@ -28,18 +28,26 @@ def render_components_oob(*component_ids):
 
 # --- Components ---
 class Component:
-    def __init__(self, cls: str = "", **attrs):
+    def __init__(self, id=None, cls=None, **attrs):
+        self.id = id
         self.cls = cls
         self.attrs = attrs
-        self.id = attrs.get("id")
         if self.id:
             _component_registry[self.id] = self
 
+    def _resolve(self, value):
+        """Resolve a potentially dynamic value (callable or static)"""
+        return value() if callable(value) else value
+
     def _get_attrs_str(self) -> str:
-        """Convert attributes to HTML string, handling cls -> class conversion"""
-        filtered_attrs = {k: v for k, v in self.attrs.items() if k != 'cls'}
-        if self.cls:
-            filtered_attrs['class'] = self.cls
+        """Convert attributes to HTML string, handling cls -> class conversion and dynamic values"""
+        filtered_attrs = {}
+        for k, v in self.attrs.items():
+            if k != 'cls':
+                filtered_attrs[k] = self._resolve(v)
+        resolved_cls = self._resolve(self.cls)
+        if resolved_cls:
+            filtered_attrs['class'] = resolved_cls
         return " ".join(f'{k}="{v}"' for k, v in filtered_attrs.items())
 
     def render(self) -> str:
@@ -47,8 +55,8 @@ class Component:
 
 
 class Div(Component):
-    def __init__(self, children=None, cls: str = "", **attrs):
-        super().__init__(cls=cls, **attrs)
+    def __init__(self, children=None, id=None, cls=None, **attrs):
+        super().__init__(id=id, cls=cls, **attrs)
         self.children = children or []
 
     def render(self) -> str:
@@ -61,43 +69,56 @@ class Div(Component):
 
 
 class Button(Component):
-    def __init__(self, text: str, cls: str = "", **attrs):
-        super().__init__(cls=cls, **attrs)
+    def __init__(self, text, id=None, cls=None, **attrs):
+        super().__init__(id=id, cls=cls, **attrs)
         self.text = text
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
-        return f"<button {attrs}>{self.text}</button>"
+        resolved_text = self._resolve(self.text)
+        return f"<button {attrs}>{resolved_text}</button>"
 
 
 class Label(Component):
-    def __init__(self, get_text, cls: str = "", **attrs):
-        super().__init__(cls=cls, **attrs)
-        self.get_text = get_text  # Callable that returns current text
+    def __init__(self, text, id=None, cls=None, **attrs):
+        super().__init__(id=id, cls=cls, **attrs)
+        self.text = text
 
     def render(self) -> str:
-        text = self.get_text()
         attrs = self._get_attrs_str()
-        return f"<p {attrs}>{text}</p>"
+        resolved_text = self._resolve(self.text)
+        return f"<p {attrs}>{resolved_text}</p>"
 
     def render_oob(self) -> str:
         """Render with hx-swap-oob for HTMX out-of-band updates"""
         if not self.id:
             return self.render()
-        text = self.get_text()
+        resolved_text = self._resolve(self.text)
         attrs = self._get_attrs_str()
         # Ensure id is present and add hx-swap-oob
         if 'id=' not in attrs:
             attrs = f'id="{self.id}" {attrs}'.strip()
         attrs = f'hx-swap-oob="true" {attrs}'.strip()
-        return f"<p {attrs}>{text}</p>"
+        return f"<p {attrs}>{resolved_text}</p>"
 
 
-# --- Counter Label (dynamic) ---
+# --- Dynamic styling function ---
+def get_counter_style():
+    """Dynamic styling based on counter value"""
+    count = counter_state['count']
+    base = "text-xl"
+    if count > 5:
+        return f"{base} text-red-500 font-bold"
+    elif count < 0:
+        return f"{base} text-blue-500"
+    return base
+
+
+# --- Counter Label (fully dynamic) ---
 CounterLabel = Label(
-    lambda: f"Count: {counter_state['count']}",
+    text=lambda: f"Count: {counter_state['count']}",
     id="counter-label",
-    cls="text-xl"
+    cls=get_counter_style  # Can be a function reference or lambda
 )
 
 
@@ -107,21 +128,17 @@ def Counter():
         CounterLabel,
         Button(
             "+1",
-            **{
-                "hx-post": "/increment",
-                "hx-target": "#hx-target",
-                "cls": "bg-blue-500 text-white p-2 rounded mt-2"
-            }
+            hx_post="/increment",
+            hx_target="#hx-target",
+            cls="bg-blue-500 text-white p-2 rounded mt-2"
         ),
         Button(
             "Reset",
-            **{
-                "hx-post": "/reset",
-                "hx-target": "#hx-target",
-                "cls": "bg-red-500 text-white p-2 rounded mt-2"
-            }
+            hx_post="/reset",
+            hx_target="#hx-target",
+            cls="bg-red-500 text-white p-2 rounded mt-2"
         )
-    ], cls="p-4 max-w-xs mx-auto")
+    ], id="counter", cls="p-4 max-w-xs mx-auto")
 
 
 # --- Routes ---
