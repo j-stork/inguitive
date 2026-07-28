@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import contextvars
 import uuid
+import warnings
 from contextlib import contextmanager
 from typing import Generic, TypeVar
 
@@ -23,6 +24,15 @@ _state_name_registry: dict[str, State] = {}
 _mutated_states: contextvars.ContextVar[set[str]] = contextvars.ContextVar(
     "mutated_states", default=set()
 )
+
+# Module-level flag to control dev mode warnings
+_dev_mode_warnings_enabled = False
+
+
+def enable_dev_mode_warnings() -> None:
+    """Enable warning when State is mutated with no listeners."""
+    global _dev_mode_warnings_enabled
+    _dev_mode_warnings_enabled = True
 
 
 @contextmanager
@@ -83,6 +93,15 @@ class State(Generic[_T]):
         _get_data_registry()[self._key] = new_value
         # Track mutation for auto-propagation in trigger handlers
         _mutated_states.get().add(self._key)
+
+        # Warn if no components are listening in dev mode
+        if _dev_mode_warnings_enabled and not self.listeners:
+            warnings.warn(
+                f"State '{self.name or self._key}' was mutated but no component is listening. "
+                f"This may indicate a missing 'listen_to' parameter.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     @property
     def listeners(self) -> set[str]:  # type: ignore[valid-type]

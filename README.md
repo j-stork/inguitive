@@ -260,6 +260,7 @@ app = create_app(
 - ✅ Set `session_cookie_secure=True` when using HTTPS
 - ✅ Verify `session_cookie_httponly=True` (enabled by default)
 - ✅ Deploy with HTTPS (required for secure cookies)
+- ✅ Set `dev_mode=False` to disable development warnings
 
 ## Running the Demo
 
