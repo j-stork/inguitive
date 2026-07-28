@@ -6,19 +6,21 @@ from __future__ import annotations
 
 import inspect
 import uuid
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, ParamSpec, Protocol, TypeVar, runtime_checkable
+from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from inguitive.htmx import update_components
 from inguitive.session import (
     Session,
     SessionBackend,
     _clear_current_session,
-    get_session_backend,
     _set_current_session,
+    get_session_backend,
     set_session_backend,
 )
 from inguitive.state import (
@@ -26,8 +28,7 @@ from inguitive.state import (
     _get_state_by_name,
     _track_mutations,
 )
-from inguitive.trigger import get_trigger_args, _trigger_args_context
-from inguitive.htmx import update_components
+from inguitive.trigger import _trigger_args_context
 
 # Type variables for decorator type annotations
 _P = ParamSpec("_P")
@@ -51,7 +52,7 @@ class InguitiveApp(Protocol[_P, _T]):
     page: _PageDecorator[_P, _T]
 
 
-def _register_page_route(app, path: str, handler: Callable[P, T]):
+def _register_page_route(app, path: str, handler: Callable[_P, _T]):
     """Helper to register a page route on an app."""
 
     @app.get(path, response_class=HTMLResponse)
@@ -61,7 +62,7 @@ def _register_page_route(app, path: str, handler: Callable[P, T]):
         needs_form_data = "form_data" in sig.parameters
         is_async = inspect.iscoroutinefunction(h)
 
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         if needs_request:
             kwargs["request"] = request
         if needs_form_data:
@@ -97,7 +98,7 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
         needs_form_data = "form_data" in sig.parameters
         is_async = inspect.iscoroutinefunction(h)
 
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
         if needs_request:
             kwargs["request"] = request
 
@@ -122,7 +123,7 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
 
                 # Otherwise, auto-generate OOB response from mutated states
                 mutated_state_keys = _get_mutated_states()
-                all_component_ids = set()
+                all_component_ids: set[str] = set()
                 for state_key in mutated_state_keys:
                     # Get the State object for this key and collect its listeners
                     state = _get_state_by_name(state_key)
@@ -145,7 +146,7 @@ class SessionMiddleware:
         cleanup_interval: int = 100,
     ):
         """Initialize SessionMiddleware.
-        
+
         Args:
             app: The ASGI application
             session_cookie_name: Name of the session cookie
@@ -300,7 +301,7 @@ def create_app(
         cleanup_interval=session_cleanup_interval,
     )
 
-    return app
+    return app  # type: ignore[return-value]
 
 
 def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True):

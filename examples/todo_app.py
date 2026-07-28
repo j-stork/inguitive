@@ -126,7 +126,7 @@ def TodoItem(todo: dict) -> Div:  # noqa: N802
 
     def todo_styles():
         return "flex-1" + (" line-through" if todo["completed"] else "")
-    
+
     def todo_div_css():
         base = f"flex items-center gap-3 p-3 border-b border-{COLOR_SECONDARY} last:border-b-0"
         if todo["completed"]:
@@ -213,14 +213,14 @@ def TodoFilters() -> Div:  # noqa: N802
         if current_filter == "all":
             return f"{BUTTON_SHAPE} bg-{COLOR_ACTIVE}"
         return f"{BUTTON_SHAPE} bg-{COLOR_SECONDARY}"
-    
+
     def filter_active_css():
         """Return CSS classes for Active filter button with active state."""
         current_filter = todo_state.get()["filter"]
         if current_filter == "active":
             return f"{BUTTON_SHAPE} bg-{COLOR_ACTIVE}"
         return f"{BUTTON_SHAPE} bg-{COLOR_SECONDARY}"
-    
+
     def filter_completed_css():
         """Return CSS classes for Completed filter button with active state."""
         current_filter = todo_state.get()["filter"]
