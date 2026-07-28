@@ -40,6 +40,10 @@ def Counter():
 # Create FastAPI app
 app, templates = create_app()
 
+@app.page("/")
+def index():
+    return Counter()
+
 @app.trigger_handler
 def increment():
     counter_state.set(counter_state.get() + 1)
