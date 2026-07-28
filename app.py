@@ -7,8 +7,9 @@ from typing import TypeVar, Generic
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# --- Component Registry ---
+# --- Registries ---
 _component_registry = {}  # {id: component_instance}
+_state_registry = {}     # {name: State}
 
 # --- State Management ---
 T = TypeVar('T')
@@ -18,6 +19,9 @@ class State(Generic[T]):
     def __init__(self, initial_value: T, name: str = ""):
         self._value = initial_value
         self.name = name
+        self.listeners: set[str] = set()  # Component IDs listening to this state
+        if name:
+            _state_registry[name] = self
 
     def get(self) -> T:
         """Get the current state value"""
@@ -26,6 +30,14 @@ class State(Generic[T]):
     def set(self, new_value: T):
         """Set a new state value"""
         self._value = new_value
+
+    def add_listener(self, component_id: str):
+        """Add a component ID to listen for changes"""
+        self.listeners.add(component_id)
+
+    def remove_listener(self, component_id: str):
+        """Remove a component ID from listeners"""
+        self.listeners.discard(component_id)
 
 
 # --- State Instances ---
@@ -47,12 +59,16 @@ def render_components_oob(*component_ids):
 
 # --- Components ---
 class Component:
-    def __init__(self, id=None, cls=None, **attrs):
+    def __init__(self, id=None, cls=None, listen_to: str | None = None, **attrs):
         self.id = id
         self.cls = cls
         self.attrs = attrs
         if self.id:
             _component_registry[self.id] = self
+        if listen_to and self.id:
+            # Register this component as a listener to the state
+            if listen_to in _state_registry:
+                _state_registry[listen_to].add_listener(self.id)
 
     def _resolve(self, value):
         """Resolve a potentially dynamic value (callable or static)"""
@@ -138,7 +154,8 @@ def get_counter_style():
 CounterLabel = Label(
     text=lambda: f"Count: {counter_state.get()}",
     id="counter-label",
-    cls=get_counter_style  # Can be a function reference or lambda
+    cls=get_counter_style,
+    listen_to="counter"  # Listen to state named "counter"
 )
 
 
@@ -177,13 +194,13 @@ def home(request: Request):
 @app.post("/increment", response_class=HTMLResponse)
 def increment():
     counter_state.set(counter_state.get() + 1)
-    return render_components_oob("counter-label")
+    return render_components_oob(*counter_state.listeners)
 
 
 @app.post("/reset", response_class=HTMLResponse)
 def reset():
     counter_state.set(0)
-    return render_components_oob("counter-label")
+    return render_components_oob(*counter_state.listeners)
 
 
 # --- Start ---
