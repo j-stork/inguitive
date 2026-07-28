@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from typing import TypeVar, Generic
 
 # --- FastAPI Setup ---
 app = FastAPI()
@@ -9,8 +10,26 @@ templates = Jinja2Templates(directory="templates")
 # --- Component Registry ---
 _component_registry = {}  # {id: component_instance}
 
-# --- Simple State ---
-counter_state = {"count": 0}
+# --- State Management ---
+T = TypeVar('T')
+
+class State(Generic[T]):
+    """Reactive state container with type safety and optional naming"""
+    def __init__(self, initial_value: T, name: str = ""):
+        self._value = initial_value
+        self.name = name
+
+    def get(self) -> T:
+        """Get the current state value"""
+        return self._value
+
+    def set(self, new_value: T):
+        """Set a new state value"""
+        self._value = new_value
+
+
+# --- State Instances ---
+counter_state = State(0, "counter")
 
 # --- Helper Functions ---
 def render_components_oob(*component_ids):
@@ -106,7 +125,7 @@ class Label(Component):
 # --- Dynamic styling function ---
 def get_counter_style():
     """Dynamic styling based on counter value"""
-    count = counter_state['count']
+    count = counter_state.get()
     base = "text-xl"
     if count > 5:
         return f"{base} text-red-500 font-bold"
@@ -117,7 +136,7 @@ def get_counter_style():
 
 # --- Counter Label (fully dynamic) ---
 CounterLabel = Label(
-    text=lambda: f"Count: {counter_state['count']}",
+    text=lambda: f"Count: {counter_state.get()}",
     id="counter-label",
     cls=get_counter_style  # Can be a function reference or lambda
 )
@@ -157,13 +176,13 @@ def home(request: Request):
 
 @app.post("/increment", response_class=HTMLResponse)
 def increment():
-    counter_state["count"] += 1
+    counter_state.set(counter_state.get() + 1)
     return render_components_oob("counter-label")
 
 
 @app.post("/reset", response_class=HTMLResponse)
 def reset():
-    counter_state["count"] = 0
+    counter_state.set(0)
     return render_components_oob("counter-label")
 
 
