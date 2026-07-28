@@ -59,7 +59,7 @@ Pass data from a component to its handler using `trigger_args` on the component 
 ```python
 from inguitive import Button, Div, State, Text, create_app, get_trigger_args
 
-app, templates = create_app()
+app, templates = create_app()  # templates is used in @app.page routes for Jinja2 rendering
 selected_state = State("none", "selected_state")
 
 @app.trigger_handler
@@ -132,25 +132,24 @@ INGUITIVE provides a comprehensive set of components organized by category. All 
 | `trigger` | `str \| None` | Trigger name for HTMX POST actions (Button, Input, etc.) |
 | `trigger_args` | `dict[str, str] \| None` | Query parameters to pass with trigger |
 
-## When to Use: Navigation & Actions
+## Navigation & Actions
 
-### Decision Guide
+Use `Link` for traditional navigation (SEO, bookmarking, new-tab support) and `trigger` for partial page updates:
 
-| Component/Parameter | Renders | Use When | URL Changes | Native Link Behavior |
-|---------------------|---------|----------|-------------|---------------------|
-| **`Link(href="...")`** | `<a href="...">` | Traditional links, SEO, accessibility | ✅ Yes | ✅ Full support |
-| **`trigger="..."`** | `hx-post`, `hx-target="#hx-target"` | Form submissions, partial updates | ❌ No | ❌ No |
-
-### Common Patterns
+| | `Link(href="...")` | `trigger="..."` |
+|---|---|---|
+| Renders | `<a href="...">` | HTMX POST |
+| URL changes | ✅ | ❌ |
+| Open in new tab | ✅ | ❌ |
 
 ```python
-from inguitive import Link, Button, Text, Div
+from inguitive import Link, Button
 
-# Traditional navigation (SEO, accessibility, bookmarking)
+# Traditional navigation
 Link("Home", href="/")
 Link("Documentation", href="/docs", css="text-blue-500")
 
-# Partial updates (forms, actions that update specific elements)
+# Partial updates
 Button("Save", trigger="save_form")
 Button("Like", trigger="like_post", trigger_args={"id": "123"})
 ```
@@ -168,7 +167,12 @@ Button("Like", trigger="like_post", trigger_args={"id": "123"})
 │       ├── fastapi.py       # FastAPI integration
 │       └── svg.py           # SVG icon definitions
 ├── examples/
-│   └── counter_app.py       # Demo application
+│   ├── counter_app.py        # Per-session counter with theme toggle
+│   ├── todo_app.py           # CRUD with filtering and real-time count
+│   ├── chat_app.py           # Real-time chat
+│   ├── navigation_demo.py    # Link vs trigger patterns
+│   ├── registration_form.py  # Form handling
+│   └── data_table_app.py     # DataTable with sorting and filtering
 ├── tests/
 │   └── test_*.py           # Test files
 ├── pyproject.toml           # Build configuration
