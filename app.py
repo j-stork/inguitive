@@ -95,11 +95,7 @@ class Component:
 class Div(Component):
     def __init__(self, *children, id=None, cls=None, **attrs):
         super().__init__(id=id, cls=cls, **attrs)
-        # Handle both Div(child1, child2) and Div([child1, child2]) for backward compatibility
-        if len(children) == 1 and isinstance(children[0], list):
-            self.children = children[0]
-        else:
-            self.children = list(children)
+        self.children = list(children)
 
     def render(self) -> str:
         attrs = self._get_attrs_str()
