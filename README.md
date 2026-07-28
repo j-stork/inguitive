@@ -141,22 +141,6 @@ INGUITIVE provides a comprehensive set of components organized by category. All 
 | **`Link(href="...")`** | `<a href="...">` | Traditional links, SEO, accessibility | ✅ Yes | ✅ Full support |
 | **`trigger="..."`** | `hx-post`, `hx-target="#hx-target"` | Form submissions, partial updates | ❌ No | ❌ No |
 
-### Decision Tree
-
-```
-Is this a traditional link that users might:
-   │
-   ├── want to open in a new tab? ──YES──► Use Link(href="...")
-   │
-   ├── want to bookmark/share? ───────YES──► Use Link(href="...")
-   │
-   └── want SEO to find? ──────────────YES──► Use Link(href="...")
-           │
-           NO
-           │
-    Is this a form action or partial update? ──YES──► Use trigger="..."
-```
-
 ### Common Patterns
 
 ```python
