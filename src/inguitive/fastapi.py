@@ -400,11 +400,15 @@ def create_app(
     if session_backend is not None:
         set_session_backend(session_backend)
 
-    # Enable dev mode warnings if requested (default: True)
+    # Enable or disable dev mode warnings based on dev_mode parameter
     if dev_mode:
         from inguitive.state import enable_dev_mode_warnings
 
         enable_dev_mode_warnings()
+    else:
+        from inguitive.state import disable_dev_mode_warnings
+
+        disable_dev_mode_warnings()
 
     # Add session middleware
     app.add_middleware(
