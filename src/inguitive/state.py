@@ -5,8 +5,8 @@ Reactive state management for inguitive.
 from __future__ import annotations
 
 import contextvars
+import logging
 import uuid
-import warnings
 from contextlib import contextmanager
 from typing import Generic, TypeVar
 
@@ -27,6 +27,9 @@ _mutated_states: contextvars.ContextVar[set[str]] = contextvars.ContextVar(
 
 # Module-level flag to control dev mode warnings
 _dev_mode_warnings_enabled = False
+
+# Module-level logger
+logger = logging.getLogger(__name__)
 
 
 def enable_dev_mode_warnings() -> None:
@@ -102,11 +105,10 @@ class State(Generic[_T]):
 
         # Warn if no components are listening in dev mode
         if _dev_mode_warnings_enabled and not self.listeners:
-            warnings.warn(
-                f"State '{self.name or self._key}' was mutated but no component is listening. "
-                f"This may indicate a missing 'listen_to' parameter.",
-                UserWarning,
-                stacklevel=2,
+            logger.warning(
+                "State '%s' was mutated but no component is listening. "
+                "This may indicate a missing 'listen_to' parameter.",
+                self.name or self._key,
             )
 
     @property
