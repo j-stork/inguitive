@@ -20,6 +20,7 @@ templates = Jinja2Templates(directory="templates")
 # --- Registries ---
 _component_registry = {}  # {id: component_instance}
 _state_registry = {}     # {name: State}
+_data_registry = {}      # {id: any_data}
 
 # --- State Management ---
 T = TypeVar('T')
@@ -52,6 +53,11 @@ class State(Generic[T]):
 
 # --- State Instances ---
 counter_state = State(0, "counter")
+
+# --- Data Registry Example ---
+# Store complex data server-side, reference by ID from buttons
+_data_registry["config_dark"] = {"theme": "dark", "accent": "indigo"}
+_data_registry["config_light"] = {"theme": "light", "accent": "blue"}
 
 # --- Helper Functions ---
 def update_components(*component_ids):
@@ -124,11 +130,15 @@ class Div(Component):
 
 
 class Button(Component):
-    def __init__(self, text, id=None, cls=None, on_click: str | None = None, **attrs):
-        # Convert on_click to HTMX attributes
+    def __init__(self, text, id=None, cls=None, on_click: str | None = None,
+                 on_click_args: dict | None = None, **attrs):
+        # Convert on_click to HTMX attributes with optional query parameters
         if on_click:
             if 'hx-post' not in attrs:
-                attrs['hx-post'] = f"/{on_click.lstrip('/')}"
+                url = f"/{on_click.lstrip('/')}"
+                if on_click_args:
+                    url += "?" + "&".join(f"{k}={v}" for k, v in on_click_args.items())
+                attrs['hx-post'] = url
             if 'hx-target' not in attrs:
                 attrs['hx-target'] = "#hx-target"
         super().__init__(id=id, cls=cls, **attrs)
@@ -191,6 +201,12 @@ def Counter():
             ),
             Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
             Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
+            Button(
+                "Apply Dark Theme",
+                on_click="apply_theme",
+                on_click_args={"config_id": "config_dark"},
+                cls=f"{BUTTON_SECONDARY_CSS} w-full"
+            ),
             id="counter",
             cls="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm"
         ),
@@ -216,6 +232,18 @@ def increment():
 @app.post("/reset", response_class=HTMLResponse)
 def reset():
     counter_state.set(0)
+    return update_components(*counter_state.listeners)
+
+
+@app.post("/apply_theme", response_class=HTMLResponse)
+def apply_theme(config_id: str):
+    """Example: Apply theme configuration from data registry"""
+    if config_id in _data_registry:
+        config = _data_registry[config_id]
+        # Here you would apply the theme config
+        # For demo purposes, we just update the counter label to show the theme
+        # In a real app, you might return update_components for a theme label
+        pass
     return update_components(*counter_state.listeners)
 
 
