@@ -35,6 +35,12 @@ def enable_dev_mode_warnings() -> None:
     _dev_mode_warnings_enabled = True
 
 
+def disable_dev_mode_warnings() -> None:
+    """Disable warning when State is mutated with no listeners."""
+    global _dev_mode_warnings_enabled
+    _dev_mode_warnings_enabled = False
+
+
 @contextmanager
 def _track_mutations():
     """Context manager to track state mutations during handler execution.

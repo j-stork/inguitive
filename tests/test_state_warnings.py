@@ -11,7 +11,7 @@ from inguitive.session import (
     _set_current_session,
     set_session_backend,
 )
-from inguitive.state import State, enable_dev_mode_warnings
+from inguitive.state import State, disable_dev_mode_warnings, enable_dev_mode_warnings
 
 
 @pytest.fixture(autouse=True)
@@ -140,3 +140,74 @@ class TestStateWarnings:
             assert issubclass(w[0].category, UserWarning)
             assert "test_state" in str(w[0].message)
             assert "no component is listening" in str(w[0].message)
+
+    def test_disable_warnings(self):
+        """Test that warnings can be disabled."""
+        enable_dev_mode_warnings()
+        disable_dev_mode_warnings()
+
+        state = State(0, "test_state")
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            state.set(1)
+
+            assert len(w) == 0
+
+    def test_toggle_warnings_on_off(self):
+        """Test that warnings can be toggled on/off multiple times."""
+        state = State(0, "test_state")
+
+        # Start with warnings disabled (default from fixture)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            state.set(1)
+            assert len(w) == 0
+
+        # Enable warnings
+        enable_dev_mode_warnings()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            state.set(2)
+            assert len(w) == 1
+
+        # Disable warnings
+        disable_dev_mode_warnings()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            state.set(3)
+            assert len(w) == 0
+
+        # Enable again
+        enable_dev_mode_warnings()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            state.set(4)
+            assert len(w) == 1
+
+    def test_create_app_dev_mode_false_disables_warnings(self):
+        """Test that create_app(dev_mode=False) disables warnings."""
+        from inguitive.fastapi import create_app
+
+        # First create app with dev_mode=True (default)
+        app1 = create_app(dev_mode=True)
+
+        # Verify warnings are enabled
+        state1 = State(0, "test_state_1")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            state1.set(1)
+            assert len(w) == 1
+
+        # Now create app with dev_mode=False
+        app2 = create_app(dev_mode=False)
+
+        # Verify warnings are disabled
+        state2 = State(0, "test_state_2")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            state2.set(1)
+            assert len(w) == 0
+
+        # Clean up - re-enable warnings for other tests
+        enable_dev_mode_warnings()
