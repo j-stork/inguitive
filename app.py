@@ -44,12 +44,12 @@ class State(Generic[T]):
 counter_state = State(0, "counter")
 
 # --- Helper Functions ---
-def render_components_oob(*component_ids):
-    """Render multiple components as OOB HTML for HTMX"""
+def render_updates(*component_ids):
+    """Render multiple components as OOB HTML for HTMX updates"""
     html_parts = []
     for cid in component_ids:
         if cid in _component_registry:
-            html_parts.append(_component_registry[cid].render_oob())
+            html_parts.append(_component_registry[cid].update())
     return "".join(html_parts)
 
 
@@ -101,7 +101,7 @@ class Div(Component):
         )
         return f"<div {attrs}>{children_html}</div>"
 
-    def render_oob(self) -> str:
+    def update(self) -> str:
         """Render with hx-swap-oob for HTMX out-of-band updates"""
         if not self.id:
             return self.render()
@@ -129,7 +129,7 @@ class Button(Component):
         resolved_text = self._resolve(self.text)
         return f"<button {attrs}>{resolved_text}</button>"
 
-    def render_oob(self) -> str:
+    def update(self) -> str:
         """Render with hx-swap-oob for HTMX out-of-band updates"""
         if not self.id:
             return self.render()
@@ -148,14 +148,12 @@ class Label(Component):
         resolved_text = self._resolve(self.text)
         return f"<p {attrs}>{resolved_text}</p>"
 
-    def render_oob(self) -> str:
+    def update(self) -> str:
         """Render with hx-swap-oob for HTMX out-of-band updates"""
         if not self.id:
             return self.render()
         resolved_text = self._resolve(self.text)
-        attrs = self._get_attrs_str()
-        # Add hx-swap-oob attribute
-        attrs = f'hx-swap-oob="true" {attrs}'.strip()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
         return f"<p {attrs}>{resolved_text}</p>"
 
 
@@ -199,13 +197,13 @@ def home(request: Request):
 @app.post("/increment", response_class=HTMLResponse)
 def increment():
     counter_state.set(counter_state.get() + 1)
-    return render_components_oob(*counter_state.listeners)
+    return render_updates(*counter_state.listeners)
 
 
 @app.post("/reset", response_class=HTMLResponse)
 def reset():
     counter_state.set(0)
-    return render_components_oob(*counter_state.listeners)
+    return render_updates(*counter_state.listeners)
 
 
 # --- Start ---
