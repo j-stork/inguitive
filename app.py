@@ -182,16 +182,19 @@ def get_counter_style():
 # --- Counter Component ---
 def Counter():
     return Div(
-        Label(
-            text=lambda: f"Count: {counter_state.get()}",
-            id="counter-label",
-            cls=get_counter_style,
-            listen_to="counter"
+        Div(
+            Label(
+                text=lambda: f"Count: {counter_state.get()}",
+                id="counter-label",
+                cls=get_counter_style,
+                listen_to="counter"
+            ),
+            Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
+            Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
+            id="counter",
+            cls="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm"
         ),
-        Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
-        Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
-        id="counter",
-        cls="p-6 space-y-6 max-w-xs mx-auto"
+        cls="w-full min-h-screen bg-slate-800 flex items-center justify-center"
     )
 
 
