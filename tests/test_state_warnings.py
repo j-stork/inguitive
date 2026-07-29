@@ -1,7 +1,5 @@
 """Tests for State mutation warnings."""
 
-import warnings
-
 import pytest
 
 from inguitive.session import (
@@ -39,62 +37,60 @@ def reset_dev_mode():
 
 
 class TestStateWarnings:
-    def test_warns_when_no_listeners(self):
+    def test_warns_when_no_listeners(self, caplog):
         """Test that a warning is emitted when state is set with no listeners in dev mode."""
         enable_dev_mode_warnings()
 
         state = State(0, "test_state")
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
             state.set(1)
 
-            assert len(w) == 1
-            assert issubclass(w[0].category, UserWarning)
-            assert "test_state" in str(w[0].message)
-            assert "no component is listening" in str(w[0].message)
+            assert len(caplog.records) == 1
+            assert "test_state" in caplog.records[0].message
+            assert "no component is listening" in caplog.records[0].message
 
-    def test_no_warning_with_listeners(self):
+    def test_no_warning_with_listeners(self, caplog):
         """Test that no warning is emitted when state has listeners."""
         enable_dev_mode_warnings()
 
         state = State(0, "test_state")
         state.add_listener("comp-1")
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
             state.set(1)
 
-            assert len(w) == 0
+            # Filter for our specific logger
+            inguitive_warnings = [r for r in caplog.records if r.name == "inguitive.state"]
+            assert len(inguitive_warnings) == 0
 
-    def test_no_warning_in_production(self):
+    def test_no_warning_in_production(self, caplog):
         """Test that no warning is emitted when dev mode is explicitly disabled."""
         # Explicitly ensure dev mode is off
         disable_dev_mode_warnings()
 
         state = State(0, "test_state")
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
             state.set(1)
 
-            assert len(w) == 0
+            # Filter for our specific logger
+            inguitive_warnings = [r for r in caplog.records if r.name == "inguitive.state"]
+            assert len(inguitive_warnings) == 0
 
-    def test_warning_for_anonymous_state(self):
+    def test_warning_for_anonymous_state(self, caplog):
         """Test that anonymous states also emit warnings."""
         enable_dev_mode_warnings()
 
         state = State(0)  # No name
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
             state.set(1)
 
-            assert len(w) == 1
-            assert issubclass(w[0].category, UserWarning)
-            assert "no component is listening" in str(w[0].message)
+            assert len(caplog.records) == 1
+            assert "no component is listening" in caplog.records[0].message
 
-    def test_multiple_listeners_no_warning(self):
+    def test_multiple_listeners_no_warning(self, caplog):
         """Test that multiple listeners also prevent warnings."""
         enable_dev_mode_warnings()
 
@@ -103,13 +99,14 @@ class TestStateWarnings:
         state.add_listener("comp-2")
         state.add_listener("comp-3")
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
             state.set(1)
 
-            assert len(w) == 0
+            # Filter for our specific logger
+            inguitive_warnings = [r for r in caplog.records if r.name == "inguitive.state"]
+            assert len(inguitive_warnings) == 0
 
-    def test_warning_after_listener_removal(self):
+    def test_warning_after_listener_removal(self, caplog):
         """Test that warning is emitted after all listeners are removed."""
         enable_dev_mode_warnings()
 
@@ -117,68 +114,71 @@ class TestStateWarnings:
         state.add_listener("comp-1")
 
         # First set should not warn
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
+            caplog.clear()
             state.set(1)
-            assert len(w) == 0
+            inguitive_warnings = [r for r in caplog.records if r.name == "inguitive.state"]
+            assert len(inguitive_warnings) == 0
 
         # Remove listener
         state.remove_listener("comp-1")
 
         # Now it should warn
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
+            caplog.clear()
             state.set(2)
-            assert len(w) == 1
-            assert issubclass(w[0].category, UserWarning)
-            assert "test_state" in str(w[0].message)
-            assert "no component is listening" in str(w[0].message)
+            assert len(caplog.records) == 1
+            assert "test_state" in caplog.records[0].message
+            assert "no component is listening" in caplog.records[0].message
 
-    def test_disable_warnings(self):
+    def test_disable_warnings(self, caplog):
         """Test that warnings can be disabled."""
         enable_dev_mode_warnings()
         disable_dev_mode_warnings()
 
         state = State(0, "test_state")
 
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
             state.set(1)
 
-            assert len(w) == 0
+            # Filter for our specific logger
+            inguitive_warnings = [r for r in caplog.records if r.name == "inguitive.state"]
+            assert len(inguitive_warnings) == 0
 
-    def test_toggle_warnings_on_off(self):
+    def test_toggle_warnings_on_off(self, caplog):
         """Test that warnings can be toggled on/off multiple times."""
         state = State(0, "test_state")
 
         # Start with warnings disabled (default from fixture)
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
+            caplog.clear()
             state.set(1)
-            assert len(w) == 0
+            inguitive_warnings = [r for r in caplog.records if r.name == "inguitive.state"]
+            assert len(inguitive_warnings) == 0
 
         # Enable warnings
         enable_dev_mode_warnings()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
+            caplog.clear()
             state.set(2)
-            assert len(w) == 1
+            assert len(caplog.records) == 1
 
         # Disable warnings
         disable_dev_mode_warnings()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
+            caplog.clear()
             state.set(3)
-            assert len(w) == 0
+            inguitive_warnings = [r for r in caplog.records if r.name == "inguitive.state"]
+            assert len(inguitive_warnings) == 0
 
         # Enable again
         enable_dev_mode_warnings()
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
+            caplog.clear()
             state.set(4)
-            assert len(w) == 1
+            assert len(caplog.records) == 1
 
-    def test_create_app_dev_mode_false_disables_warnings(self):
+    def test_create_app_dev_mode_false_disables_warnings(self, caplog):
         """Test that create_app(dev_mode=False) disables warnings."""
         from inguitive.fastapi import create_app
 
@@ -187,20 +187,21 @@ class TestStateWarnings:
 
         # Verify warnings are enabled
         state1 = State(0, "test_state_1")
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
+            caplog.clear()
             state1.set(1)
-            assert len(w) == 1
+            assert len(caplog.records) == 1
 
         # Now create app with dev_mode=False
         app2 = create_app(dev_mode=False)
 
         # Verify warnings are disabled
         state2 = State(0, "test_state_2")
-        with warnings.catch_warnings(record=True) as w:
-            warnings.simplefilter("always")
+        with caplog.at_level("WARNING"):
+            caplog.clear()
             state2.set(1)
-            assert len(w) == 0
+            inguitive_warnings = [r for r in caplog.records if r.name == "inguitive.state"]
+            assert len(inguitive_warnings) == 0
 
         # Clean up - re-enable warnings for other tests
         enable_dev_mode_warnings()
