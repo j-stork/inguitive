@@ -29,18 +29,13 @@ def cleanup_session():
 @pytest.fixture(autouse=True)
 def reset_dev_mode():
     """Reset dev mode flag before and after each test."""
-    # Save original state
-    import inguitive.state as state_module
-
-    original = state_module._dev_mode_warnings_enabled
-
-    # Reset to False before test
-    state_module._dev_mode_warnings_enabled = False
+    # Ensure warnings are disabled before each test
+    disable_dev_mode_warnings()
 
     yield
 
-    # Restore original state
-    state_module._dev_mode_warnings_enabled = original
+    # Ensure warnings are disabled after each test
+    disable_dev_mode_warnings()
 
 
 class TestStateWarnings:
@@ -75,9 +70,7 @@ class TestStateWarnings:
     def test_no_warning_in_production(self):
         """Test that no warning is emitted when dev mode is explicitly disabled."""
         # Explicitly ensure dev mode is off
-        import inguitive.state as state_module
-
-        state_module._dev_mode_warnings_enabled = False
+        disable_dev_mode_warnings()
 
         state = State(0, "test_state")
 
