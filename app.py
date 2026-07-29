@@ -4,8 +4,14 @@ from fastapi.templating import Jinja2Templates
 from typing import TypeVar, Generic
 
 # --- Styling constants ---
-BUTTON_STYLE = "rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-BUTTON_SECONDARY_STYLE = "rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50"
+# Common base styling for all buttons
+BUTTON_BASE_CSS = "rounded-md px-3 py-2 text-sm font-semibold shadow-xs"
+
+# Primary button (indigo theme)
+BUTTON_PRIMARY_CSS = f"{BUTTON_BASE_CSS} bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+
+# Secondary button (white theme with gray ring)
+BUTTON_SECONDARY_CSS = f"{BUTTON_BASE_CSS} bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50"
 
 # --- FastAPI Setup ---
 app = FastAPI()
@@ -182,8 +188,8 @@ def Counter():
             cls=get_counter_style,
             listen_to="counter"
         ),
-        Button("+1", on_click="increment", cls=f"{BUTTON_STYLE} w-full"),
-        Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_STYLE} w-full"),
+        Button("+1", on_click="increment", cls=f"{BUTTON_PRIMARY_CSS} w-full"),
+        Button("Reset", on_click="reset", cls=f"{BUTTON_SECONDARY_CSS} w-full"),
         id="counter",
         cls="p-6 space-y-6 max-w-xs mx-auto"
     )
