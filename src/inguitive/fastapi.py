@@ -23,6 +23,7 @@ from inguitive.session import (
     Session,
     SessionBackend,
     _clear_current_session,
+    _current_session,
     _set_current_session,
     get_session_backend,
     set_session_backend,
@@ -211,7 +212,7 @@ class SessionMiddleware:
         self._request_count += 1
         if self._request_count % self.cleanup_interval == 0:
             backend = get_session_backend()
-            backend.cleanup_expired()
+            await backend.cleanup_expired()
 
         # Extract cookies from headers
         headers = dict(scope.get("headers", []))
@@ -227,15 +228,16 @@ class SessionMiddleware:
         backend = get_session_backend()
 
         if session_id:
-            session = backend.get_session(session_id)
+            session = await backend.get_session(session_id)
             if session is None:
                 session = Session(session_id=session_id)
-                backend.save_session(session)
+                await backend.save_session(session)
         else:
             session = Session(session_id=str(uuid.uuid4()))
-            backend.save_session(session)
+            await backend.save_session(session)
 
         _set_current_session(session)
+        _current_session.set(session)
 
         async def send_with_cookie(message):
             if message["type"] == "http.response.start":
@@ -255,7 +257,7 @@ class SessionMiddleware:
         try:
             await self.app(scope, receive, send_with_cookie)
         finally:
-            backend.save_session(session)
+            await backend.save_session(session)
             _clear_current_session()
 
 

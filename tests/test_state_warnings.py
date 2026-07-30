@@ -18,7 +18,8 @@ def cleanup_session():
     backend = MemoryBackend()
     set_session_backend(backend)
     session = Session(session_id="test-session")
-    backend.save_session(session)
+    # Don't call backend.save_session - just set the session in context
+    # The middleware will handle persistence in real scenarios
     _set_current_session(session)
     yield
     _clear_current_session()
@@ -183,7 +184,7 @@ class TestStateWarnings:
         from inguitive.fastapi import create_app
 
         # First create app with dev_mode=True (default)
-        app1 = create_app(dev_mode=True)
+        app1 = create_app(dev_mode=True)  # noqa: F841
 
         # Verify warnings are enabled
         state1 = State(0, "test_state_1")
@@ -193,7 +194,7 @@ class TestStateWarnings:
             assert len(caplog.records) == 1
 
         # Now create app with dev_mode=False
-        app2 = create_app(dev_mode=False)
+        app2 = create_app(dev_mode=False)  # noqa: F841
 
         # Verify warnings are disabled
         state2 = State(0, "test_state_2")

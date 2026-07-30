@@ -36,7 +36,8 @@ def cleanup_registries():
     backend = MemoryBackend()
     set_session_backend(backend)
     session = Session(session_id="test-session")
-    backend.save_session(session)
+    # Don't call backend.save_session - just set the session in context
+    # The middleware will handle persistence in real scenarios
     _set_current_session(session)
     yield
     _clear_current_session()
