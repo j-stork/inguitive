@@ -9,6 +9,9 @@ import pytest
 # Skip all tests in this file if redis package is not installed
 redis = pytest.importorskip("redis")
 
+# Mark all test methods in this file as async
+pytestmark = pytest.mark.asyncio
+
 
 class TestRedisBackend:
     """Tests for RedisBackend session storage."""
@@ -23,7 +26,7 @@ class TestRedisBackend:
         except (redis.ConnectionError, redis.RedisError, OSError):
             pytest.skip("Redis server not available")
 
-    def test_redis_backend_basic_operations(self):
+    async def test_redis_backend_basic_operations(self):
         """Test basic save, get, and delete operations with RedisBackend."""
         self._check_redis_available()
 
@@ -35,19 +38,19 @@ class TestRedisBackend:
         # Create and save a session
         session = _create_session()
         session.data_registry["test_key"] = "test_value"
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Retrieve the session
-        retrieved = backend.get_session(session.session_id)
+        retrieved = await backend.get_session(session.session_id)
         assert retrieved is not None
         assert retrieved.session_id == session.session_id
         assert retrieved.data_registry["test_key"] == "test_value"
 
         # Delete the session
-        backend.delete_session(session.session_id)
-        assert backend.get_session(session.session_id) is None
+        await backend.delete_session(session.session_id)
+        assert await backend.get_session(session.session_id) is None
 
-    def test_redis_backend_session_serialization(self):
+    async def test_redis_backend_session_serialization(self):
         """Test that sessions with data are correctly serialized for Redis."""
         self._check_redis_available()
 
@@ -63,10 +66,10 @@ class TestRedisBackend:
         session.data_registry["dict"] = {"nested": "value"}
 
         # Save to Redis
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Retrieve and verify data is preserved
-        retrieved = backend.get_session(session.session_id)
+        retrieved = await backend.get_session(session.session_id)
         assert retrieved is not None
         assert retrieved.data_registry["string"] == "value"
         assert retrieved.data_registry["number"] == 42
@@ -74,9 +77,9 @@ class TestRedisBackend:
         assert retrieved.data_registry["dict"] == {"nested": "value"}
 
         # Cleanup
-        backend.delete_session(session.session_id)
+        await backend.delete_session(session.session_id)
 
-    def test_redis_backend_ttl(self):
+    async def test_redis_backend_ttl(self):
         """Test that sessions expire after the configured TTL."""
         import time
 
@@ -89,18 +92,18 @@ class TestRedisBackend:
 
         # Create and save a session
         session = _create_session()
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Verify session exists
-        assert backend.get_session(session.session_id) is not None
+        assert await backend.get_session(session.session_id) is not None
 
         # Wait for TTL to expire
         time.sleep(1.5)
 
         # Session should be gone
-        assert backend.get_session(session.session_id) is None
+        assert await backend.get_session(session.session_id) is None
 
-    def test_redis_backend_key_naming(self):
+    async def test_redis_backend_key_naming(self):
         """Test that Redis keys are correctly formatted."""
         self._check_redis_available()
 
@@ -111,7 +114,7 @@ class TestRedisBackend:
 
         # Create and save a session
         session = _create_session()
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Check the key in Redis directly
         expected_key = f"inguitive:session:{session.session_id}"
@@ -121,9 +124,9 @@ class TestRedisBackend:
         assert len(our_keys) > 0
 
         # Cleanup
-        backend.delete_session(session.session_id)
+        await backend.delete_session(session.session_id)
 
-    def test_redis_backend_multiple_sessions(self):
+    async def test_redis_backend_multiple_sessions(self):
         """Test that multiple sessions are stored independently."""
         self._check_redis_available()
 
@@ -136,20 +139,20 @@ class TestRedisBackend:
         for i in range(5):
             session = _create_session()
             session.data_registry["index"] = i
-            backend.save_session(session)
+            await backend.save_session(session)
             sessions.append(session)
 
         # Verify all sessions can be retrieved
         for i, session in enumerate(sessions):
-            retrieved = backend.get_session(session.session_id)
+            retrieved = await backend.get_session(session.session_id)
             assert retrieved is not None
             assert retrieved.data_registry["index"] == i
 
         # Cleanup
         for session in sessions:
-            backend.delete_session(session.session_id)
+            await backend.delete_session(session.session_id)
 
-    def test_redis_backend_cleanup_expired(self):
+    async def test_redis_backend_cleanup_expired(self):
         """Test that cleanup_expired returns 0 (Redis handles TTL automatically)."""
         self._check_redis_available()
 
@@ -158,10 +161,10 @@ class TestRedisBackend:
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
 
         # cleanup_expired should be a no-op and return 0
-        result = backend.cleanup_expired()
+        result = await backend.cleanup_expired()
         assert result == 0
 
-    def test_redis_backend_with_components_not_serialized(self):
+    async def test_redis_backend_with_components_not_serialized(self):
         """Test that component_registry and state_registry are not serialized to Redis.
 
         This test verifies the fix for the serialization bug where Component
@@ -182,10 +185,10 @@ class TestRedisBackend:
         session.data_registry["data1"] = "some_data"
 
         # This should not raise TypeError (the bug we fixed)
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Verify session was saved and can be retrieved
-        retrieved = backend.get_session(session.session_id)
+        retrieved = await backend.get_session(session.session_id)
         assert retrieved is not None
         assert retrieved.session_id == session.session_id
 
@@ -197,9 +200,9 @@ class TestRedisBackend:
         assert retrieved.data_registry["data1"] == "some_data"
 
         # Cleanup
-        backend.delete_session(session.session_id)
+        await backend.delete_session(session.session_id)
 
-    def test_redis_backend_nonexistent_session(self):
+    async def test_redis_backend_nonexistent_session(self):
         """Test that getting a nonexistent session returns None."""
         self._check_redis_available()
 
@@ -208,7 +211,7 @@ class TestRedisBackend:
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
 
         # Getting a nonexistent session should return None
-        assert backend.get_session("nonexistent-session-id") is None
+        assert await backend.get_session("nonexistent-session-id") is None
 
         # Deleting a nonexistent session should not raise
-        backend.delete_session("nonexistent-session-id")
+        await backend.delete_session("nonexistent-session-id")
