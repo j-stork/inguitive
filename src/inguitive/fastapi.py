@@ -42,8 +42,26 @@ _T = TypeVar("_T")
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
 _PageDecorator = Callable[
-    [str | None, str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]
+    [str | None, str | None, str | None, Any], Callable[[Callable[_P, _T]], Callable[_P, _T]]
 ]
+
+
+def _render_template_content(value) -> str:
+    """Render a value (Component, list, or string) to HTML string for template injection.
+    
+    Args:
+        value: A string, Component instance, list of strings/Components, or None
+        
+    Returns:
+        Rendered HTML string (safe for template insertion)
+    """
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return "".join(_render_template_content(item) for item in value)
+    if hasattr(value, 'render') and callable(value.render):
+        return value.render()
+    return str(value)
 
 
 @runtime_checkable
@@ -65,6 +83,7 @@ def _register_page_route(
     handler: Callable[_P, _T],
     page_title: str | None = None,
     page_favicon: str | None = None,
+    page_head: Any = None,
 ):
     """Helper to register a page route on an app.
 
@@ -74,10 +93,11 @@ def _register_page_route(
         handler: The handler function to call
         page_title: Optional page-specific title. Falls back to app.state.title or "inguitive"
         page_favicon: Optional page-specific favicon. Falls back to app.state.favicon or default
+        page_head: Optional page-specific head content. Can be a string, Component, or list of both.
     """
 
     @app.get(path, response_class=HTMLResponse)
-    async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon):
+    async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon, ph=page_head):
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
         needs_form_data = "form_data" in sig.parameters
@@ -118,12 +138,15 @@ def _register_page_route(
             pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
         )
 
+        # Render head content if provided
+        head_extra = _render_template_content(ph)
+
         # Wrap in base template with title and favicon
         templates = app.state.templates
         return templates.TemplateResponse(
             request,
             "base.html",
-            {"content": content, "title": effective_title, "favicon": effective_favicon},
+            {"content": content, "title": effective_title, "favicon": effective_favicon, "head_extra": head_extra},
         )
 
 
@@ -368,11 +391,12 @@ def create_app(
         path: str | None = None,
         title: str | None = None,
         favicon: str | None = None,
+        head: Any = None,
     ):
         def decorator(func: Callable):
             actual_path = path if path is not None else "/"
             app.state.page_routes[actual_path] = func
-            _register_page_route(app, actual_path, func, title, favicon)
+            _register_page_route(app, actual_path, func, title, favicon, head)
             return func
 
         return decorator
