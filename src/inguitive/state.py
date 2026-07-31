@@ -11,8 +11,8 @@ from contextlib import contextmanager
 from typing import Generic, TypeVar
 
 from inguitive.session import (
-    _get_data_registry,
     _get_current_session_from_context,
+    _get_data_registry,
 )
 
 _T = TypeVar("_T")
