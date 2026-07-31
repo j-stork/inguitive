@@ -18,6 +18,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
 
+from inguitive.components import Component
 from inguitive.htmx import update_components
 from inguitive.session import (
     Session,
@@ -38,12 +39,17 @@ from inguitive.trigger import _trigger_args_context
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
 
+# Type alias for head content (supports strings, Components, lists, or None)
+HeadContent = str | Component | list[str | Component] | None
+
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
-_PageDecorator = Callable[[str | None, str | None, str | None, Any], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
+_PageDecorator = Callable[
+    [str | None, str | None, str | None, HeadContent], Callable[[Callable[_P, _T]], Callable[_P, _T]]
+]
 
 
-def _render_template_content(value) -> str:
+def _render_template_content(value: HeadContent) -> str:
     """Render a value (Component, list, or string) to HTML string for template injection.
 
     Args:
@@ -80,7 +86,7 @@ def _register_page_route(
     handler: Callable[_P, _T],
     page_title: str | None = None,
     page_favicon: str | None = None,
-    page_head: Any = None,
+    page_head: HeadContent = None,
 ):
     """Helper to register a page route on an app.
 
@@ -337,7 +343,7 @@ def create_app(
     template_dir: str | Path = "templates",
     title: str = "inguitive",
     favicon: str | None = None,
-    head: Any = None,
+    head: HeadContent = None,
     session_backend: SessionBackend | None = None,
     session_cookie_name: str = "inguitive_session_id",
     session_cookie_max_age: int = 3600,
@@ -403,7 +409,7 @@ def create_app(
         path: str | None = None,
         title: str | None = None,
         favicon: str | None = None,
-        head: Any = None,
+        head: HeadContent = None,
     ):
         def decorator(func: Callable):
             actual_path = path if path is not None else "/"
