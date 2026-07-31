@@ -94,6 +94,7 @@ def _register_page_route(
         page_title: Optional page-specific title. Falls back to app.state.title or "inguitive"
         page_favicon: Optional page-specific favicon. Falls back to app.state.favicon or default
         page_head: Optional page-specific head content. Can be a string, Component, or list of both.
+            This is appended AFTER app-level head content (from create_app).
     """
 
     @app.get(path, response_class=HTMLResponse)
@@ -138,8 +139,15 @@ def _register_page_route(
             pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
         )
 
-        # Render head content if provided
-        head_extra = _render_template_content(ph)
+        # Collect all head content sources in order: app-level first, then page-level
+        head_sources = []
+        app_head = getattr(app.state, "head", None)
+        if app_head is not None:
+            head_sources.append(app_head)
+        if ph is not None:
+            head_sources.append(ph)
+        # Render and concatenate all sources
+        head_extra = "".join(_render_template_content(source) for source in head_sources)
 
         # Wrap in base template with title and favicon
         templates = app.state.templates
@@ -334,6 +342,7 @@ def create_app(
     template_dir: str | Path = "templates",
     title: str = "inguitive",
     favicon: str | None = None,
+    head: Any = None,
     session_backend: SessionBackend | None = None,
     session_cookie_name: str = "inguitive_session_id",
     session_cookie_max_age: int = 3600,
@@ -354,6 +363,11 @@ def create_app(
         favicon: Default favicon path for pages. Can be overridden per-page via the @app.page
             decorator. Can be a URL path (e.g. /static/favicon.ico) or an absolute URL (e.g. https://...).
             Defaults to None, which uses the bundled INGUITIVE favicon at /static/inguitive_favicon.svg.
+        head: Default head content for pages (e.g., CSS, JS, meta tags). This content is
+            applied to ALL pages and can be a string, Component, or list of both. Page-level
+            head content (via @app.page decorator) is appended AFTER app-level content,
+            allowing app-wide resources to load first followed by page-specific additions.
+            Defaults to None (empty).
         session_backend: Session backend to use (defaults to MemoryBackend)
         session_cookie_name: Name of the session cookie
         session_cookie_max_age: Cookie max age in seconds
@@ -381,6 +395,9 @@ def create_app(
 
     # Set the default favicon for pages
     app.state.favicon = favicon
+
+    # Set the default head content for pages
+    app.state.head = head
 
     # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
