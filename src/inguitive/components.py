@@ -401,39 +401,13 @@ class Icon(Component):
             # Remove namespace prefixes from attribute names (e.g., ns0:class="..." -> class="...")
             result = re.sub(r'(\s)\w+:', r'\1', result)
 
-        except ET.ParseError:
-            # Fallback for malformed XML - use the original string-based approach
-            # Find class attribute with optional whitespace between class and =
-            idx = svg_string.find("class")
-            if idx != -1:
-                # Move past 'class'
-                idx += len("class")
-                # Skip whitespace
-                while idx < len(svg_string) and svg_string[idx] in " \t":
-                    idx += 1
-                # Check for '='
-                if idx < len(svg_string) and svg_string[idx] == "=":
-                    idx += 1
-                    # Skip whitespace after '='
-                    while idx < len(svg_string) and svg_string[idx] in " \t":
-                        idx += 1
-                    # Now at the opening quote
-                    if idx < len(svg_string) and svg_string[idx] in ('"', "'"):
-                        quote_char = svg_string[idx]
-                        # Find closing quote
-                        content_start = idx + 1
-                        content_end = svg_string.find(quote_char, content_start)
-                        if content_end != -1:
-                            # Replace the content between quotes
-                            result = svg_string[:content_start] + css_value + svg_string[content_end:]
-                            # Preserve Markup type if input was Markup
-                            return markupsafe.Markup(result) if is_markup else result
-            # No class attribute found - insert one
-            if svg_string.startswith("<svg"):
-                pos = len("<svg")
-                result = svg_string[:pos] + f' class="{css_value}"' + svg_string[pos:]
-            else:
-                result = f'<svg class="{css_value}">{svg_string}'
+        except ET.ParseError as e:
+            raise ValueError(
+                f"Invalid SVG XML: {e}. "
+                f"The Icon component requires well-formed SVG XML. "
+                f"Common issues: unquoted attributes, unclosed tags, or malformed syntax. "
+                f"Please validate your SVG input."
+            ) from e
 
         # Preserve Markup type if input was Markup
         if is_markup:
@@ -450,8 +424,10 @@ class Icon(Component):
         )
 
         if self.css:
-            resolved_css: str = self._resolve(self.css)
-            resolved_svg = self._replace_class(resolved_svg, resolved_css)
+            # Get the raw CSS value (don't resolve/escape it here - ET will handle
+            # XML escaping for attribute values in _replace_class)
+            css_value = self.css() if callable(self.css) else self.css
+            resolved_svg = self._replace_class(resolved_svg, css_value)
 
         return resolved_svg
 
