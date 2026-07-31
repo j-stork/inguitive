@@ -12,6 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
+import markupsafe
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -39,8 +40,8 @@ from inguitive.trigger import _trigger_args_context
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
 
-# Type alias for head content (supports strings, Components, lists, or None)
-HeadContent = str | Component | list[str | Component] | None
+# Type alias for head content (supports strings, Components, Markup, lists, or None)
+HeadContent = str | Component | markupsafe.Markup | list[str | Component | markupsafe.Markup] | None
 
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
@@ -50,16 +51,19 @@ _PageDecorator = Callable[
 
 
 def _render_template_content(value: HeadContent) -> str:
-    """Render a value (Component, list, or string) to HTML string for template injection.
+    """Render a value (Component, list, string, or Markup) to HTML string for template injection.
 
     Args:
-        value: A string, Component instance, list of strings/Components, or None
+        value: A string, Component instance, markupsafe.Markup, list of strings/Components/Markup, or None
 
     Returns:
         Rendered HTML string (safe for template insertion)
     """
     if value is None:
         return ""
+    if isinstance(value, markupsafe.Markup):
+        # Already marked as safe, don't escape - return as string
+        return str(value)
     if isinstance(value, list):
         return "".join(_render_template_content(item) for item in value)
     if hasattr(value, "render") and callable(value.render):
