@@ -231,9 +231,11 @@ class SessionMiddleware:
             session = await backend.get_session(session_id)
             if session is None:
                 session = Session(session_id=session_id)
+                # Mark as dirty so the finally block below will save this new session
                 session.mark_dirty()
         else:
             session = Session(session_id=str(uuid.uuid4()))
+            # Mark as dirty so the finally block below will save this new session
             session.mark_dirty()
 
         _set_current_session(session)
