@@ -27,6 +27,15 @@ class Session:
     state_registry: dict[str, Any] = field(default_factory=dict)
     data_registry: dict[str, Any] = field(default_factory=dict)
     last_accessed: float = field(default_factory=lambda: time.time())
+    _dirty: bool = field(default=False)
+
+    def mark_dirty(self) -> None:
+        """Mark the session as having unsaved changes."""
+        self._dirty = True
+
+    def clear_dirty(self) -> None:
+        """Clear the dirty flag after saving."""
+        self._dirty = False
 
     def to_dict(self) -> SessionData:
         """Serialize session data for storage."""
@@ -45,6 +54,7 @@ class Session:
             state_registry={},
             data_registry=data.get("data_registry", {}),
             last_accessed=data.get("last_accessed", 0.0),
+            _dirty=False,
         )
 
 
@@ -95,6 +105,8 @@ class MemoryBackend(SessionBackend):
                 return None
             # Update last_accessed timestamp on every access
             session.last_accessed = time.time()
+            # Reset dirty flag - loaded sessions start clean
+            session._dirty = False
             return session
 
     async def save_session(self, session: Session) -> None:
