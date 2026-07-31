@@ -194,6 +194,50 @@ class Icon(Component):
         return resolved_svg
 
 
+class Input(Component):
+    """HTML input component for text, email, password, etc.
+    
+    Example:
+        Input(id="email", type="email", placeholder="Enter email", cls="border rounded p-2")
+        Input(id="name", value=state, listen_to="name_state")
+    """
+    
+    def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None,
+                 type: str = "text", value: str | Callable[[], str] | None = None,
+                 placeholder: str = "", listen_to: str | None = None, **attrs):
+        """Initialize an Input component.
+        
+        Args:
+            id: HTML id attribute
+            cls: Tailwind CSS classes
+            type: Input type (text, email, password, number, etc.)
+            value: Initial value (string or callable)
+            placeholder: Placeholder text
+            listen_to: State name to listen for changes
+            **attrs: Additional HTML attributes (name, required, etc.)
+        """
+        # Set default value
+        if value is not None:
+            attrs['value'] = value
+        if placeholder:
+            attrs['placeholder'] = placeholder
+        if type != "text":
+            attrs['type'] = type
+        super().__init__(id=id, cls=cls, listen_to=listen_to, **attrs)
+
+    def render(self) -> str:
+        """Render the input element."""
+        attrs = self._get_attrs_str()
+        return f"<input {attrs}>"
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true" {self._get_attrs_str()}'.strip()
+        return f"<input {attrs}>"
+
+
 class Markdown(Component):
     """A component that renders Markdown content as HTML.
     
