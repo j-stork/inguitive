@@ -139,6 +139,60 @@ class TestIcon:
         html = icon.render()
         assert "SUN" in html or "w-6 h-6 text-gray-800" in html
 
+    def test_replace_class_self_closing_tag(self):
+        """Test _replace_class with self-closing SVG tag."""
+        svg = '<svg class="old-class" width="24" height="24"/>'
+        result = Icon._replace_class(svg, "new-class")
+        assert 'class="new-class"' in result
+        assert "old-class" not in result
+
+    def test_replace_class_no_existing_class(self):
+        """Test _replace_class when SVG has no class attribute initially."""
+        svg = '<svg width="24" height="24" fill="currentColor"><path d="M1 2"/></svg>'
+        result = Icon._replace_class(svg, "added-class")
+        assert 'class="added-class"' in result
+
+    def test_replace_class_extra_whitespace(self):
+        """Test _replace_class with extra whitespace in attributes."""
+        svg = '<svg   class  =  "old-class"   width="24"   height="24"   ></svg>'
+        result = Icon._replace_class(svg, "new-class")
+        assert 'class="new-class"' in result
+        assert "old-class" not in result
+
+    def test_replace_class_single_quotes(self):
+        """Test _replace_class with single quotes in attributes."""
+        svg = "<svg class='old-class' width='24' height='24'></svg>"
+        result = Icon._replace_class(svg, "new-class")
+        assert 'class="new-class"' in result
+        assert "old-class" not in result
+
+    def test_replace_class_with_xmlns(self):
+        """Test _replace_class with xmlns attribute (namespace handling)."""
+        svg = '<svg class="old-class" xmlns="http://www.w3.org/2000/svg" width="24" height="24"></svg>'
+        result = Icon._replace_class(svg, "new-class")
+        assert 'class="new-class"' in result
+        assert "old-class" not in result
+        # Ensure no namespace prefixes remain
+        assert ":" not in result or result.count(":") == svg.count(":")
+
+    def test_replace_class_markup_preservation(self):
+        """Test that Markup type is preserved through _replace_class."""
+        from markupsafe import Markup
+
+        svg_markup = Markup('<svg class="old-class" width="24" height="24"></svg>')
+        result = Icon._replace_class(svg_markup, "new-class")
+        assert isinstance(result, Markup)
+        assert 'class="new-class"' in str(result)
+
+    def test_replace_class_multiple_attributes(self):
+        """Test _replace_class with many attributes in different orders."""
+        svg = '<svg aria-hidden="true" viewBox="0 0 24 24" class="old-class" width="24" height="24" fill="currentColor"></svg>'
+        result = Icon._replace_class(svg, "new-class")
+        assert 'class="new-class"' in result
+        assert "old-class" not in result
+        assert 'aria-hidden="true"' in result
+        assert 'viewBox="0 0 24 24"' in result
+
 
 class TestState:
     def test_state_get_set(self):
