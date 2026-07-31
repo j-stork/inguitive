@@ -31,7 +31,12 @@ from inguitive.css import BUTTON_PRIMARY_CSS
 # Create FastAPI app
 # Optionally, you can assign a title and/or favicon to the app (which will appear
 # in the browser tab). Fallback to Inguitive's title and favicon when omitted.
-app = create_app(title="Counter App", favicon="/path/to/favicon.svg")
+# Use `head` to add custom content (meta tags, CSS, JS, etc.) to the <head> section.
+app = create_app(
+    title="Counter App",
+    favicon="/path/to/favicon.svg",
+    head='<meta name="description" content="A simple counter app">',
+)
 
 # Create reactive state
 counter_state = State(0, "counter_state")
@@ -49,13 +54,37 @@ def Counter():
     )
 
 # Define a route function
-# Each page can optionally have its own title and/or favicon. 
+# Each page can optionally have its own title, favicon, and/or head content.
 # Fallback to app-level title/favicon if defined, else Inguitive's title and favicon
-# are used by default.
-@app.page("/", title="Counter Page", favicon="/path/to/page_favicon.svg")
+# are used by default. Page-level head content is appended after app-level head content.
+@app.page("/", title="Counter Page", favicon="/path/to/page_favicon.svg", head='<link rel="stylesheet" href="/custom.css">')
 def index():
     return Counter()
 ```
+
+### Head Content Injection
+
+Add custom content to the `<head>` section of your pages using the `head` parameter:
+
+```python
+from inguitive import create_app, Div
+
+# App-level head content (applies to all pages)
+app = create_app(
+    title="My App",
+    head=[
+        '<meta name="viewport" content="width=device-width, initial-scale=1">',
+        '<link rel="stylesheet" href="/global.css">',
+    ]
+)
+
+# Page-level head content (appended after app-level)
+@app.page("/special", head='<meta name="special-page" content="true">')
+def special_page():
+    return Div("Special page content")
+```
+
+The `head` parameter accepts strings, Components, or lists of both. Use it for meta tags, CSS/JS includes, or any custom HTML you need in the document head.
 
 ### Trigger Arguments
 
@@ -248,6 +277,7 @@ from inguitive import create_app, RedisBackend
 app = create_app(
     title="My App",
     favicon="/path/to/favicon.ico",
+    head='<link rel="stylesheet" href="/static/prod.css">',
     session_backend=RedisBackend(redis_url="redis://localhost:6379"),
     session_cookie_secure=True,      # Cookies only over HTTPS
     session_cookie_httponly=True,    # Prevent JavaScript access (default)
