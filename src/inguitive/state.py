@@ -49,6 +49,3 @@ class State(Generic[T]):
         self.listeners.discard(component_id)
 
 
-# --- Default State Instances ---
-counter_state = State(0, "counter_state")
-theme_state = State("light", "theme_state")
