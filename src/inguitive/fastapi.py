@@ -231,10 +231,10 @@ class SessionMiddleware:
             session = await backend.get_session(session_id)
             if session is None:
                 session = Session(session_id=session_id)
-                await backend.save_session(session)
+                session.mark_dirty()
         else:
             session = Session(session_id=str(uuid.uuid4()))
-            await backend.save_session(session)
+            session.mark_dirty()
 
         _set_current_session(session)
         _current_session.set(session)
@@ -257,7 +257,9 @@ class SessionMiddleware:
         try:
             await self.app(scope, receive, send_with_cookie)
         finally:
-            await backend.save_session(session)
+            if session._dirty:
+                await backend.save_session(session)
+                session.clear_dirty()
             _clear_current_session()
 
 
