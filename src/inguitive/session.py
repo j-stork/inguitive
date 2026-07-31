@@ -209,9 +209,6 @@ class RedisBackend(SessionBackend):
 # Global session backend instance
 _session_backend: SessionBackend | None = None
 
-# Context variable for current session ID
-_current_session_id: ContextVar[SessionId | None] = ContextVar("current_session_id", default=None)
-
 # Context variable for current Session object (for direct sync access)
 _current_session: ContextVar[Session | None] = ContextVar("current_session", default=None)
 
@@ -257,20 +254,17 @@ def _get_or_create_current_session() -> Session:
     session = _create_session()
 
     # Set in context (but don't call backend - middleware handles persistence)
-    _current_session_id.set(session.session_id)
     _current_session.set(session)
     return session
 
 
 def _set_current_session(session: Session) -> None:
     """Set the current session for this request/context."""
-    _current_session_id.set(session.session_id)
     _current_session.set(session)
 
 
 def _clear_current_session() -> None:
     """Clear the current session from context."""
-    _current_session_id.set(None)
     _current_session.set(None)
 
 
