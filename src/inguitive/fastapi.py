@@ -23,7 +23,6 @@ from inguitive.session import (
     Session,
     SessionBackend,
     _clear_current_session,
-    _current_session,
     _set_current_session,
     get_session_backend,
     set_session_backend,
@@ -41,17 +40,15 @@ _T = TypeVar("_T")
 
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
-_PageDecorator = Callable[
-    [str | None, str | None, str | None, Any], Callable[[Callable[_P, _T]], Callable[_P, _T]]
-]
+_PageDecorator = Callable[[str | None, str | None, str | None, Any], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
 
 
 def _render_template_content(value) -> str:
     """Render a value (Component, list, or string) to HTML string for template injection.
-    
+
     Args:
         value: A string, Component instance, list of strings/Components, or None
-        
+
     Returns:
         Rendered HTML string (safe for template insertion)
     """
@@ -59,7 +56,7 @@ def _render_template_content(value) -> str:
         return ""
     if isinstance(value, list):
         return "".join(_render_template_content(item) for item in value)
-    if hasattr(value, 'render') and callable(value.render):
+    if hasattr(value, "render") and callable(value.render):
         return value.render()
     return str(value)
 
@@ -135,9 +132,7 @@ def _register_page_route(
         # 1. Page-level favicon (from decorator)
         # 2. App-level favicon (from create_app)
         # 3. Default favicon
-        effective_favicon = (
-            pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
-        )
+        effective_favicon = pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
 
         # Collect all head content sources in order: app-level first, then page-level
         head_sources = []
@@ -489,9 +484,7 @@ def create_app(
     return app  # type: ignore[return-value]
 
 
-def run_app(
-    app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True
-):
+def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True):
     """Run the FastAPI application using Uvicorn.
 
     Args:
