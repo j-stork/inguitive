@@ -303,7 +303,7 @@ class TestIconComponent:
 
     def test_icon_with_untrusted_svg(self):
         """Test that Icon outputs SVG as-is (trusts developer input).
-        
+
         Note: Icon component is for developer-supplied markup, not user input.
         SVG with script tags is valid XML and will be passed through.
         Developers are responsible for providing safe SVG content.
