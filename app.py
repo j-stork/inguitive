@@ -179,25 +179,40 @@ class Icon(Component):
         super().__init__(cls=cls, **attrs)
         self.svg = svg
 
+    @staticmethod
+    def _replace_class(svg_str, cls_value):
+        """Replace or insert class attribute in SVG string.
+        
+        Preserves all other attributes, quote style, and structure.
+        
+        Args:
+            svg_str: The SVG HTML string
+            cls_value: The new class value (without quotes)
+            
+        Returns:
+            SVG string with updated class attribute
+        """
+        # Find class attribute: class=", " or class=''
+        match = re.search(r'(class\s*=\s*)([\'"](.*?)\2)', svg_str)
+        
+        if match:
+            # Replace only the value inside the quotes
+            before, quote = match.groups()[:2]
+            start, end = match.span()
+            return svg_str[:start] + f'{before}{quote}{cls_value}{quote}' + svg_str[end:]
+        else:
+            # No class attribute - insert one after <svg
+            if svg_str.startswith('<svg'):
+                pos = len('<svg')
+                return svg_str[:pos] + f' class="{cls_value}"' + svg_str[pos:]
+            return f'<svg class="{cls_value}">{svg_str}'
+
     def render(self) -> str:
         resolved_svg = self._resolve(self.svg)
         
         if self.cls:
             resolved_cls = self._resolve(self.cls)
-            # Replace class attribute value if exists, preserving quote style
-            if 'class=' in resolved_svg:
-                resolved_svg = re.sub(
-                    r'(class\s*=\s*)([\'"].*?)\2',
-                    rf'\g<1>{resolved_cls}\2',
-                    resolved_svg,
-                    count=1
-                )
-            else:
-                # No class attribute - add one
-                if resolved_svg.startswith('<svg'):
-                    resolved_svg = resolved_svg.replace('<svg', f'<svg class="{resolved_cls}"')
-                else:
-                    resolved_svg = f'<svg class="{resolved_cls}">{resolved_svg}'
+            resolved_svg = self._replace_class(resolved_svg, resolved_cls)
         
         return resolved_svg
 
