@@ -23,7 +23,7 @@ pip install inguitive
 
 ```python
 from inguitive import Div, Button, Label, State, create_app
-from inguitive.fastapi import BUTTON_PRIMARY_CSS
+from inguitive.css import BUTTON_PRIMARY_CSS
 from inguitive.htmx import update_components
 
 # Create reactive state
