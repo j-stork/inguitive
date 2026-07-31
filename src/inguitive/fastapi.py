@@ -239,7 +239,6 @@ class SessionMiddleware:
             session.mark_dirty()
 
         _set_current_session(session)
-        _current_session.set(session)
 
         async def send_with_cookie(message):
             if message["type"] == "http.response.start":
