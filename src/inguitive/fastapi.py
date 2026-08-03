@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import importlib.resources
 import inspect
+import traceback
 import uuid
 import warnings
 from collections.abc import Callable
@@ -343,6 +344,39 @@ def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoa
     return ChoiceLoader(loaders)
 
 
+def _dev_error_handler(request: Request, exc: Exception) -> HTMLResponse:
+    """Exception handler that returns a styled error page.
+
+    In dev mode (dev_mode=True), displays full traceback.
+    In production mode (dev_mode=False), displays a simple error message.
+
+    Args:
+        request: The FastAPI request object
+        exc: The exception that was raised
+
+    Returns:
+        TemplateResponse with the error page template, status_code=500
+    """
+    from fastapi.templating import Jinja2Templates
+
+    templates: Jinja2Templates = request.app.state.templates
+    dev_mode = getattr(request.app.state, "dev_mode", False)
+    # Use format_exception to get the full traceback for the given exception
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {
+            "dev_mode": dev_mode,
+            "traceback": tb,
+            "request_url": str(request.url),
+            "request_method": request.method,
+        },
+        status_code=500,
+    )
+
+
 def create_app(
     template_dir: str | Path = "templates",
     title: str = "inguitive",
@@ -395,6 +429,9 @@ def create_app(
     templates = Jinja2Templates(env=env)
     app.state.templates = templates
 
+    # Store dev_mode on app state for exception handler access
+    app.state.dev_mode = dev_mode
+
     # Set the default title for pages
     app.state.title = title
 
@@ -403,6 +440,9 @@ def create_app(
 
     # Set the default head content for pages
     app.state.head = head
+
+    # Register exception handler for styled error pages
+    app.add_exception_handler(Exception, _dev_error_handler)
 
     # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
