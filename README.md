@@ -242,7 +242,7 @@ app = create_app(
 )
 ```
 
-Requires `pip install redis` for RedisBackend.
+Requires `pip install redis>=4.2` for RedisBackend.
 
 ### Session Lifetime and Expiry
 

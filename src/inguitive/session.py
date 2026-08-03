@@ -167,13 +167,13 @@ class RedisBackend(SessionBackend):
         self._client = None
         self._lock = asyncio.Lock()
 
-    def _get_client(self):
-        """Lazy initialization of Redis client."""
+    async def _get_client(self):
+        """Lazy initialization of async Redis client."""
         if self._client is None:
             try:
-                import redis
+                import redis.asyncio as aioredis
 
-                self._client = redis.Redis.from_url(self._redis_url, db=self._db, decode_responses=True)
+                self._client = aioredis.Redis.from_url(self._redis_url, db=self._db, decode_responses=True)
             except ImportError:
                 raise ImportError("Redis backend requires 'redis' package. Install with: pip install redis")
         return self._client
@@ -185,9 +185,9 @@ class RedisBackend(SessionBackend):
     async def get_session(self, session_id: SessionId) -> Session | None:
         """Retrieve session from Redis."""
         async with self._lock:
-            client = self._get_client()
+            client = await self._get_client()
             key = self._make_key(session_id)
-            data = client.get(key)
+            data = await client.get(key)
             if data is None:
                 return None
             try:
@@ -200,22 +200,34 @@ class RedisBackend(SessionBackend):
     async def save_session(self, session: Session) -> None:
         """Save session to Redis with TTL."""
         async with self._lock:
-            client = self._get_client()
+            client = await self._get_client()
             key = self._make_key(session.session_id)
             data = json.dumps(session.to_dict())
-            client.setex(key, self._ttl_seconds, data)
+            await client.setex(key, self._ttl_seconds, data)
 
     async def delete_session(self, session_id: SessionId) -> None:
         """Delete session from Redis."""
         async with self._lock:
-            client = self._get_client()
+            client = await self._get_client()
             key = self._make_key(session_id)
-            client.delete(key)
+            await client.delete(key)
 
     async def cleanup_expired(self) -> int:
         """Redis handles TTL automatically. This is a no-op."""
-        async with self._lock:
-            return 0
+        return 0
+
+    async def aclose(self) -> None:
+        """Close the Redis connection asynchronously."""
+        if self._client is not None:
+            await self._client.aclose()
+            self._client = None
+
+    def close(self) -> None:
+        """Close the Redis connection (synchronous wrapper)."""
+        import asyncio
+
+        if self._client is not None:
+            asyncio.run(self.aclose())
 
 
 # Global session backend instance
