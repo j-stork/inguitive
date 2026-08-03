@@ -2,14 +2,19 @@
 
 import json
 
+import pytest
+
 from inguitive.components import Button
 from inguitive.session import MemoryBackend, Session, _create_session
+
+# Mark all test methods in this file as async
+pytestmark = pytest.mark.asyncio
 
 
 class TestRedisBackendSerialization:
     """Tests for RedisBackend serialization fixes."""
 
-    def test_session_with_components_serialization(self):
+    async def test_session_with_components_serialization(self):
         """Test that sessions with components can be serialized for Redis storage.
 
         This tests the fix for: component_registry and state_registry contain live
@@ -39,7 +44,7 @@ class TestRedisBackendSerialization:
         assert deserialized.component_registry == {}
         assert deserialized.state_registry == {}
 
-    def test_session_with_complex_data_serialization(self):
+    async def test_session_with_complex_data_serialization(self):
         """Test serialization with various data types in data_registry."""
         session = _create_session()
         session.data_registry["string"] = "test"
@@ -60,7 +65,7 @@ class TestRedisBackendSerialization:
 class TestMemoryBackendInstanceIsolation:
     """Tests for MemoryBackend instance isolation fix."""
 
-    def test_instances_have_isolated_storage(self):
+    async def test_instances_have_isolated_storage(self):
         """Test that MemoryBackend instances do not share session storage.
 
         This tests the fix for: _sessions was a class-level variable, causing all
@@ -74,29 +79,29 @@ class TestMemoryBackendInstanceIsolation:
         # Save a session to backend1
         session1 = _create_session()
         session1.data_registry["test"] = "value1"
-        backend1.save_session(session1)
+        await backend1.save_session(session1)
 
         # backend2 should NOT have this session
-        assert backend2.get_session(session1.session_id) is None
+        assert await backend2.get_session(session1.session_id) is None
 
         # backend1 should have it
-        retrieved1 = backend1.get_session(session1.session_id)
+        retrieved1 = await backend1.get_session(session1.session_id)
         assert retrieved1 is not None
         assert retrieved1.data_registry["test"] == "value1"
 
         # Save a session to backend2
         session2 = _create_session()
         session2.data_registry["test"] = "value2"
-        backend2.save_session(session2)
+        await backend2.save_session(session2)
 
         # backend1 should still NOT have session2
-        assert backend1.get_session(session2.session_id) is None
+        assert await backend1.get_session(session2.session_id) is None
         # backend2 should have session2
-        retrieved2 = backend2.get_session(session2.session_id)
+        retrieved2 = await backend2.get_session(session2.session_id)
         assert retrieved2 is not None
         assert retrieved2.data_registry["test"] == "value2"
 
-    def test_multiple_instances_independent(self):
+    async def test_multiple_instances_independent(self):
         """Test that operations on one backend don't affect others."""
         backend1 = MemoryBackend()
         backend2 = MemoryBackend()
@@ -107,91 +112,91 @@ class TestMemoryBackendInstanceIsolation:
         session2 = _create_session()
         session3 = _create_session()
 
-        backend1.save_session(session1)
-        backend2.save_session(session2)
-        backend3.save_session(session3)
+        await backend1.save_session(session1)
+        await backend2.save_session(session2)
+        await backend3.save_session(session3)
 
         # Each backend should only have its own session
-        assert backend1.get_session(session1.session_id) is not None
-        assert backend1.get_session(session2.session_id) is None
-        assert backend1.get_session(session3.session_id) is None
+        assert await backend1.get_session(session1.session_id) is not None
+        assert await backend1.get_session(session2.session_id) is None
+        assert await backend1.get_session(session3.session_id) is None
 
-        assert backend2.get_session(session2.session_id) is not None
-        assert backend2.get_session(session1.session_id) is None
-        assert backend2.get_session(session3.session_id) is None
+        assert await backend2.get_session(session2.session_id) is not None
+        assert await backend2.get_session(session1.session_id) is None
+        assert await backend2.get_session(session3.session_id) is None
 
-        assert backend3.get_session(session3.session_id) is not None
-        assert backend3.get_session(session1.session_id) is None
-        assert backend3.get_session(session2.session_id) is None
+        assert await backend3.get_session(session3.session_id) is not None
+        assert await backend3.get_session(session1.session_id) is None
+        assert await backend3.get_session(session2.session_id) is None
 
 
 class TestMemoryBackendBasicOperations:
     """Tests for basic MemoryBackend operations."""
 
-    def test_save_and_retrieve_session(self):
+    async def test_save_and_retrieve_session(self):
         """Test basic save and get operations."""
         backend = MemoryBackend()
 
         # Create and save a session
         session = _create_session()
         session.data_registry["key"] = "value"
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Retrieve the session
-        retrieved = backend.get_session(session.session_id)
+        retrieved = await backend.get_session(session.session_id)
         assert retrieved is not None
         assert retrieved.data_registry["key"] == "value"
 
-    def test_delete_session(self):
+    async def test_delete_session(self):
         """Test session deletion."""
         backend = MemoryBackend()
 
         # Create and save a session
         session = _create_session()
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Verify it exists
-        assert backend.get_session(session.session_id) is not None
+        assert await backend.get_session(session.session_id) is not None
 
         # Delete the session
-        backend.delete_session(session.session_id)
-        assert backend.get_session(session.session_id) is None
+        await backend.delete_session(session.session_id)
+        assert await backend.get_session(session.session_id) is None
 
-    def test_update_session(self):
+    async def test_update_session(self):
         """Test updating an existing session."""
         backend = MemoryBackend()
 
         # Create and save a session
         session = _create_session()
         session.data_registry["key"] = "original"
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Modify and save again
         session.data_registry["key"] = "updated"
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Retrieve and verify update
-        retrieved = backend.get_session(session.session_id)
+        retrieved = await backend.get_session(session.session_id)
         assert retrieved is not None
         assert retrieved.data_registry["key"] == "updated"
 
-    def test_get_nonexistent_session(self):
+    async def test_get_nonexistent_session(self):
         """Test that getting a non-existent session returns None."""
         backend = MemoryBackend()
-        assert backend.get_session("nonexistent-id") is None
+        assert await backend.get_session("nonexistent-id") is None
 
-    def test_delete_nonexistent_session(self):
+    async def test_delete_nonexistent_session(self):
         """Test that deleting a non-existent session doesn't raise an error."""
         backend = MemoryBackend()
         # Should not raise
-        backend.delete_session("nonexistent-id")
-        assert backend.get_session("nonexistent-id") is None
+        await backend.delete_session("nonexistent-id")
+        assert await backend.get_session("nonexistent-id") is None
 
 
 class TestMemoryBackendSessionExpiry:
     """Tests for MemoryBackend session expiry and cleanup functionality."""
 
-    def test_session_has_last_accessed_on_creation(self):
+    async def test_session_has_last_accessed_on_creation(self):
         """Test that sessions have last_accessed timestamp set on creation."""
         import time
 
@@ -204,24 +209,24 @@ class TestMemoryBackendSessionExpiry:
         assert session.last_accessed >= before
         assert session.last_accessed <= after
 
-    def test_get_session_updates_last_accessed(self):
+    async def test_get_session_updates_last_accessed(self):
         """Test that getting a session updates its last_accessed timestamp."""
         import time
 
         backend = MemoryBackend()
         session = _create_session()
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Ensure some time has passed
         time.sleep(0.01)
 
         old_timestamp = session.last_accessed
-        retrieved = backend.get_session(session.session_id)
+        retrieved = await backend.get_session(session.session_id)
 
         assert retrieved is not None
         assert retrieved.last_accessed > old_timestamp
 
-    def test_save_session_updates_last_accessed(self):
+    async def test_save_session_updates_last_accessed(self):
         """Test that saving a session updates its last_accessed timestamp."""
         import time
 
@@ -232,11 +237,11 @@ class TestMemoryBackendSessionExpiry:
         time.sleep(0.01)
 
         old_timestamp = session.last_accessed
-        backend.save_session(session)
+        await backend.save_session(session)
 
         assert session.last_accessed > old_timestamp
 
-    def test_cleanup_expired_removes_old_sessions(self):
+    async def test_cleanup_expired_removes_old_sessions(self):
         """Test that cleanup_expired removes sessions older than TTL."""
         import time
 
@@ -245,22 +250,22 @@ class TestMemoryBackendSessionExpiry:
 
         # Create a session
         session = _create_session()
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Verify session exists
-        assert backend.get_session(session.session_id) is not None
+        assert await backend.get_session(session.session_id) is not None
 
         # Manually set last_accessed to the past (2 seconds ago) by modifying the stored session
         backend._sessions[session.session_id].last_accessed = time.time() - 2
 
         # Run cleanup
-        deleted_count = backend.cleanup_expired()
+        deleted_count = await backend.cleanup_expired()
 
         # Session should be deleted
         assert deleted_count == 1
-        assert backend.get_session(session.session_id) is None
+        assert await backend.get_session(session.session_id) is None
 
-    def test_cleanup_expired_keeps_recent_sessions(self):
+    async def test_cleanup_expired_keeps_recent_sessions(self):
         """Test that cleanup_expired keeps sessions within TTL."""
 
         # Create backend with TTL of 1 hour
@@ -268,31 +273,31 @@ class TestMemoryBackendSessionExpiry:
 
         # Create a session (will have current timestamp)
         session = _create_session()
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Run cleanup
-        deleted_count = backend.cleanup_expired()
+        deleted_count = await backend.cleanup_expired()
 
         # Session should NOT be deleted
         assert deleted_count == 0
-        assert backend.get_session(session.session_id) is not None
+        assert await backend.get_session(session.session_id) is not None
 
-    def test_cleanup_expired_with_no_expiry(self):
+    async def test_cleanup_expired_with_no_expiry(self):
         """Test that cleanup with TTL <= 0 does nothing."""
         backend = MemoryBackend(ttl_seconds=0)
 
         # Create and save a session with old timestamp
         session = _create_session()
         session.last_accessed = 0.0  # Very old timestamp
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Run cleanup - should not delete anything
-        deleted_count = backend.cleanup_expired()
+        deleted_count = await backend.cleanup_expired()
 
         assert deleted_count == 0
-        assert backend.get_session(session.session_id) is not None
+        assert await backend.get_session(session.session_id) is not None
 
-    def test_cleanup_expired_multiple_sessions(self):
+    async def test_cleanup_expired_multiple_sessions(self):
         """Test cleanup with multiple sessions, some expired, some not."""
         import time
 
@@ -303,23 +308,23 @@ class TestMemoryBackendSessionExpiry:
         session2 = _create_session()  # Will be expired
         session3 = _create_session()  # Recent
 
-        backend.save_session(session1)
-        backend.save_session(session2)
-        backend.save_session(session3)
+        await backend.save_session(session1)
+        await backend.save_session(session2)
+        await backend.save_session(session3)
 
         # Manually set session2 to be expired
         backend._sessions[session2.session_id].last_accessed = time.time() - 2
 
         # Run cleanup
-        deleted_count = backend.cleanup_expired()
+        deleted_count = await backend.cleanup_expired()
 
         # Only session2 should be deleted
         assert deleted_count == 1
-        assert backend.get_session(session1.session_id) is not None
-        assert backend.get_session(session2.session_id) is None
-        assert backend.get_session(session3.session_id) is not None
+        assert await backend.get_session(session1.session_id) is not None
+        assert await backend.get_session(session2.session_id) is None
+        assert await backend.get_session(session3.session_id) is not None
 
-    def test_cleanup_expired_returns_correct_count(self):
+    async def test_cleanup_expired_returns_correct_count(self):
         """Test that cleanup_expired returns the correct number of deleted sessions."""
         import time
 
@@ -329,7 +334,7 @@ class TestMemoryBackendSessionExpiry:
         session_ids = []
         for _ in range(5):
             session = _create_session()
-            backend.save_session(session)
+            await backend.save_session(session)
             session_ids.append(session.session_id)
 
         # Manually set all to be expired
@@ -337,17 +342,17 @@ class TestMemoryBackendSessionExpiry:
             backend._sessions[sid].last_accessed = time.time() - 2
 
         # Run cleanup
-        deleted_count = backend.cleanup_expired()
+        deleted_count = await backend.cleanup_expired()
 
         assert deleted_count == 5
 
-    def test_cleanup_expired_empty_backend(self):
+    async def test_cleanup_expired_empty_backend(self):
         """Test that cleanup on empty backend returns 0."""
         backend = MemoryBackend(ttl_seconds=1)
-        deleted_count = backend.cleanup_expired()
+        deleted_count = await backend.cleanup_expired()
         assert deleted_count == 0
 
-    def test_session_serialization_with_last_accessed(self):
+    async def test_session_serialization_with_last_accessed(self):
         """Test that last_accessed is serialized and deserialized correctly."""
         import json
 
@@ -366,7 +371,7 @@ class TestMemoryBackendSessionExpiry:
 
         assert deserialized.last_accessed == original_timestamp
 
-    def test_session_deserialization_backward_compatible(self):
+    async def test_session_deserialization_backward_compatible(self):
         """Test that old session data without last_accessed can be deserialized."""
 
         # Old session data without last_accessed
@@ -383,7 +388,7 @@ class TestMemoryBackendSessionExpiry:
         assert session.session_id == "test-id"
         assert session.data_registry == {"key": "value"}
 
-    def test_get_session_updates_timestamp_then_cleanup(self):
+    async def test_get_session_updates_timestamp_then_cleanup(self):
         """Integration test: accessing a session keeps it from being cleaned up."""
         import time
 
@@ -391,17 +396,17 @@ class TestMemoryBackendSessionExpiry:
 
         # Create a session
         session = _create_session()
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Wait a bit
         time.sleep(0.01)
 
         # Manually set last_accessed to the past (but within TTL)
         session.last_accessed = time.time() - 0.5
-        backend.save_session(session)
+        await backend.save_session(session)
 
         # Now access the session (should update timestamp)
-        retrieved = backend.get_session(session.session_id)
+        retrieved = await backend.get_session(session.session_id)
         assert retrieved is not None
 
         # Wait a bit more
@@ -409,9 +414,9 @@ class TestMemoryBackendSessionExpiry:
 
         # Manually set timestamp to just before TTL
         retrieved.last_accessed = time.time() - 0.5
-        backend.save_session(retrieved)
+        await backend.save_session(retrieved)
 
         # Run cleanup - session should survive because it's within TTL
-        deleted_count = backend.cleanup_expired()
+        deleted_count = await backend.cleanup_expired()
         assert deleted_count == 0
-        assert backend.get_session(session.session_id) is not None
+        assert await backend.get_session(session.session_id) is not None

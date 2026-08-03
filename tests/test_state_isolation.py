@@ -20,8 +20,8 @@ def isolated_sessions():
 
     session_a = Session(session_id="test-session-a")
     session_b = Session(session_id="test-session-b")
-    backend.save_session(session_a)
-    backend.save_session(session_b)
+    # Don't call backend.save_session - just set the sessions in context when needed
+    # The tests will use _set_current_session to switch between them
 
     yield session_a, session_b
 

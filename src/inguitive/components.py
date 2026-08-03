@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import re
 import uuid
+import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping
 
 import jinja2
@@ -365,7 +366,9 @@ class Icon(Component):
     def _replace_class(svg_str: str, css_value: str) -> str:
         """Replace or insert class attribute in SVG string.
 
-        Preserves all other attributes, quote style, and structure.
+        Uses xml.etree.ElementTree for robust parsing of SVG content.
+        Handles edge cases like self-closing tags, irregular whitespace,
+        and different quote styles. Preserves all other attributes and structure.
 
         Args:
             svg_str: The SVG HTML string
@@ -374,34 +377,42 @@ class Icon(Component):
         Returns:
             SVG string with updated class attribute
         """
-        # Find class attribute with optional whitespace between class and =
-        idx = svg_str.find("class")
-        if idx != -1:
-            # Move past 'class'
-            idx += len("class")
-            # Skip whitespace
-            while idx < len(svg_str) and svg_str[idx] in " \t":
-                idx += 1
-            # Check for '='
-            if idx < len(svg_str) and svg_str[idx] == "=":
-                idx += 1
-                # Skip whitespace after '='
-                while idx < len(svg_str) and svg_str[idx] in " \t":
-                    idx += 1
-                # Now at the opening quote
-                if idx < len(svg_str) and svg_str[idx] in ('"', "'"):
-                    quote_char = svg_str[idx]
-                    # Find closing quote
-                    content_start = idx + 1
-                    content_end = svg_str.find(quote_char, content_start)
-                    if content_end != -1:
-                        # Replace the content between quotes
-                        return svg_str[:content_start] + css_value + svg_str[content_end:]
-        # No class attribute found - insert one
-        if svg_str.startswith("<svg"):
-            pos = len("<svg")
-            return svg_str[:pos] + f' class="{css_value}"' + svg_str[pos:]
-        return f'<svg class="{css_value}">{svg_str}'
+        # Extract the string content if it's a Markup object
+        is_markup = isinstance(svg_str, markupsafe.Markup)
+        svg_string = str(svg_str) if is_markup else svg_str
+
+        try:
+            # Parse the SVG string
+            root = ET.fromstring(svg_string)
+
+            # Set the class attribute on the root element
+            root.set("class", css_value)
+
+            # Serialize back to string
+            result = ET.tostring(root, encoding="unicode", method="html")
+
+            # Remove namespace prefixes and declarations to maintain clean HTML output
+            # Remove all namespace declarations (xmlns and xmlns:*)
+            result = re.sub(r'\s+xmlns(:\w+)?="[^"]*"', '', result)
+            # Remove namespace prefixes from opening tags (e.g., <ns0:svg -> <svg)
+            result = re.sub(r'<\w+:', '<', result)
+            # Remove namespace prefixes from closing tags (e.g., </ns0:svg -> </svg)
+            result = re.sub(r'</\w+:', '</', result)
+            # Remove namespace prefixes from attribute names (e.g., ns0:class="..." -> class="...")
+            result = re.sub(r'(\s)\w+:', r'\1', result)
+
+        except ET.ParseError as e:
+            raise ValueError(
+                f"Invalid SVG XML: {e}. "
+                f"The Icon component requires well-formed SVG XML. "
+                f"Common issues: unquoted attributes, unclosed tags, or malformed syntax. "
+                f"Please validate your SVG input."
+            ) from e
+
+        # Preserve Markup type if input was Markup
+        if is_markup:
+            return markupsafe.Markup(result)
+        return result
 
     def render(self) -> str:
         # SVG content is always developer-supplied markup, never user input.
@@ -413,8 +424,10 @@ class Icon(Component):
         )
 
         if self.css:
-            resolved_css: str = self._resolve(self.css)
-            resolved_svg = self._replace_class(resolved_svg, resolved_css)
+            # Get the raw CSS value (don't resolve/escape it here - ET will handle
+            # XML escaping for attribute values in _replace_class)
+            css_value = self.css() if callable(self.css) else self.css
+            resolved_svg = self._replace_class(resolved_svg, css_value)
 
         return resolved_svg
 
