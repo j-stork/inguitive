@@ -3,6 +3,7 @@ INGUITIVE - A pure Python web framework combining intuitive syntax with HTMX and
 """
 
 from inguitive.components import Component, Div, Button, Label, Icon
+from inguitive.markdown import Markdown
 from inguitive.state import State
 from inguitive.htmx import update_components
 from inguitive.fastapi import create_app, run_app
@@ -21,6 +22,7 @@ __all__ = [
     "Button",
     "Label", 
     "Icon",
+    "Markdown",
     # State
     "State",
     # HTMX helpers
