@@ -168,14 +168,20 @@ class RedisBackend(SessionBackend):
         self._lock = asyncio.Lock()
 
     async def _get_client(self):
-        """Lazy initialization of async Redis client."""
+        """Lazy initialization of async Redis client with double-checked locking."""
         if self._client is None:
-            try:
-                import redis.asyncio as aioredis
+            async with self._lock:
+                if self._client is None:
+                    try:
+                        import redis.asyncio as aioredis
 
-                self._client = aioredis.Redis.from_url(self._redis_url, db=self._db, decode_responses=True)
-            except ImportError:
-                raise ImportError("Redis backend requires 'redis' package. Install with: pip install redis")
+                        self._client = aioredis.Redis.from_url(
+                            self._redis_url, db=self._db, decode_responses=True
+                        )
+                    except ImportError:
+                        raise ImportError(
+                            "Redis backend requires 'redis' package. Install with: pip install redis"
+                        )
         return self._client
 
     def _make_key(self, session_id: SessionId) -> str:
@@ -184,50 +190,44 @@ class RedisBackend(SessionBackend):
 
     async def get_session(self, session_id: SessionId) -> Session | None:
         """Retrieve session from Redis."""
-        async with self._lock:
-            client = await self._get_client()
-            key = self._make_key(session_id)
-            data = await client.get(key)
-            if data is None:
-                return None
-            try:
-                session_data = json.loads(data)
-                return Session.from_dict(session_data)
-            except (json.JSONDecodeError, KeyError):
-                # Log error and return None
-                return None
+        client = await self._get_client()
+        key = self._make_key(session_id)
+        data = await client.get(key)
+        if data is None:
+            return None
+        try:
+            session_data = json.loads(data)
+            return Session.from_dict(session_data)
+        except (json.JSONDecodeError, KeyError):
+            # Log error and return None
+            return None
 
     async def save_session(self, session: Session) -> None:
         """Save session to Redis with TTL."""
-        async with self._lock:
-            client = await self._get_client()
-            key = self._make_key(session.session_id)
-            data = json.dumps(session.to_dict())
-            await client.setex(key, self._ttl_seconds, data)
+        client = await self._get_client()
+        key = self._make_key(session.session_id)
+        data = json.dumps(session.to_dict())
+        await client.setex(key, self._ttl_seconds, data)
 
     async def delete_session(self, session_id: SessionId) -> None:
         """Delete session from Redis."""
-        async with self._lock:
-            client = await self._get_client()
-            key = self._make_key(session_id)
-            await client.delete(key)
+        client = await self._get_client()
+        key = self._make_key(session_id)
+        await client.delete(key)
 
     async def cleanup_expired(self) -> int:
         """Redis handles TTL automatically. This is a no-op."""
         return 0
 
     async def aclose(self) -> None:
-        """Close the Redis connection asynchronously."""
+        """Close the Redis connection asynchronously.
+        
+        Use this in async contexts like FastAPI lifespan handlers:
+            await backend.aclose()
+        """
         if self._client is not None:
             await self._client.aclose()
             self._client = None
-
-    def close(self) -> None:
-        """Close the Redis connection (synchronous wrapper)."""
-        import asyncio
-
-        if self._client is not None:
-            asyncio.run(self.aclose())
 
 
 # Global session backend instance
