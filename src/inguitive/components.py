@@ -2,6 +2,7 @@
 Component classes for INGUITIVE framework.
 """
 
+import uuid
 from typing import Callable
 from inguitive.state import get_component_registry, get_state_registry
 import markdown
@@ -12,12 +13,14 @@ class Component:
     
     def __init__(self, id: str | None = None, cls: str | Callable[[], str] | None = None, 
                  listen_to: str | None = None, **attrs):
+        # Generate UUID if no id provided
+        if id is None:
+            id = f"comp-{uuid.uuid4().hex[:8]}"
         self.id = id
         self.cls = cls
         self.attrs = attrs
-        if self.id:
-            get_component_registry()[self.id] = self
-        if listen_to and self.id:
+        get_component_registry()[self.id] = self
+        if listen_to:
             # Register this component as a listener to the state
             state_registry = get_state_registry()
             if listen_to in state_registry:
