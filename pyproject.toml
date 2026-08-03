@@ -44,6 +44,9 @@ dev = [
     "mypy>=1.0.0",
     "httpx>=0.24.0",
 ]
+redis = [
+    "redis>=4.2",
+]
 
 [project.urls]
 Homepage = "https://github.com/j-strk/inguitive"
