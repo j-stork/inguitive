@@ -6,18 +6,21 @@ from __future__ import annotations
 
 import importlib.resources
 import inspect
+import traceback
 import uuid
 import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
+import markupsafe
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
 
+from inguitive.components import Component
 from inguitive.htmx import update_components
 from inguitive.session import (
     Session,
@@ -38,11 +41,35 @@ from inguitive.trigger import _trigger_args_context
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
 
+# Type alias for head content (supports strings, Components, Markup, lists, or None)
+HeadContent = str | Component | markupsafe.Markup | list[str | Component | markupsafe.Markup] | None
+
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
 _PageDecorator = Callable[
-    [str | None, str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]
+    [str | None, str | None, str | None, HeadContent], Callable[[Callable[_P, _T]], Callable[_P, _T]]
 ]
+
+
+def _render_template_content(value: HeadContent) -> str:
+    """Render a value (Component, list, string, or Markup) to HTML string for template injection.
+
+    Args:
+        value: A string, Component instance, markupsafe.Markup, list of strings/Components/Markup, or None
+
+    Returns:
+        Rendered HTML string (safe for template insertion)
+    """
+    if value is None:
+        return ""
+    if isinstance(value, markupsafe.Markup):
+        # Already marked as safe, don't escape - return as string
+        return str(value)
+    if isinstance(value, list):
+        return "".join(_render_template_content(item) for item in value)
+    if hasattr(value, "render") and callable(value.render):
+        return value.render()
+    return str(value)
 
 
 @runtime_checkable
@@ -64,6 +91,7 @@ def _register_page_route(
     handler: Callable[_P, _T],
     page_title: str | None = None,
     page_favicon: str | None = None,
+    page_head: HeadContent = None,
 ):
     """Helper to register a page route on an app.
 
@@ -73,10 +101,12 @@ def _register_page_route(
         handler: The handler function to call
         page_title: Optional page-specific title. Falls back to app.state.title or "inguitive"
         page_favicon: Optional page-specific favicon. Falls back to app.state.favicon or default
+        page_head: Optional page-specific head content. Can be a string, Component, or list of both.
+            This is appended AFTER app-level head content (from create_app).
     """
 
     @app.get(path, response_class=HTMLResponse)
-    async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon):
+    async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon, ph=page_head):
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
         needs_form_data = "form_data" in sig.parameters
@@ -113,16 +143,24 @@ def _register_page_route(
         # 1. Page-level favicon (from decorator)
         # 2. App-level favicon (from create_app)
         # 3. Default favicon
-        effective_favicon = (
-            pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
-        )
+        effective_favicon = pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
+
+        # Collect all head content sources in order: app-level first, then page-level
+        head_sources = []
+        app_head = getattr(app.state, "head", None)
+        if app_head is not None:
+            head_sources.append(app_head)
+        if ph is not None:
+            head_sources.append(ph)
+        # Render and concatenate all sources
+        head_extra = "".join(_render_template_content(source) for source in head_sources)
 
         # Wrap in base template with title and favicon
         templates = app.state.templates
         return templates.TemplateResponse(
             request,
             "base.html",
-            {"content": content, "title": effective_title, "favicon": effective_favicon},
+            {"content": content, "title": effective_title, "favicon": effective_favicon, "head_extra": head_extra},
         )
 
 
@@ -211,7 +249,7 @@ class SessionMiddleware:
         self._request_count += 1
         if self._request_count % self.cleanup_interval == 0:
             backend = get_session_backend()
-            backend.cleanup_expired()
+            await backend.cleanup_expired()
 
         # Extract cookies from headers
         headers = dict(scope.get("headers", []))
@@ -227,13 +265,15 @@ class SessionMiddleware:
         backend = get_session_backend()
 
         if session_id:
-            session = backend.get_session(session_id)
+            session = await backend.get_session(session_id)
             if session is None:
                 session = Session(session_id=session_id)
-                backend.save_session(session)
+                # Mark as dirty so the finally block below will save this new session
+                session.mark_dirty()
         else:
             session = Session(session_id=str(uuid.uuid4()))
-            backend.save_session(session)
+            # Mark as dirty so the finally block below will save this new session
+            session.mark_dirty()
 
         _set_current_session(session)
 
@@ -255,7 +295,9 @@ class SessionMiddleware:
         try:
             await self.app(scope, receive, send_with_cookie)
         finally:
-            backend.save_session(session)
+            if session._dirty:
+                await backend.save_session(session)
+                session.clear_dirty()
             _clear_current_session()
 
 
@@ -302,10 +344,43 @@ def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoa
     return ChoiceLoader(loaders)
 
 
+def _dev_error_handler(request: Request, exc: Exception) -> HTMLResponse:
+    """Exception handler that returns a styled error page.
+
+    In dev mode (dev_mode=True), displays full traceback.
+    In production mode (dev_mode=False), displays a simple error message.
+
+    Args:
+        request: The FastAPI request object
+        exc: The exception that was raised
+
+    Returns:
+        TemplateResponse with the error page template, status_code=500
+    """
+
+    templates: Jinja2Templates = request.app.state.templates
+    dev_mode = getattr(request.app.state, "dev_mode", False)
+    # Use format_exception to get the full traceback for the given exception
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {
+            "dev_mode": dev_mode,
+            "traceback": tb,
+            "request_url": str(request.url),
+            "request_method": request.method,
+        },
+        status_code=500,
+    )
+
+
 def create_app(
     template_dir: str | Path = "templates",
     title: str = "inguitive",
     favicon: str | None = None,
+    head: HeadContent = None,
     session_backend: SessionBackend | None = None,
     session_cookie_name: str = "inguitive_session_id",
     session_cookie_max_age: int = 3600,
@@ -326,6 +401,11 @@ def create_app(
         favicon: Default favicon path for pages. Can be overridden per-page via the @app.page
             decorator. Can be a URL path (e.g. /static/favicon.ico) or an absolute URL (e.g. https://...).
             Defaults to None, which uses the bundled INGUITIVE favicon at /static/inguitive_favicon.svg.
+        head: Default head content for pages (e.g., CSS, JS, meta tags). This content is
+            applied to ALL pages and can be a string, Component, or list of both. Page-level
+            head content (via @app.page decorator) is appended AFTER app-level content,
+            allowing app-wide resources to load first followed by page-specific additions.
+            Defaults to None (empty).
         session_backend: Session backend to use (defaults to MemoryBackend)
         session_cookie_name: Name of the session cookie
         session_cookie_max_age: Cookie max age in seconds
@@ -348,11 +428,20 @@ def create_app(
     templates = Jinja2Templates(env=env)
     app.state.templates = templates
 
+    # Store dev_mode on app state for exception handler access
+    app.state.dev_mode = dev_mode
+
     # Set the default title for pages
     app.state.title = title
 
     # Set the default favicon for pages
     app.state.favicon = favicon
+
+    # Set the default head content for pages
+    app.state.head = head
+
+    # Register exception handler for styled error pages
+    app.add_exception_handler(Exception, _dev_error_handler)
 
     # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
@@ -363,11 +452,12 @@ def create_app(
         path: str | None = None,
         title: str | None = None,
         favicon: str | None = None,
+        head: HeadContent = None,
     ):
         def decorator(func: Callable):
             actual_path = path if path is not None else "/"
             app.state.page_routes[actual_path] = func
-            _register_page_route(app, actual_path, func, title, favicon)
+            _register_page_route(app, actual_path, func, title, favicon, head)
             return func
 
         return decorator
@@ -443,9 +533,7 @@ def create_app(
     return app  # type: ignore[return-value]
 
 
-def run_app(
-    app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True
-):
+def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True):
     """Run the FastAPI application using Uvicorn.
 
     Args:

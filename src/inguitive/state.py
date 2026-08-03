@@ -11,6 +11,7 @@ from contextlib import contextmanager
 from typing import Generic, TypeVar
 
 from inguitive.session import (
+    _get_current_session_from_context,
     _get_data_registry,
 )
 
@@ -102,6 +103,11 @@ class State(Generic[_T]):
         _get_data_registry()[self._key] = new_value
         # Track mutation for auto-propagation in trigger handlers
         _mutated_states.get().add(self._key)
+
+        # Mark session as dirty so it gets saved
+        session = _get_current_session_from_context()
+        if session is not None:
+            session.mark_dirty()
 
         # Warn if no components are listening in dev mode
         if _dev_mode_warnings_enabled and not self.listeners:

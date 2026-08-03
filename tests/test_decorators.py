@@ -537,3 +537,167 @@ class TestFavicon:
         # Test that the response body contains SVG content
         assert "<svg" in response.text
         assert "</svg>" in response.text
+
+
+class TestHeadContent:
+    """Tests for head content functionality."""
+
+    def test_app_level_head(self):
+        """Test that app-level head content appears on all pages."""
+        app = create_app(head='<meta name="app-level" content="test">')
+
+        @app.page("/")
+        def root_page():
+            return Div(Text("Root"))
+
+        @app.page("/other")
+        def other_page():
+            return Div(Text("Other"))
+
+        client = TestClient(app)
+
+        # Check root page
+        response = client.get("/")
+        assert response.status_code == 200
+        assert '<meta name="app-level" content="test">' in response.text
+
+        # Check other page
+        response = client.get("/other")
+        assert response.status_code == 200
+        assert '<meta name="app-level" content="test">' in response.text
+
+    def test_page_level_head(self):
+        """Test that page-level head content appears only on that page."""
+        app = create_app()
+
+        @app.page("/login", head='<meta name="page-level" content="login">')
+        def login():
+            return Div(Text("Login"))
+
+        @app.page("/about")
+        def about():
+            return Div(Text("About"))
+
+        client = TestClient(app)
+
+        # Check login page has page-level head
+        response = client.get("/login")
+        assert response.status_code == 200
+        assert '<meta name="page-level" content="login">' in response.text
+
+        # Check about page does NOT have page-level head
+        response = client.get("/about")
+        assert response.status_code == 200
+        assert '<meta name="page-level" content="login">' not in response.text
+
+    def test_app_and_page_level_head_concatenation(self):
+        """Test that app-level and page-level head content are concatenated with app first."""
+        app = create_app(head='<meta name="app" content="app-value">')
+
+        @app.page("/test", head='<meta name="page" content="page-value">')
+        def test_page():
+            return Div(Text("Test"))
+
+        client = TestClient(app)
+        response = client.get("/test")
+        assert response.status_code == 200
+
+        # Both should be present
+        assert '<meta name="app" content="app-value">' in response.text
+        assert '<meta name="page" content="page-value">' in response.text
+
+        # App-level should appear before page-level
+        app_pos = response.text.find('<meta name="app" content="app-value">')
+        page_pos = response.text.find('<meta name="page" content="page-value">')
+        assert app_pos < page_pos, "App-level head content should appear before page-level"
+
+    def test_head_with_list(self):
+        """Test that head content can be provided as a list."""
+        app = create_app(head=['<meta name="app1" content="a">', '<meta name="app2" content="b">'])
+
+        @app.page("/test", head=['<meta name="page1" content="c">', '<meta name="page2" content="d">'])
+        def test_page():
+            return Div(Text("Test"))
+
+        client = TestClient(app)
+        response = client.get("/test")
+        assert response.status_code == 200
+
+        # All should be present
+        assert '<meta name="app1" content="a">' in response.text
+        assert '<meta name="app2" content="b">' in response.text
+        assert '<meta name="page1" content="c">' in response.text
+        assert '<meta name="page2" content="d">' in response.text
+
+        # Check order: app1, app2, page1, page2
+        app1_pos = response.text.find('<meta name="app1" content="a">')
+        app2_pos = response.text.find('<meta name="app2" content="b">')
+        page1_pos = response.text.find('<meta name="page1" content="c">')
+        page2_pos = response.text.find('<meta name="page2" content="d">')
+        assert app1_pos < app2_pos < page1_pos < page2_pos
+
+    def test_head_with_component(self):
+        """Test that head content can be a Component."""
+        from inguitive import Component
+
+        class MetaTag(Component):
+            def __init__(self, name, content):
+                self.name = name
+                self.content = content
+
+            def render(self):
+                return f'<meta name="{self.name}" content="{self.content}">'
+
+        app = create_app(head=MetaTag("app-component", "comp"))
+
+        @app.page("/test", head=MetaTag("page-component", "comp"))
+        def test_page():
+            return Div(Text("Test"))
+
+        client = TestClient(app)
+        response = client.get("/test")
+        assert response.status_code == 200
+
+        # Components should be rendered
+        assert '<meta name="app-component" content="comp">' in response.text
+        assert '<meta name="page-component" content="comp">' in response.text
+
+    def test_head_empty_by_default(self):
+        """Test that pages have no extra head content when none is specified."""
+        app = create_app()
+
+        @app.page("/")
+        def root_page():
+            return Div(Text("Root"))
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert response.status_code == 200
+        # Just verify the page loads correctly
+        assert "Root" in response.text
+
+    def test_page_level_head_overrides_empty_app_head(self):
+        """Test that page-level head works when app-level is None."""
+        app = create_app(head=None)
+
+        @app.page("/test", head='<meta name="page-only" content="test">')
+        def test_page():
+            return Div(Text("Test"))
+
+        client = TestClient(app)
+        response = client.get("/test")
+        assert response.status_code == 200
+        assert '<meta name="page-only" content="test">' in response.text
+
+    def test_app_level_head_with_empty_page_head(self):
+        """Test that app-level head works when page-level is None."""
+        app = create_app(head='<meta name="app-only" content="test">')
+
+        @app.page("/test")
+        def test_page():
+            return Div(Text("Test"))
+
+        client = TestClient(app)
+        response = client.get("/test")
+        assert response.status_code == 200
+        assert '<meta name="app-only" content="test">' in response.text

@@ -17,6 +17,7 @@
                 --font-sans: Inter, sans-serif;
             }
         </style>
+        {{ head_extra | safe }}  <!-- Custom head content injection -->
     </head>
     <body class="min-h-screen">
         {{ content | safe }}
