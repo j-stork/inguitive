@@ -357,7 +357,6 @@ def _dev_error_handler(request: Request, exc: Exception) -> HTMLResponse:
     Returns:
         TemplateResponse with the error page template, status_code=500
     """
-    from fastapi.templating import Jinja2Templates
 
     templates: Jinja2Templates = request.app.state.templates
     dev_mode = getattr(request.app.state, "dev_mode", False)

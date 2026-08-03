@@ -1,6 +1,5 @@
 """Tests for error handling and dev mode error pages."""
 
-import pytest
 from fastapi.testclient import TestClient
 
 from inguitive import create_app
