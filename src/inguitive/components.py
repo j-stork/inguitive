@@ -6,6 +6,7 @@ import uuid
 from typing import Callable
 from inguitive.state import get_component_registry, get_state_registry
 import markdown
+import jinja2
 
 
 class Component:
@@ -622,3 +623,103 @@ class Markdown(Component):
         resolved_content = self._resolve(self.content)
         html_content = markdown.markdown(resolved_content)
         return f"<div {attrs}>{html_content}</div>"
+
+
+class TemplateComponent(Component):
+    """Component that renders a Jinja2 template.
+    
+    Allows embedding complex HTML structures with dynamic content using Jinja2 templating.
+    
+    Example:
+        # Inline template
+        TemplateComponent(
+            template='<div class="{{ cls }}">{{ content }}</div>',
+            content="Hello World",
+            cls="text-red-500"
+        )
+        
+        # Template with state
+        TemplateComponent(
+            template='<span>{{ value }}</span>',
+            value=my_state.get,
+            listen_to="my_state"
+        )
+    """
+    
+    def __init__(self, template: str, id: str | None = None,
+                 cls: str | Callable[[], str] | None = None,
+                 listen_to: str | None = None, **context):
+        """Initialize a TemplateComponent.
+        
+        Args:
+            template: Jinja2 template string with placeholders
+            id: HTML id attribute
+            cls: Tailwind CSS classes
+            listen_to: State name to listen for changes
+            **context: Variables to pass to the template
+        """
+        super().__init__(id=id, cls=cls, listen_to=listen_to)
+        self.template_str = template
+        self.context = context
+
+    @classmethod
+    def from_file(cls, template_path: str, id: str | None = None,
+                  cls_name: str | Callable[[], str] | None = None,
+                  listen_to: str | None = None, **context):
+        """Create a TemplateComponent from a template file.
+        
+        Args:
+            template_path: Path to the Jinja2 template file
+            id: HTML id attribute
+            cls_name: Tailwind CSS classes
+            listen_to: State name to listen for changes
+            **context: Variables to pass to the template
+        """
+        with open(template_path, 'r') as f:
+            template_str = f.read()
+        return cls(template_str, id=id, cls=cls_name, listen_to=listen_to, **context)
+
+    def render(self) -> str:
+        """Render the template with context variables."""
+        # Resolve all context values
+        resolved_context = {}
+        for key, value in self.context.items():
+            resolved_context[key] = self._resolve(value) if callable(value) else value
+        
+        # Add component attributes to context
+        resolved_context['id'] = self.id
+        if self.cls:
+            resolved_context['cls'] = self._resolve(self.cls)
+        
+        # Create Jinja2 environment and render
+        env = jinja2.Environment(
+            loader=jinja2.BaseLoader(),
+            autoescape=jinja2.select_autoescape(['html', 'xml'])
+        )
+        template = env.from_string(self.template_str)
+        return template.render(**resolved_context)
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = f'hx-swap-oob="true"'
+        if self.id:
+            attrs += f' id="{self.id}"'
+        if self.cls:
+            resolved_cls = self._resolve(self.cls)
+            attrs += f' class="{resolved_cls}"'
+        # Render template content
+        env = jinja2.Environment(
+            loader=jinja2.BaseLoader(),
+            autoescape=jinja2.select_autoescape(['html', 'xml'])
+        )
+        template = env.from_string(self.template_str)
+        resolved_context = {}
+        for key, value in self.context.items():
+            resolved_context[key] = self._resolve(value) if callable(value) else value
+        resolved_context['id'] = self.id
+        if self.cls:
+            resolved_context['cls'] = self._resolve(self.cls)
+        content = template.render(**resolved_context)
+        return f"<div {attrs}>{content}</div>"
