@@ -28,15 +28,15 @@
                     <div class="mt-6 p-4 bg-red-50 border border-red-200 rounded-md">
                         <h3 class="text-sm font-medium text-red-800 mb-2">Request Details:</h3>
                         <p class="text-sm text-red-700">
-                            <span class="font-medium">Method:</span> {{ request_method }}
+                            <span class="font-medium">Method:</span> {{ request_method | e }}
                             <br>
-                            <span class="font-medium">URL:</span> {{ request_url }}
+                            <span class="font-medium">URL:</span> {{ request_url | e }}
                         </p>
                     </div>
                     
                     <div class="mt-6">
                         <h3 class="text-sm font-medium text-gray-700 mb-2">Traceback:</h3>
-                        <pre class="bg-gray-900 text-gray-100 text-xs p-4 rounded-md overflow-x-auto max-h-96">{{ traceback }}</pre>
+                        <pre class="bg-gray-900 text-gray-100 text-xs p-4 rounded-md overflow-x-auto max-h-96">{{ traceback | e }}</pre>
                     </div>
                     {% else %}
                     <p class="mt-4 text-gray-500">
