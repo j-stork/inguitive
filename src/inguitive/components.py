@@ -14,6 +14,14 @@ import markupsafe
 
 from inguitive.session import _get_component_registry
 
+# Register well-known SVG namespace prefixes with ElementTree so that round-trip
+# serialisation (fromstring → tostring) preserves them instead of inventing ns0:,
+# ns1:, … placeholders.  These registrations are process-global and must be set
+# before any ET.tostring() call.
+ET.register_namespace("", "http://www.w3.org/2000/svg")
+ET.register_namespace("xlink", "http://www.w3.org/1999/xlink")
+ET.register_namespace("xml", "http://www.w3.org/XML/1998/namespace")
+
 
 class Component:
     """Base component class for inguitive."""
