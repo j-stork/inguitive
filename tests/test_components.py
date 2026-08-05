@@ -194,18 +194,18 @@ class TestIcon:
         assert 'viewBox="0 0 24 24"' in result
 
     def test_replace_class_preserves_xlink_href(self):
-        """Test that namespace prefixes like xlink: are not incorrectly stripped by regex.
-        
-        Note: ElementTree may normalize namespace prefixes during serialization,
-        but our regex patterns should not strip non-ns\\d+ prefixes.
+        """Test that xlink: namespace prefix is preserved through the ET round-trip.
+
+        ET.register_namespace("xlink", ...) at module level ensures ElementTree
+        uses the original xlink: prefix when serialising, so the ns\\d+ cleanup
+        regex never sees it and leaves xlink:href intact.
         """
         svg = '<svg class="old-class" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="#target">Link</a></svg>'
         result = Icon._replace_class(svg, "new-class")
         assert 'class="new-class"' in result
         assert "old-class" not in result
-        # The xlink: prefix may be normalized to ns0: by ElementTree, but should not be stripped to just href
-        # by our regex (which only targets ns\\d+ patterns)
-        assert 'href="#target"' in result  # ElementTree normalizes the namespace
+        # The full xlink:href attribute must be present — plain href= is not acceptable
+        assert 'xlink:href="#target"' in result
 
     def test_replace_class_preserves_xml_space(self):
         """Test that namespace prefixes like xml: are not incorrectly stripped by regex.
