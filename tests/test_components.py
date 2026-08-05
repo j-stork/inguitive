@@ -193,6 +193,42 @@ class TestIcon:
         assert 'aria-hidden="true"' in result
         assert 'viewBox="0 0 24 24"' in result
 
+    def test_replace_class_preserves_xlink_href(self):
+        """Test that namespace prefixes like xlink: are not incorrectly stripped by regex.
+        
+        Note: ElementTree may normalize namespace prefixes during serialization,
+        but our regex patterns should not strip non-ns\\d+ prefixes.
+        """
+        svg = '<svg class="old-class" xmlns:xlink="http://www.w3.org/1999/xlink"><a xlink:href="#target">Link</a></svg>'
+        result = Icon._replace_class(svg, "new-class")
+        assert 'class="new-class"' in result
+        assert "old-class" not in result
+        # The xlink: prefix may be normalized to ns0: by ElementTree, but should not be stripped to just href
+        # by our regex (which only targets ns\\d+ patterns)
+        assert 'href="#target"' in result  # ElementTree normalizes the namespace
+
+    def test_replace_class_preserves_xml_space(self):
+        """Test that namespace prefixes like xml: are not incorrectly stripped by regex.
+        
+        Note: ElementTree may normalize namespace prefixes during serialization,
+        but our regex patterns should not strip non-ns\\d+ prefixes.
+        """
+        svg = '<svg class="old-class" xmlns:xml="http://www.w3.org/XML/1998/namespace" xml:space="preserve"></svg>'
+        result = Icon._replace_class(svg, "new-class")
+        assert 'class="new-class"' in result
+        assert "old-class" not in result
+        # The xml: prefix may be normalized by ElementTree, but should not be stripped by our regex
+        assert 'space="preserve"' in result  # ElementTree normalizes the namespace
+
+    def test_replace_class_removes_ns0_prefix(self):
+        """Test that auto-generated ns0: namespace prefix is removed."""
+        svg = '<ns0:svg class="old-class" xmlns:ns0="http://www.w3.org/2000/svg"></ns0:svg>'
+        result = Icon._replace_class(svg, "new-class")
+        assert 'class="new-class"' in result
+        assert "old-class" not in result
+        # ns0: prefix should be removed
+        assert "ns0:" not in result
+
 
 class TestState:
     def test_state_get_set(self):

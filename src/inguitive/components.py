@@ -389,17 +389,17 @@ class Icon(Component):
             root.set("class", css_value)
 
             # Serialize back to string
-            result = ET.tostring(root, encoding="unicode", method="html")
+            result = ET.tostring(root, encoding="unicode", method="xml")
 
             # Remove namespace prefixes and declarations to maintain clean HTML output
             # Remove all namespace declarations (xmlns and xmlns:*)
             result = re.sub(r'\s+xmlns(:\w+)?="[^"]*"', '', result)
             # Remove namespace prefixes from opening tags (e.g., <ns0:svg -> <svg)
-            result = re.sub(r'<\w+:', '<', result)
+            result = re.sub(r'<ns\d+:', '<', result)
             # Remove namespace prefixes from closing tags (e.g., </ns0:svg -> </svg)
-            result = re.sub(r'</\w+:', '</', result)
+            result = re.sub(r'</ns\d+:', '</', result)
             # Remove namespace prefixes from attribute names (e.g., ns0:class="..." -> class="...")
-            result = re.sub(r'(\s)\w+:', r'\1', result)
+            result = re.sub(r'(\s)ns\d+:', r'\1', result)
 
         except ET.ParseError as e:
             raise ValueError(
