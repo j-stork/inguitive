@@ -221,7 +221,7 @@ class RedisBackend(SessionBackend):
 
     async def aclose(self) -> None:
         """Close the Redis connection asynchronously.
-        
+
         Use this in async contexts like FastAPI lifespan handlers:
             await backend.aclose()
         """
