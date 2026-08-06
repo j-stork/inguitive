@@ -209,7 +209,7 @@ class TestIcon:
 
     def test_replace_class_preserves_xml_space(self):
         """Test that namespace prefixes like xml: are not incorrectly stripped by regex.
-        
+
         Note: ElementTree may normalize namespace prefixes during serialization,
         but our regex patterns should not strip non-ns\\d+ prefixes.
         """
