@@ -4,21 +4,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 from inguitive import (
+    CustomValidator,
     FormSchema,
     ValidationError,
-    Validator,
-    CustomValidator,
-    RequiredValidator,
-    MinLengthValidator,
-    MaxLengthValidator,
-    MinValueValidator,
-    MaxValueValidator,
-    RegexValidator,
+    create_app,
     field,
     validate_form,
-    create_app,
 )
-
 
 # =============================================================================
 # Test Fixtures
@@ -889,22 +881,30 @@ class TestIntegrationWithExistingCode:
     def test_validation_exports_available_from_inguitive(self):
         """All validation classes are exported from inguitive package."""
         from inguitive import (
+            CustomValidator,
             FormSchema,
+            MaxLengthValidator,
+            MaxValueValidator,
+            MinLengthValidator,
+            MinValueValidator,
+            RegexValidator,
+            RequiredValidator,
             ValidationError,
             Validator,
-            CustomValidator,
-            RequiredValidator,
-            MinLengthValidator,
-            MaxLengthValidator,
-            MinValueValidator,
-            MaxValueValidator,
-            RegexValidator,
             field,
             validate_form,
         )
         # If we can import them all, the exports are working
+        assert CustomValidator is not None
         assert FormSchema is not None
+        assert MaxLengthValidator is not None
+        assert MaxValueValidator is not None
+        assert MinLengthValidator is not None
+        assert MinValueValidator is not None
+        assert RegexValidator is not None
+        assert RequiredValidator is not None
         assert ValidationError is not None
+        assert Validator is not None
         assert field is not None
         assert validate_form is not None
 
