@@ -23,6 +23,137 @@ def simple_app():
 
 
 # =============================================================================
+# 0. FormSchema Inheritance Tests
+# =============================================================================
+
+class TestFormSchemaInheritance:
+    """Tests for FormSchema inheritance functionality."""
+
+    class BaseUserSchema(FormSchema):
+        """Base schema with common user fields."""
+        username = field(str, required=True, min_length=3)
+        email = field(str, required=True, regex=r'^[\w.-]+@[\w.-]+\.\w+$')
+
+    class ExtendedUserSchema(BaseUserSchema):
+        """Child schema that inherits from base and adds more fields."""
+        first_name = field(str, required=True)
+        last_name = field(str, required=True)
+
+    class MultiLevelSchema(ExtendedUserSchema):
+        """Grandchild schema testing multiple levels of inheritance."""
+        age = field(int, default=18, min_value=0, max_value=150)
+
+    class OverrideFieldSchema(BaseUserSchema):
+        """Child schema that overrides a parent field."""
+        username = field(str, required=True, min_length=5)  # More restrictive
+
+    def test_child_inherits_parent_fields(self):
+        """Child schema inherits all fields from parent."""
+        schema = self.ExtendedUserSchema({
+            "username": "john_doe",
+            "email": "john@example.com",
+            "first_name": "John",
+            "last_name": "Doe"
+        })
+        assert schema.is_valid
+        assert schema.username == "john_doe"
+        assert schema.email == "john@example.com"
+        assert schema.first_name == "John"
+        assert schema.last_name == "Doe"
+
+    def test_child_missing_required_parent_field(self):
+        """Child schema requires all inherited parent fields."""
+        schema = self.ExtendedUserSchema({
+            "username": "john_doe",
+            "first_name": "John",
+            "last_name": "Doe"
+            # Missing email (required field from parent)
+        })
+        assert not schema.is_valid
+        assert "email" in schema.errors
+        assert "required" in schema.errors["email"][0].lower()
+
+    def test_parent_field_validation_enforced_in_child(self):
+        """Parent field validation rules are enforced in child schemas."""
+        schema = self.ExtendedUserSchema({
+            "username": "jo",  # Too short for parent's min_length=3
+            "email": "john@example.com",
+            "first_name": "John",
+            "last_name": "Doe"
+        })
+        assert not schema.is_valid
+        assert "username" in schema.errors
+        assert "3 characters" in schema.errors["username"][0]
+
+    def test_multiple_inheritance_levels(self):
+        """Multiple levels of inheritance work correctly."""
+        schema = self.MultiLevelSchema({
+            "username": "john_doe",
+            "email": "john@example.com",
+            "first_name": "John",
+            "last_name": "Doe",
+            "age": "25"
+        })
+        assert schema.is_valid
+        assert schema.username == "john_doe"
+        assert schema.email == "john@example.com"
+        assert schema.first_name == "John"
+        assert schema.last_name == "Doe"
+        assert schema.age == 25
+
+    def test_field_override_in_child(self):
+        """Child field overrides parent field with same name."""
+        # Child requires min_length=5, parent only required min_length=3
+        schema = self.OverrideFieldSchema({
+            "username": "john",  # Valid for parent (>=3) but not child (>=5)
+            "email": "john@example.com"
+        })
+        assert not schema.is_valid
+        assert "username" in schema.errors
+        assert "5 characters" in schema.errors["username"][0]
+
+        # Now try with valid length
+        schema = self.OverrideFieldSchema({
+            "username": "john_doe",  # Valid for child (>=5)
+            "email": "john@example.com"
+        })
+        assert schema.is_valid
+        assert schema.username == "john_doe"
+
+    def test_child_schema_has_all_parent_fields(self):
+        """Child schema _fields contains all parent fields."""
+        assert "username" in self.ExtendedUserSchema._fields
+        assert "email" in self.ExtendedUserSchema._fields
+        assert "first_name" in self.ExtendedUserSchema._fields
+        assert "last_name" in self.ExtendedUserSchema._fields
+
+    def test_multi_level_schema_has_all_fields(self):
+        """Multi-level schema has fields from all ancestor classes."""
+        expected_fields = {"username", "email", "first_name", "last_name", "age"}
+        actual_fields = set(self.MultiLevelSchema._fields.keys())
+        assert actual_fields == expected_fields
+
+    def test_override_schema_uses_child_field_definition(self):
+        """Overridden field uses child's field definition, not parent's."""
+        parent_username_field = self.BaseUserSchema._fields["username"]
+        child_username_field = self.OverrideFieldSchema._fields["username"]
+
+        # They should be different objects (child overrides parent)
+        assert parent_username_field is not child_username_field
+
+        # Verify child field enforces its own rules (min_length=5)
+        # "john" is 4 chars, which would pass parent's min_length=3 but fail child's min_length=5
+        schema = self.OverrideFieldSchema({"username": "john", "email": "john@example.com"})
+        assert not schema.is_valid
+        assert "username" in schema.errors
+        assert "5 characters" in schema.errors["username"][0]
+
+        # "john_doe" is 8 chars, which passes both
+        schema = self.OverrideFieldSchema({"username": "john_doe", "email": "john@example.com"})
+        assert schema.is_valid
+
+
+# =============================================================================
 # 1. Type Coercion Tests
 # =============================================================================
 

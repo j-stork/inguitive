@@ -486,15 +486,26 @@ class FormSchemaMeta(type):
 
         This metaclass removes Field instances from the class namespace and stores
         them in a separate _fields dictionary, so that instance attribute access
-        works correctly.
+        works correctly. Also collects fields from parent classes to support inheritance.
         """
-        # Collect field definitions from class attributes
+        # Collect field definitions from parent classes first (in reverse MRO order)
         fields: dict[str, Field] = {}
+
+        # Process base classes in MRO order (excluding object and FormSchema itself)
+        # We use reverse order so that child class fields override parent fields
+        for base in reversed(bases):
+            if hasattr(base, '_fields') and isinstance(base._fields, dict):
+                # Add parent fields, but don't override existing ones
+                for field_name, field_obj in base._fields.items():
+                    if field_name not in fields:
+                        fields[field_name] = field_obj
+
         # Create a clean namespace without Field instances
         clean_namespace = {}
 
         for attr_name, attr_value in namespace.items():
             if isinstance(attr_value, Field):
+                # Child class fields override parent fields
                 fields[attr_name] = attr_value
             else:
                 clean_namespace[attr_name] = attr_value
