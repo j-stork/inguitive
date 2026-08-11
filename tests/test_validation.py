@@ -481,6 +481,21 @@ class TestBuiltInValidators:
         schema = self.CombinedValidatorsSchema({"password": "validpassword123"})
         assert schema.is_valid
 
+    def test_regex_validator_fullmatch(self):
+        """Regex validator rejects strings with trailing invalid characters."""
+        # Pattern without explicit $ anchor - should match exactly 3 digits
+        class ExactDigitsSchema(FormSchema):
+            code = field(str, regex=r'\d{3}')
+        
+        # Valid: exactly 3 digits
+        schema = ExactDigitsSchema({"code": "123"})
+        assert schema.is_valid
+        
+        # Invalid: 3 digits followed by letters (should fail with fullmatch)
+        schema = ExactDigitsSchema({"code": "123abc"})
+        assert not schema.is_valid
+        assert "code" in schema.errors
+
 
 class TestCustomValidators:
     """Tests for custom validators."""

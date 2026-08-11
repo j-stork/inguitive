@@ -242,7 +242,7 @@ class RegexValidator(Validator):
         """Check if string value matches the regex pattern."""
         if value is None or not isinstance(value, str):
             return None
-        if not self.compiled.match(value):
+        if not self.compiled.fullmatch(value):
             return self.error_message or f"Does not match pattern: {self.pattern}"
         return None
 
