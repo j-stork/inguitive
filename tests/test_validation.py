@@ -152,6 +152,39 @@ class TestFormSchemaInheritance:
         schema = self.OverrideFieldSchema({"username": "john_doe", "email": "john@example.com"})
         assert schema.is_valid
 
+    def test_multiple_inheritance_conflict_resolution(self):
+        """Multiple inheritance with conflicting fields: first base in MRO wins."""
+        # Create base classes with conflicting field definitions
+        class BaseA(FormSchema):
+            x = field(str, min_length=1)  # Less restrictive
+
+        class BaseB(BaseA):
+            x = field(str, min_length=5)  # More restrictive
+            y = field(str, required=True)
+
+        class BaseC(BaseA):
+            x = field(str, min_length=3)  # Medium restrictive
+            z = field(str, required=True)
+
+        # D inherits from B then C - B should win conflicts due to MRO
+        class D(BaseB, BaseC):
+            pass
+
+        # Verify D has all fields from B and C
+        assert "x" in D._fields
+        assert "y" in D._fields
+        assert "z" in D._fields
+
+        # Verify D's x field uses B's stricter validation (min_length=5)
+        d_schema = D({"x": "abc", "y": "test", "z": "test"})
+        assert not d_schema.is_valid
+        assert "x" in d_schema.errors
+        assert "5 characters" in d_schema.errors["x"][0]
+
+        # Now try with x that satisfies B's min_length=5
+        d_schema = D({"x": "abcdef", "y": "test", "z": "test"})
+        assert d_schema.is_valid
+
 
 # =============================================================================
 # 1. Type Coercion Tests
