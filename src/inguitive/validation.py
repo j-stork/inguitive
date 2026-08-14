@@ -597,9 +597,13 @@ class FormSchema(metaclass=FormSchemaMeta):
                 # It's a custom validate method, call it
                 try:
                     validate_method(self)
-                except ValidationError:
-                    # ValidationError was raised, errors are already set
-                    pass
+                except ValidationError as e:
+                    # Merge errors from the ValidationError into self._errors
+                    for field_name, field_errors in e.errors.items():
+                        if field_name not in self._errors:
+                            self._errors[field_name] = field_errors
+                        else:
+                            self._errors[field_name].extend(field_errors)
 
     def __getattr__(self, name: str) -> Any:
         """Allow attribute-style access to validated field values.

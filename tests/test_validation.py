@@ -1234,3 +1234,24 @@ class TestComplexScenarios:
         # With shipping but no address - should fail
         schema = ShippingSchema({"use_shipping": "true", "shipping_address": ""})
         assert not schema.is_valid
+
+    def test_cross_field_validation_with_validation_error(self):
+        """Custom validate() raising ValidationError preserves errors."""
+        class PasswordSchema(FormSchema):
+            password = field(str, required=True)
+            confirm = field(str, required=True)
+
+            def validate(self):
+                if self.password != self.confirm:
+                    raise ValidationError({'confirm': ['Passwords must match']})
+                return super().validate()
+
+        # Valid: passwords match
+        schema = PasswordSchema({'password': 'abc123', 'confirm': 'abc123'})
+        assert schema.is_valid
+
+        # Invalid: passwords don't match
+        schema = PasswordSchema({'password': 'abc', 'confirm': 'xyz'})
+        assert not schema.is_valid
+        assert 'confirm' in schema.errors
+        assert 'Passwords must match' in schema.errors['confirm'][0]
