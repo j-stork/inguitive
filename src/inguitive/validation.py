@@ -432,6 +432,9 @@ def field(
         required: If True, field must be present and non-empty.
         default: Default value if field is missing or invalid.
         error_message: Custom error message for validation failures.
+            When multiple built-in validators are created (e.g., required + min_length),
+            this same message is used for all of them. For different messages per
+            constraint, use the `validators` parameter with explicit Validator instances.
         min_length: Minimum string length (for str fields).
         max_length: Maximum string length (for str fields).
         min_value: Minimum numeric value (for int/float fields).
@@ -445,12 +448,25 @@ def field(
 
     Example:
         class MySchema(FormSchema):
-            username = field(str, required=True, min_length=3)
+            # Single error_message applies to all built-in validators
+            username = field(str, required=True, min_length=3, error_message="Invalid username")
+            
+            # Different messages per constraint using validators list
+            password = field(
+                str,
+                validators=[
+                    RequiredValidator("Password is required"),
+                    MinLengthValidator(8, "Password must be at least 8 characters"),
+                ]
+            )
             age = field(int, default=0, min_value=0, max_value=150)
             email = field(str, regex=r'^[\\w.-]+@[\\w.-]+\\.\\w+$')
     """
     built_validators: list[Validator] = []
 
+    # Note: error_message is shared across all built-in validators created below.
+    # If you need different messages per constraint, use validators=[...] instead
+    # of the individual parameters (required, min_length, etc.).
     # Add built-in validators based on parameters
     if required:
         built_validators.append(RequiredValidator(error_message))
