@@ -566,14 +566,13 @@ class FormSchema(metaclass=FormSchemaMeta):
         for field_name, field_obj in self._fields.items():
             raw_value = self._raw_data.get(field_name, None)
 
+            # Track if field is missing from input data
+            is_missing = field_name not in self._raw_data
+            
             # Handle missing values (field not in data at all)
-            if field_name not in self._raw_data:
-                if field_obj.required:
-                    self._errors[field_name] = [field_obj.error_message or "This field is required"]
-                    self._values[field_name] = field_obj.default
-                else:
-                    self._values[field_name] = field_obj.default
-                continue
+            if is_missing:
+                raw_value = None
+                # fall through to coerce-then-validate below
 
             # Coerce value
             try:
@@ -583,8 +582,18 @@ class FormSchema(metaclass=FormSchemaMeta):
                 self._values[field_name] = field_obj.default
                 continue
 
+            # For missing fields, validate None to catch validators like RequiredValidator
+            if is_missing:
+                # Validate None to check if field is required by any validator
+                errors = field_obj.validate(None)
+                if errors:
+                    self._errors[field_name] = errors
+                    self._values[field_name] = field_obj.default
+                else:
+                    # No validator requires the field, use coerced default
+                    self._values[field_name] = coerced_value
             # Check required for empty values (after coercion)
-            if field_obj.required:
+            elif field_obj.required:
                 if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
                     self._errors[field_name] = [field_obj.error_message or "This field is required"]
                     self._values[field_name] = field_obj.default

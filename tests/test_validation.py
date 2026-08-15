@@ -1255,3 +1255,90 @@ class TestComplexScenarios:
         assert not schema.is_valid
         assert 'confirm' in schema.errors
         assert 'Passwords must match' in schema.errors['confirm'][0]
+
+
+# =============================================================================
+# Issue 4: RequiredValidator in validators=[...] should not be silently ignored
+# =============================================================================
+
+class TestRequiredValidatorInValidatorsList:
+    """Test that RequiredValidator in validators=[...] works for missing fields."""
+
+    def test_required_validator_in_validators_list_missing_field(self):
+        """RequiredValidator in validators=[...] should fail for missing fields."""
+        from inguitive import RequiredValidator, field, FormSchema
+
+        class TestSchema(FormSchema):
+            name = field(str, validators=[RequiredValidator("Name is required")])
+
+        # Missing field should fail validation
+        schema = TestSchema({})
+        assert not schema.is_valid
+        assert 'name' in schema.errors
+        assert 'Name is required' in schema.errors['name'][0]
+
+    def test_required_validator_in_validators_list_present_valid_field(self):
+        """RequiredValidator in validators=[...] should pass for present valid fields."""
+        from inguitive import RequiredValidator, field, FormSchema
+
+        class TestSchema(FormSchema):
+            name = field(str, validators=[RequiredValidator("Name is required")])
+
+        # Present field should pass validation
+        schema = TestSchema({'name': 'John'})
+        assert schema.is_valid
+        assert schema.name == 'John'
+
+    def test_required_validator_in_validators_list_present_empty_field(self):
+        """RequiredValidator in validators=[...] should fail for empty string fields."""
+        from inguitive import RequiredValidator, field, FormSchema
+
+        class TestSchema(FormSchema):
+            name = field(str, validators=[RequiredValidator("Name is required")])
+
+        # Empty string should fail validation
+        schema = TestSchema({'name': ''})
+        assert not schema.is_valid
+        assert 'name' in schema.errors
+        assert 'Name is required' in schema.errors['name'][0] or 'cannot be empty' in schema.errors['name'][0]
+
+    def test_required_validator_with_required_true_missing_field(self):
+        """Using required=True should still work (backward compatibility)."""
+        from inguitive import field, FormSchema
+
+        class TestSchema(FormSchema):
+            name = field(str, required=True, error_message="Name is required")
+
+        # Missing field should fail validation
+        schema = TestSchema({})
+        assert not schema.is_valid
+        assert 'name' in schema.errors
+        assert 'Name is required' in schema.errors['name'][0]
+
+    def test_required_validator_in_validators_with_default(self):
+        """RequiredValidator in validators=[...] should override default for missing fields."""
+        from inguitive import RequiredValidator, field, FormSchema
+
+        class TestSchema(FormSchema):
+            name = field(str, default="default_name", validators=[RequiredValidator("Name is required")])
+
+        # Missing field should fail validation, not use default
+        schema = TestSchema({})
+        assert not schema.is_valid
+        assert 'name' in schema.errors
+        assert 'Name is required' in schema.errors['name'][0]
+        # Value should be the default but error should be present
+        assert schema.name == "default_name"
+
+    def test_no_required_validator_missing_field_uses_default(self):
+        """Without RequiredValidator, missing fields should use default without error."""
+        from inguitive import field, FormSchema
+
+        class TestSchema(FormSchema):
+            name = field(str, default="default_name")
+
+        # Missing field should use default, no error
+        schema = TestSchema({})
+        assert schema.is_valid
+        assert schema.name == "default_name"
+        assert 'name' not in schema.errors
