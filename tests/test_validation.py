@@ -573,6 +573,40 @@ class TestCustomValidators:
         schema = RangeSchema({"number": "150"})
         assert not schema.is_valid
 
+    def test_optional_field_with_custom_validator_missing_is_valid(self):
+        """Optional field with a CustomValidator is valid when absent.
+
+        CustomValidator calls the user's function directly and does not guard
+        against None.  The is_missing path must not run content validators at
+        all, only RequiredValidator instances.
+        """
+
+        class OptionalTagSchema(FormSchema):
+            tag = field(
+                str,
+                validators=[
+                    CustomValidator(
+                        lambda v: v.startswith("x"),
+                        "Must start with x",
+                    )
+                ],
+            )
+
+        # Missing field — no RequiredValidator, so the field is simply absent.
+        schema = OptionalTagSchema({})
+        assert schema.is_valid
+        assert schema.errors == {}
+
+        # Present but failing the constraint.
+        schema = OptionalTagSchema({"tag": "abc"})
+        assert not schema.is_valid
+        assert schema.errors["tag"] == ["Must start with x"]
+
+        # Present and passing the constraint.
+        schema = OptionalTagSchema({"tag": "xyz"})
+        assert schema.is_valid
+        assert schema.errors == {}
+
 
 # =============================================================================
 # 4. Error Handling Tests
