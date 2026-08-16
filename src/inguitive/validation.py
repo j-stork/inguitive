@@ -582,10 +582,17 @@ class FormSchema(metaclass=FormSchemaMeta):
                 self._values[field_name] = field_obj.default
                 continue
 
-            # For missing fields, validate None to catch validators like RequiredValidator
+            # For missing fields, only run RequiredValidator instances.
+            # Content validators (length, range, pattern, custom) are meaningless
+            # for a value that is absent, and custom validators may not handle None.
             if is_missing:
-                # Validate None to check if field is required by any validator
-                errors = field_obj.validate(None)
+                errors = [
+                    err
+                    for v in field_obj.validators
+                    if isinstance(v, RequiredValidator)
+                    for err in [v.validate(None)]
+                    if err
+                ]
                 if errors:
                     self._errors[field_name] = errors
                     self._values[field_name] = field_obj.default
