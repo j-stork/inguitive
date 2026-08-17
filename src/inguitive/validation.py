@@ -323,7 +323,9 @@ class Field:
         # String is always safe
         if self.field_type is str:
             if isinstance(raw_value, str):
-                return raw_value.strip() if raw_value.strip() != "" else (self.default if self.default is not None else "")
+                return (
+                    raw_value.strip() if raw_value.strip() != "" else (self.default if self.default is not None else "")
+                )
             return str(raw_value) if raw_value is not None else self.default
 
         # Type-specific coercion
@@ -450,7 +452,7 @@ def field(
         class MySchema(FormSchema):
             # Single error_message applies to all built-in validators
             username = field(str, required=True, min_length=3, error_message="Invalid username")
-            
+
             # Different messages per constraint using validators list
             password = field(
                 str,
@@ -510,7 +512,7 @@ class FormSchemaMeta(type):
         # Process base classes in reverse MRO order
         # Using dict.update() ensures last-visited base wins conflicts
         for base in reversed(bases):
-            if hasattr(base, '_fields') and isinstance(base._fields, dict):
+            if hasattr(base, "_fields") and isinstance(base._fields, dict):
                 fields.update(base._fields)
 
         # Create a clean namespace without Field instances
@@ -568,7 +570,7 @@ class FormSchema(metaclass=FormSchemaMeta):
 
             # Track if field is missing from input data
             is_missing = field_name not in self._raw_data
-            
+
             # Handle missing values (field not in data at all)
             if is_missing:
                 raw_value = None
@@ -622,7 +624,7 @@ class FormSchema(metaclass=FormSchemaMeta):
 
         # Run custom validate method if defined
         # This allows subclasses to add custom validation logic
-        if hasattr(self, 'validate') and callable(self.validate):
+        if hasattr(self, "validate") and callable(self.validate):
             # Get the method from the instance's class to avoid infinite recursion
             validate_method = self.__class__.validate
             if validate_method is not FormSchema.validate:
@@ -712,7 +714,7 @@ def _validate_and_call_sync(
             if param_name == form_data_param or param_name == "form_data":
                 if i < len(args):
                     form_data = args[i]
-                    args = args[:i] + args[i + 1:]
+                    args = args[:i] + args[i + 1 :]
                 break
 
     # If still no form_data, use empty dict
@@ -788,7 +790,7 @@ async def _validate_and_call_async(
             if param_name == form_data_param or param_name == "form_data":
                 if i < len(args):
                     form_data = args[i]
-                    args = args[:i] + args[i + 1:]
+                    args = args[:i] + args[i + 1 :]
                 break
 
     # If still no form_data, use empty dict
@@ -880,6 +882,7 @@ def validate_form(
     Raises:
         ValidationError: If handle_errors=True and validation fails.
     """
+
     def decorator(handler: Callable[_P, _T]) -> Callable[..., _T]:
         # Get the original signature
         sig = inspect.signature(handler)
@@ -905,18 +908,20 @@ def validate_form(
 
         # Create wrapper functions
         if inspect.iscoroutinefunction(handler):
+
             @functools.wraps(handler)
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
                 return await _validate_and_call_async(
                     handler, schema_class, handle_errors, form_data_param, args, kwargs
                 )
+
             wrapped = async_wrapper
         else:
+
             @functools.wraps(handler)
             def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-                return _validate_and_call_sync(
-                    handler, schema_class, handle_errors, form_data_param, args, kwargs
-                )
+                return _validate_and_call_sync(handler, schema_class, handle_errors, form_data_param, args, kwargs)
+
             wrapped = sync_wrapper
 
         # Set the new signature that includes form_data

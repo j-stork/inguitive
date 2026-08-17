@@ -486,11 +486,11 @@ class TestBuiltInValidators:
         # Pattern without explicit $ anchor - should match exactly 3 digits
         class ExactDigitsSchema(FormSchema):
             code = field(str, regex=r'\d{3}')
-        
+
         # Valid: exactly 3 digits
         schema = ExactDigitsSchema({"code": "123"})
         assert schema.is_valid
-        
+
         # Invalid: 3 digits followed by letters (should fail with fullmatch)
         schema = ExactDigitsSchema({"code": "123abc"})
         assert not schema.is_valid
@@ -1300,7 +1300,7 @@ class TestRequiredValidatorInValidatorsList:
 
     def test_required_validator_in_validators_list_missing_field(self):
         """RequiredValidator in validators=[...] should fail for missing fields."""
-        from inguitive import RequiredValidator, field, FormSchema
+        from inguitive import FormSchema, RequiredValidator, field
 
         class TestSchema(FormSchema):
             name = field(str, validators=[RequiredValidator("Name is required")])
@@ -1313,7 +1313,7 @@ class TestRequiredValidatorInValidatorsList:
 
     def test_required_validator_in_validators_list_present_valid_field(self):
         """RequiredValidator in validators=[...] should pass for present valid fields."""
-        from inguitive import RequiredValidator, field, FormSchema
+        from inguitive import FormSchema, RequiredValidator, field
 
         class TestSchema(FormSchema):
             name = field(str, validators=[RequiredValidator("Name is required")])
@@ -1325,7 +1325,7 @@ class TestRequiredValidatorInValidatorsList:
 
     def test_required_validator_in_validators_list_present_empty_field(self):
         """RequiredValidator in validators=[...] should fail for empty string fields."""
-        from inguitive import RequiredValidator, field, FormSchema
+        from inguitive import FormSchema, RequiredValidator, field
 
         class TestSchema(FormSchema):
             name = field(str, validators=[RequiredValidator("Name is required")])
@@ -1338,7 +1338,7 @@ class TestRequiredValidatorInValidatorsList:
 
     def test_required_validator_with_required_true_missing_field(self):
         """Using required=True should still work (backward compatibility)."""
-        from inguitive import field, FormSchema
+        from inguitive import FormSchema, field
 
         class TestSchema(FormSchema):
             name = field(str, required=True, error_message="Name is required")
@@ -1351,7 +1351,7 @@ class TestRequiredValidatorInValidatorsList:
 
     def test_required_validator_in_validators_with_default(self):
         """RequiredValidator in validators=[...] should override default for missing fields."""
-        from inguitive import RequiredValidator, field, FormSchema
+        from inguitive import FormSchema, RequiredValidator, field
 
         class TestSchema(FormSchema):
             name = field(str, default="default_name", validators=[RequiredValidator("Name is required")])
@@ -1366,7 +1366,7 @@ class TestRequiredValidatorInValidatorsList:
 
     def test_no_required_validator_missing_field_uses_default(self):
         """Without RequiredValidator, missing fields should use default without error."""
-        from inguitive import field, FormSchema
+        from inguitive import FormSchema, field
 
         class TestSchema(FormSchema):
             name = field(str, default="default_name")
