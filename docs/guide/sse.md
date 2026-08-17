@@ -116,11 +116,33 @@ async def _delayed_push(session_id: str):
     options:
       show_source: false
 
+## Using SSE with RedisBackend
+
+SSE auto-push and `push_update()` both work with `RedisBackend` out of the box.
+Here is how it works under the hood:
+
+- **Listener metadata is persisted.** Component listener sets (which component
+  IDs listen to which state) live in the session's `data_registry`, which is
+  serialised to Redis (sets are stored as JSON lists and restored to sets on
+  load). `_push_sse_for_state` can therefore always determine which components
+  need re-rendering, regardless of backend.
+- **Live components are cached per worker.** Component objects hold arbitrary
+  callables and cannot be serialised to Redis. Instead, each worker keeps a
+  process-local cache of the live `component_registry` for every session it
+  renders. Since an SSE connection is always opened by a browser that loaded
+  its page through the *same* worker, that worker's cache always contains the
+  components needed to render pushes for its locally-connected clients. Cache
+  entries are refreshed on every request and expire after one hour of
+  inactivity (or when the session is deleted).
+
+No configuration is required — switch `session_backend=RedisBackend(...)` and
+both broadcast auto-push and per-session `push_update()` keep working.
+
 ## Limitations and notes
 
 | Topic | Detail |
 |---|---|
-| **MemoryBackend required for rendering** | Both `State.set()` auto-push and `push_update()` need the session's `component_registry` to render OOB HTML. This registry lives in process memory and is **not** persisted to Redis. With `RedisBackend`, `component_registry` is empty after deserialisation, so all rendering-based SSE pushes silently produce no HTML. A future release (task #8) will address this by persisting the registry or using a Redis Pub/Sub fan-out. |
+| **Worker restarts** | The per-worker component cache is in process memory. After a worker restart, sessions loaded from Redis have no cached components until the user reloads a page (which repopulates the cache). Until then, SSE pushes for those sessions are silently skipped. |
 | **Multi-worker deployments** | Each worker maintains its own in-memory SSE registry. A push from worker A will not reach a client connected to worker B. Use a message broker (e.g. Redis Pub/Sub) and call `push_update()` on each worker so all workers forward messages to their locally-connected clients. |
 | **Missed events** | SSE does not persist events. If the client reconnects after a drop, it will not receive events sent during the disconnection. Components re-render with current state on the next user interaction or page reload. |
 | **Keep-alive** | inguitive sends a `heartbeat` comment every 30 seconds to prevent proxies and load balancers from closing idle connections. |

@@ -586,3 +586,167 @@ def test_sse_disconnect_cleans_up_only_that_tab(app):
         )
 
     asyncio.run(run())
+
+
+# ---------------------------------------------------------------------------
+# Serialising backends (RedisBackend-style) — component cache + listener sets
+# ---------------------------------------------------------------------------
+
+
+class _SerializingBackend(MemoryBackend):
+    """Backend that round-trips sessions through to_dict/from_dict like RedisBackend."""
+
+    def __init__(self):
+        super().__init__()
+        self._store: dict[str, dict] = {}
+
+    async def get_session(self, session_id):
+        data = self._store.get(session_id)
+        if data is None:
+            return None
+        return Session.from_dict(data)
+
+    async def save_session(self, session):
+        self._store[session.session_id] = session.to_dict()
+
+    async def delete_session(self, session_id):
+        self._store.pop(session_id, None)
+
+
+def test_session_to_dict_serialises_listener_sets_as_lists():
+    import json
+
+    session = Session(session_id="ser-sess")
+    session.data_registry["__listeners__my_state"] = {"comp-b", "comp-a"}
+    data = session.to_dict()
+    # Must be JSON-serialisable (sets are not).
+    json.dumps(data)
+    assert data["data_registry"]["__listeners__my_state"] == ["comp-a", "comp-b"]
+
+
+def test_session_from_dict_restores_listener_sets():
+    session = Session(session_id="de-sess")
+    session.data_registry["__listeners__my_state"] = {"comp-a"}
+    restored = Session.from_dict(session.to_dict())
+    assert restored.data_registry["__listeners__my_state"] == {"comp-a"}
+
+
+def test_push_sse_works_with_serialising_backend():
+    """Auto-push renders via the process-local component cache when the
+    backend (like RedisBackend) does not persist component_registry."""
+    from inguitive import Text
+    from inguitive.session import _cache_component_registry
+
+    s = State("hello", "_sse_redis_state")
+
+    async def run():
+        backend = _SerializingBackend()
+        set_session_backend(backend)
+
+        session = Session(session_id="redis-sess")
+        txt = Text(lambda: s.get(), id="redis-txt", listen_to="_sse_redis_state")
+        session.component_registry["redis-txt"] = txt
+        session.data_registry["__listeners___sse_redis_state"] = {"redis-txt"}
+        session.data_registry["_sse_redis_state"] = "from-redis"
+        await backend.save_session(session)
+        # Simulate the middleware caching the live components post-render.
+        _cache_component_registry(session)
+
+        q = _register_sse_connection("redis-sess")
+        await _push_sse_for_state("_sse_redis_state")
+
+        assert not q.empty(), "Push must work with a serialising backend"
+        html = await q.get()
+        assert "redis-txt" in html
+        assert "hx-swap-oob" in html
+
+    asyncio.run(run())
+
+
+def test_push_update_works_with_serialising_backend():
+    from inguitive import Text
+    from inguitive.session import _cache_component_registry
+
+    s = State("v", "_sse_redis_pu")
+
+    async def run():
+        backend = _SerializingBackend()
+        set_session_backend(backend)
+
+        session = Session(session_id="redis-pu-sess")
+        session.component_registry["rpu-txt"] = Text(lambda: s.get(), id="rpu-txt")
+        session.data_registry["_sse_redis_pu"] = "value"
+        await backend.save_session(session)
+        _cache_component_registry(session)
+
+        q = _register_sse_connection("redis-pu-sess")
+        await push_update("redis-pu-sess", "rpu-txt")
+
+        assert not q.empty()
+        html = await q.get()
+        assert "rpu-txt" in html
+
+    asyncio.run(run())
+
+
+def test_push_sse_serialising_backend_without_cache_is_silent():
+    """Without a cached registry (e.g. different worker), push is skipped safely."""
+    async def run():
+        backend = _SerializingBackend()
+        set_session_backend(backend)
+
+        session = Session(session_id="nocache-sess")
+        session.data_registry["__listeners__nc_state"] = {"nc-comp"}
+        await backend.save_session(session)
+
+        q = _register_sse_connection("nocache-sess")
+        await _push_sse_for_state("nc_state")  # must not raise
+        assert q.empty()
+
+    asyncio.run(run())
+
+
+def test_component_cache_eviction_and_hydration():
+    from inguitive.session import (
+        _cache_component_registry,
+        _component_registry_cache,
+        _evict_component_registry_cache,
+        _hydrate_component_registry,
+    )
+
+    session = Session(session_id="cache-sess")
+    session.component_registry["c1"] = object()
+    _cache_component_registry(session)
+    assert "cache-sess" in _component_registry_cache
+
+    fresh = Session.from_dict(session.to_dict())
+    assert not fresh.component_registry
+    _hydrate_component_registry(fresh)
+    assert "c1" in fresh.component_registry
+
+    _evict_component_registry_cache("cache-sess")
+    assert "cache-sess" not in _component_registry_cache
+    # Hydrating after eviction is a no-op.
+    fresh2 = Session.from_dict(session.to_dict())
+    _hydrate_component_registry(fresh2)
+    assert not fresh2.component_registry
+
+
+def test_cache_component_registry_noop_when_empty():
+    """A render-free request (e.g. GET /_sse) must not clobber the cache."""
+    from inguitive.session import (
+        _cache_component_registry,
+        _component_registry_cache,
+        _evict_component_registry_cache,
+    )
+
+    session = Session(session_id="noclobber-sess")
+    session.component_registry["c1"] = object()
+    _cache_component_registry(session)
+
+    empty = Session(session_id="noclobber-sess")
+    _cache_component_registry(empty)
+    registry, _ = _component_registry_cache["noclobber-sess"]
+    assert "c1" in registry
+
+    _evict_component_registry_cache("noclobber-sess")

@@ -27,7 +27,9 @@ from inguitive.htmx import update_components
 from inguitive.session import (
     Session,
     SessionBackend,
+    _cache_component_registry,
     _clear_current_session,
+    _hydrate_component_registry,
     _get_current_session_from_context,
     _get_sse_queues,
     _put_bounded,
@@ -299,12 +301,19 @@ class SessionMiddleware:
                 message = dict(message, headers=headers_list)
             await send(message)
 
+        # Restore live components cached from a previous render in this worker
+        # (needed for backends that serialise sessions, e.g. RedisBackend).
+        _hydrate_component_registry(session)
+
         try:
             await self.app(scope, receive, send_with_cookie)
         finally:
             if session._dirty:
                 await backend.save_session(session)
                 session.clear_dirty()
+            # Cache live components for SSE rendering with serialising
+            # backends (no-op when nothing was rendered this request).
+            _cache_component_registry(session)
             _clear_current_session()
 
 
@@ -647,10 +656,11 @@ async def push_update(session_id: str, *component_ids: str) -> None:
     if session is None:
         return
 
-    # Note: rendering requires a populated component_registry, which is only
-    # available with MemoryBackend.  With RedisBackend the registry is empty
-    # after deserialisation and update_components() returns empty HTML.
-    # See task #8 for the planned Redis fix.
+    # Rendering requires a populated component_registry.  MemoryBackend
+    # returns the live session; for serialising backends (RedisBackend) the
+    # registry is restored from the worker's process-local component cache.
+    _hydrate_component_registry(session)
+
     def _render(s=session, ids=component_ids) -> str:
         _set_current_session(s)
         return update_components(*ids)

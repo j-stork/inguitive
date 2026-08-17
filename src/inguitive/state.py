@@ -197,18 +197,11 @@ async def _push_sse_for_state(state_key: str) -> None:
 
     For each session that has at least one active SSE connection:
 
-    1. Load the session from the backend.
-
-       .. important:: **MemoryBackend only.**
-          ``MemoryBackend`` returns the live in-process session object whose
-          ``component_registry`` is fully populated.  ``RedisBackend``
-          deserialises only ``data_registry`` from Redis and leaves
-          ``component_registry`` empty, so rendering is impossible and this
-          function silently skips those sessions.  Use :func:`push_update`
-          with ``MemoryBackend`` for explicit per-session pushes — it suffers
-          the same limitation because it also requires ``component_registry``.
-          Redis + SSE rendering requires persisting the registry (task #8).
-
+    1. Load the session from the backend and, if the backend serialises
+       sessions (e.g. ``RedisBackend``, which persists only ``data_registry``),
+       restore the live ``component_registry`` from the worker's process-local
+       cache.  Any session with an SSE connection in this worker rendered its
+       page through this worker, so the cache holds its live components.
     2. Check whether any component in the session listens to this state.
     3. Render the listening components as OOB HTML in an isolated context.
     4. Fan out the HTML to **all** open queues for the session (one per tab).
@@ -219,6 +212,7 @@ async def _push_sse_for_state(state_key: str) -> None:
     # Deferred imports to avoid circular dependencies.
     from inguitive.htmx import update_components
     from inguitive.session import (
+        _hydrate_component_registry,
         _put_bounded,
         _set_current_session,
         _sse_connections,
@@ -235,9 +229,12 @@ async def _push_sse_for_state(state_key: str) -> None:
             if session is None:
                 continue
 
+            # Restore live components for serialising backends (RedisBackend).
+            _hydrate_component_registry(session)
+
             # Check whether any component in this session listens to the state.
             listeners_key = f"{_LISTENERS_PREFIX}{state_key}"
-            listeners: set[str] = session.data_registry.get(listeners_key, set())
+            listeners: set[str] = set(session.data_registry.get(listeners_key, set()))
             if not listeners:
                 continue
 

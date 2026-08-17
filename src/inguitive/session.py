@@ -38,21 +38,36 @@ class Session:
         self._dirty = False
 
     def to_dict(self) -> SessionData:
-        """Serialize session data for storage."""
+        """Serialize session data for storage.
+
+        Listener sets (``__listeners__*`` keys) are converted to sorted lists
+        so the payload is JSON-serialisable for backends like Redis.
+        """
+        data_registry = {
+            key: sorted(value) if isinstance(value, set) else value
+            for key, value in self.data_registry.items()
+        }
         return {
             "session_id": self.session_id,
-            "data_registry": self.data_registry,
+            "data_registry": data_registry,
             "last_accessed": self.last_accessed,
         }
 
     @classmethod
     def from_dict(cls, data: SessionData) -> Session:
-        """Deserialize session data from storage."""
+        """Deserialize session data from storage.
+
+        Listener lists (``__listeners__*`` keys) are restored to sets.
+        """
+        data_registry = dict(data.get("data_registry", {}))
+        for key, value in data_registry.items():
+            if key.startswith("__listeners__") and isinstance(value, list):
+                data_registry[key] = set(value)
         return cls(
             session_id=data["session_id"],
             component_registry={},
             state_registry={},
-            data_registry=data.get("data_registry", {}),
+            data_registry=data_registry,
             last_accessed=data.get("last_accessed", 0.0),
             _dirty=False,
         )
@@ -120,6 +135,7 @@ class MemoryBackend(SessionBackend):
         """Delete session from memory."""
         async with self._lock:
             self._sessions.pop(session_id, None)
+        _evict_component_registry_cache(session_id)
 
     async def cleanup_expired(self) -> int:
         """Clean up expired sessions.
@@ -214,6 +230,7 @@ class RedisBackend(SessionBackend):
         client = await self._get_client()
         key = self._make_key(session_id)
         await client.delete(key)
+        _evict_component_registry_cache(session_id)
 
     async def cleanup_expired(self) -> int:
         """Redis handles TTL automatically. This is a no-op."""
@@ -398,6 +415,79 @@ def _get_sse_queues(session_id: str) -> set[asyncio.Queue]:
         A snapshot set of queues; iterate it to fan out a push.
     """
     return set(_sse_connections.get(session_id, set()))
+
+
+# ---------------------------------------------------------------------------
+# Process-local component-registry cache
+# ---------------------------------------------------------------------------
+
+# Live Component objects cannot be serialised to external session stores
+# (they hold arbitrary callables), so backends like RedisBackend persist only
+# ``data_registry``.  To keep SSE rendering working with such backends, each
+# worker caches the live ``component_registry`` of every session it renders,
+# keyed by session_id.  Any session with an SSE connection in this worker
+# necessarily loaded its page through this worker, so the cache always holds
+# the components needed to render pushes for locally-connected clients.
+#
+# Entries are (registry, last_touched) pairs; stale entries are pruned
+# opportunistically using _COMPONENT_CACHE_TTL.
+_COMPONENT_CACHE_TTL: float = 3600.0
+
+_component_registry_cache: dict[str, tuple[dict[str, Any], float]] = {}
+
+
+def _cache_component_registry(session: Session) -> None:
+    """Cache a session's live component registry in this worker process.
+
+    Called after each request that rendered components.  A no-op when the
+    session's ``component_registry`` is empty (e.g. ``GET /_sse``), so an
+    existing cache entry is never clobbered by a render-free request.
+
+    Args:
+        session: The session whose live components should be cached.
+    """
+    if not session.component_registry:
+        return
+    _component_registry_cache[session.session_id] = (
+        session.component_registry,
+        time.time(),
+    )
+    _prune_component_registry_cache()
+
+
+def _hydrate_component_registry(session: Session) -> None:
+    """Populate an empty ``component_registry`` from the process-local cache.
+
+    Backends that serialise sessions (e.g. RedisBackend) return sessions with
+    an empty ``component_registry``.  This restores the live components cached
+    when this worker last rendered the session's page, enabling SSE pushes to
+    re-render components.  A no-op when the registry is already populated
+    (MemoryBackend) or when nothing is cached for the session.
+
+    Args:
+        session: A session freshly loaded from the backend.
+    """
+    if session.component_registry:
+        return
+    entry = _component_registry_cache.get(session.session_id)
+    if entry is not None:
+        registry, _ = entry
+        session.component_registry = registry
+        # Refresh the timestamp — the session is clearly still active.
+        _component_registry_cache[session.session_id] = (registry, time.time())
+
+
+def _evict_component_registry_cache(session_id: str) -> None:
+    """Remove a session's cached component registry (e.g. on session delete)."""
+    _component_registry_cache.pop(session_id, None)
+
+
+def _prune_component_registry_cache() -> None:
+    """Drop cache entries not touched within _COMPONENT_CACHE_TTL."""
+    cutoff = time.time() - _COMPONENT_CACHE_TTL
+    stale = [sid for sid, (_, touched) in _component_registry_cache.items() if touched < cutoff]
+    for sid in stale:
+        _component_registry_cache.pop(sid, None)
 
 
 # ---------------------------------------------------------------------------
