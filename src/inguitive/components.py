@@ -123,7 +123,7 @@ class Component:
                     if isinstance(resolved, Component):
                         children_html_parts.append(resolved.render())
                     else:
-                        children_html_parts.append(resolved)
+                        children_html_parts.append(str(resolved))
         return "".join(children_html_parts)
 
     def _oob_attrs_str(self) -> str:
@@ -435,7 +435,7 @@ class Icon(Component):
             # Get the raw CSS value (don't resolve/escape it here - ET will handle
             # XML escaping for attribute values in _replace_class)
             css_value = self.css() if callable(self.css) else self.css
-            resolved_svg = self._replace_class(resolved_svg, css_value)
+            resolved_svg = markupsafe.Markup(self._replace_class(resolved_svg, css_value))
 
         return resolved_svg
 
@@ -1114,7 +1114,7 @@ class DataTable(Component):
         # Add root CSS to class attribute
         if root_css:
             if "class" in filtered_attrs:
-                filtered_attrs["class"] += " " + root_css
+                filtered_attrs["class"] = str(filtered_attrs["class"]) + " " + root_css
             else:
                 filtered_attrs["class"] = root_css
 
