@@ -48,7 +48,7 @@ class ValidationError(Exception):
 
     def __str__(self) -> str:
         """Return string representation of validation errors."""
-        error_messages = []
+        error_messages: list[str] = []
         for field_name, messages in self.errors.items():
             for message in messages:
                 error_messages.append(f"{field_name}: {message}")
@@ -72,7 +72,7 @@ class ValidationError(Exception):
             errors = self.errors.get(field, [])
             return errors[0] if errors else None
 
-        for field_name, messages in self.errors.items():
+        for messages in self.errors.values():
             if messages:
                 return messages[0]
         return None
@@ -322,11 +322,8 @@ class Field:
 
         # String is always safe
         if self.field_type is str:
-            if isinstance(raw_value, str):
-                return (
-                    raw_value.strip() if raw_value.strip() != "" else (self.default if self.default is not None else "")
-                )
-            return str(raw_value) if raw_value is not None else self.default
+            stripped = raw_value.strip()
+            return stripped if stripped != "" else (self.default if self.default is not None else "")
 
         # Type-specific coercion
         try:
@@ -335,8 +332,7 @@ class Field:
                     return self.default if self.default is not None else 0
                 if isinstance(raw_value, int):
                     return raw_value
-                if not isinstance(raw_value, str):
-                    return self.default if self.default is not None else 0
+                # After None/int checks and type hint, raw_value must be str
                 stripped = raw_value.strip()
                 if not stripped:
                     return self.default if self.default is not None else 0
@@ -346,8 +342,7 @@ class Field:
                     return self.default if self.default is not None else 0.0
                 if isinstance(raw_value, (int, float)):
                     return float(raw_value)
-                if not isinstance(raw_value, str):
-                    return self.default if self.default is not None else 0.0
+                # After None/int/float checks and type hint, raw_value must be str
                 stripped = raw_value.strip()
                 if not stripped:
                     return self.default if self.default is not None else 0.0
@@ -374,7 +369,7 @@ class Field:
         Truthy values: "true", "1", "on", "yes", "y" (case-insensitive)
         Falsy values: "false", "0", "off", "no", "n", "" (case-insensitive)
         """
-        if not raw_value or not isinstance(raw_value, str):
+        if not raw_value:
             return self.default if self.default is not None else False
 
         stripped = raw_value.strip().lower()
@@ -398,7 +393,7 @@ class Field:
         Returns:
             List of error messages. Empty list if validation passes.
         """
-        errors = []
+        errors: list[str] = []
 
         # Required check (only if value came from form data, not default)
         # Note: Required validation is handled at the schema level
@@ -499,7 +494,7 @@ def field(
 class FormSchemaMeta(type):
     """Metaclass to collect field definitions from schema classes."""
 
-    def __new__(mcs, name: str, bases: tuple, namespace: dict) -> type:
+    def __new__(mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any]) -> type:
         """Create a new schema class, collecting Field instances from class attributes.
 
         This metaclass removes Field instances from the class namespace and stores
@@ -512,11 +507,12 @@ class FormSchemaMeta(type):
         # Process base classes in reverse MRO order
         # Using dict.update() ensures last-visited base wins conflicts
         for base in reversed(bases):
-            if hasattr(base, "_fields") and isinstance(base._fields, dict):
-                fields.update(base._fields)
+            base_fields: dict[str, Field] | None = getattr(base, "_fields", None)
+            if base_fields is not None:
+                fields.update(base_fields)
 
         # Create a clean namespace without Field instances
-        clean_namespace = {}
+        clean_namespace: dict[str, Any] = {}
 
         for attr_name, attr_value in namespace.items():
             if isinstance(attr_value, Field):
@@ -527,7 +523,7 @@ class FormSchemaMeta(type):
 
         # Create the class with clean namespace
         cls = super().__new__(mcs, name, bases, clean_namespace)
-        cls._fields = fields
+        setattr(cls, "_fields", fields)
         return cls
 
 
@@ -603,7 +599,7 @@ class FormSchema(metaclass=FormSchemaMeta):
                     self._values[field_name] = coerced_value
             # Check required for empty values (after coercion)
             elif field_obj.required:
-                if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
+                if raw_value is None or not raw_value.strip():
                     self._errors[field_name] = [field_obj.error_message or "This field is required"]
                     self._values[field_name] = field_obj.default
                 elif isinstance(coerced_value, str) and not coerced_value.strip():
@@ -689,20 +685,20 @@ class FormSchema(metaclass=FormSchemaMeta):
 
 
 def _validate_and_call_sync(
-    handler: Callable,
+    handler: Callable[..., Any],
     schema_class: type[FormSchema],
     handle_errors: bool,
     form_data_param: str,
-    args: tuple,
-    kwargs: dict,
-):
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> Any:
     """Synchronous internal helper to perform validation and call handler."""
     # Get the handler signature to find the expected parameter name
     sig = inspect.signature(handler)
     handler_params = list(sig.parameters.keys())
 
     # Try to find form_data in kwargs first, using the specified param name
-    form_data = kwargs.pop(form_data_param, None)
+    form_data: dict[str, str] | None = kwargs.pop(form_data_param, None)
 
     # Also try 'form_data' as a fallback since that's what the trigger route uses
     if form_data is None:
@@ -719,10 +715,6 @@ def _validate_and_call_sync(
 
     # If still no form_data, use empty dict
     if form_data is None:
-        form_data = {}
-
-    # Ensure form_data is a dict (it should be from request.form())
-    if not isinstance(form_data, dict):
         form_data = {}
 
     # Instantiate and validate schema
@@ -765,20 +757,20 @@ def _validate_and_call_sync(
 
 
 async def _validate_and_call_async(
-    handler: Callable,
+    handler: Callable[..., Any],
     schema_class: type[FormSchema],
     handle_errors: bool,
     form_data_param: str,
-    args: tuple,
-    kwargs: dict,
-):
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> Any:
     """Asynchronous internal helper to perform validation and call handler."""
     # Get the handler signature to find the expected parameter name
     sig = inspect.signature(handler)
     handler_params = list(sig.parameters.keys())
 
     # Try to find form_data in kwargs first, using the specified param name
-    form_data = kwargs.pop(form_data_param, None)
+    form_data: dict[str, str] | None = kwargs.pop(form_data_param, None)
 
     # Also try 'form_data' as a fallback since that's what the trigger route uses
     if form_data is None:
@@ -795,10 +787,6 @@ async def _validate_and_call_async(
 
     # If still no form_data, use empty dict
     if form_data is None:
-        form_data = {}
-
-    # Ensure form_data is a dict (it should be from request.form())
-    if not isinstance(form_data, dict):
         form_data = {}
 
     # Instantiate and validate schema
@@ -889,8 +877,8 @@ def validate_form(
 
         # Create new parameters that include form_data if not already present
         # This ensures FastAPI's route_wrapper detects that we need form_data
-        new_params = []
-        for param_name, param in sig.parameters.items():
+        new_params: list[inspect.Parameter] = []
+        for param in sig.parameters.values():
             new_params.append(param)
 
         # Add form_data parameter if not present
