@@ -419,7 +419,7 @@ def field(
     regex: str | None = None,
     validators: list[Validator] | None = None,
     coerce: bool = True,
-):
+) -> Field:
     """Define a form field with validation rules.
 
     This is the primary way to define fields in a FormSchema subclass.

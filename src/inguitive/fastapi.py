@@ -547,7 +547,7 @@ def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000
     uvicorn.run(app_module, host=host, port=port, reload=reload)
 
 
-def redirect(url: str, status_code: int = 302):
+def redirect(url: str, status_code: int = 302) -> Any:
     """Perform an HTTP redirect to the specified URL.
 
     Args:

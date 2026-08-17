@@ -81,3 +81,6 @@ uvicorn.log
 
 # Existing
 venv_inguitive/
+
+# MkDocs
+site/

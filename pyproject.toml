@@ -47,6 +47,12 @@ dev = [
 redis = [
     "redis>=4.2",
 ]
+docs = [
+    "mkdocs>=1.5",
+    "mkdocs-material>=9.0",
+    "mkdocstrings[python]>=0.24",
+    "mkdocs-autorefs>=0.5",
+]
 
 [project.urls]
 Homepage = "https://github.com/j-strk/inguitive"

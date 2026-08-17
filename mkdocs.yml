@@ -1,0 +1,82 @@
+site_name: inguitive
+site_description: A pure Python reactive web framework — HTMX + Tailwind without JavaScript
+site_url: https://j-strk.github.io/inguitive/
+repo_url: https://github.com/j-strk/inguitive
+repo_name: j-strk/inguitive
+copyright: Copyright &copy; 2026 Johannes Stork
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_category_heading: true
+            members_order: source
+            merge_init_into_class: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - User Guide:
+    - Components: guide/components.md
+    - Reactive State: guide/state.md
+    - Trigger Handlers: guide/trigger-handlers.md
+    - Form Validation: guide/form-validation.md
+    - Session Backends: guide/session-backends.md
+  - API Reference:
+    - Overview: api/index.md
+    - Components: api/components.md
+    - State: api/state.md
+    - Validation: api/validation.md
+    - FastAPI Integration: api/fastapi.md
+    - Session: api/session.md
+    - HTMX Helpers: api/htmx.md
+    - Utilities: api/utils.md
+  - Examples: examples.md
+  - Changelog: changelog.md

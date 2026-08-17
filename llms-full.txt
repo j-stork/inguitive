@@ -609,12 +609,24 @@ Component classes for inguitive framework.
 
 from __future__ import annotations
 
+import re
 import uuid
+import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping
+from typing import Any
 
 import jinja2
+import markupsafe
 
 from inguitive.session import _get_component_registry
+
+# Register well-known SVG namespace prefixes with ElementTree so that round-trip
+# serialisation (fromstring → tostring) preserves them instead of inventing ns0:,
+# ns1:, … placeholders.  These registrations are process-global and must be set
+# before any ET.tostring() call.
+ET.register_namespace(&quot;&quot;, &quot;http://www.w3.org/2000/svg&quot;)
+ET.register_namespace(&quot;xlink&quot;, &quot;http://www.w3.org/1999/xlink&quot;)
+ET.register_namespace(&quot;xml&quot;, &quot;http://www.w3.org/XML/1998/namespace&quot;)
 
 
 class Component:
@@ -627,7 +639,7 @@ class Component:
         listen_to: str | list[str] | None = None,
         trigger: str | None = None,
         trigger_args: dict[str, str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         # Generate UUID if no id provided
         if id is None:
@@ -655,9 +667,26 @@ class Component:
                 if state is not None:
                     state.add_listener(self.id)
 
-    def _resolve(self, value: str | Callable[[], str]) -&gt; str:
-        &quot;&quot;&quot;Resolve a potentially dynamic value (callable or static).&quot;&quot;&quot;
-        return value() if callable(value) else value
+    def _resolve(
+        self, value: str | Callable[[], str] | list | dict | tuple
+    ) -&gt; str | list | dict | tuple:
+        &quot;&quot;&quot;Resolve a potentially dynamic value (callable or static) and escape strings for HTML output.&quot;&quot;&quot;
+        resolved = value() if callable(value) else value
+        if isinstance(resolved, markupsafe.Markup):
+            # Already marked as safe, don&#x27;t escape
+            return resolved
+        elif isinstance(resolved, str):
+            return markupsafe.escape(resolved)
+        elif isinstance(resolved, list):
+            # For lists, recursively resolve each element
+            return [self._resolve(item) for item in resolved]
+        elif isinstance(resolved, dict):
+            # For dicts, recursively resolve values
+            return {k: self._resolve(v) for k, v in resolved.items()}
+        elif isinstance(resolved, tuple):
+            # For tuples, recursively resolve each element
+            return tuple(self._resolve(item) for item in resolved)
+        return resolved
 
     def _get_attrs_str(self) -&gt; str:
         &quot;&quot;&quot;Convert attributes to HTML string, handling css -&gt; class conversion and dynamic values.&quot;&quot;&quot;
@@ -670,7 +699,12 @@ class Component:
             filtered_attrs[&quot;class&quot;] = resolved_css
         # Add id if present
         if self.id:
-            filtered_attrs[&quot;id&quot;] = self.id
+            resolved_id = self._resolve(self.id)
+            filtered_attrs[&quot;id&quot;] = (
+                resolved_id
+                if isinstance(resolved_id, markupsafe.Markup)
+                else markupsafe.escape(str(resolved_id))
+            )
         return &quot; &quot;.join(f&#x27;{k}=&quot;{v}&quot;&#x27; for k, v in filtered_attrs.items())
 
     def _render_children(self) -&gt; str:
@@ -730,7 +764,9 @@ class Component:
 class Div(Component):
     &quot;&quot;&quot;HTML div component.&quot;&quot;&quot;
 
-    def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
+    def __init__(
+        self, *children: Any, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any
+    ):
         super().__init__(id=id, css=css, **attrs)
         self.children = self._normalize_children(children)
 
@@ -757,7 +793,9 @@ class Button(Component):
     - redirect: Immediate browser redirect
     &quot;&quot;&quot;
 
-    def __init__(self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs):
+    def __init__(
+        self, *children: Any, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any
+    ):
         super().__init__(id=id, css=css, **attrs)
         self.children = self._normalize_children(children)
 
@@ -791,7 +829,7 @@ class Label(Component):
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
         for_: str | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize a Label component.
 
@@ -839,11 +877,11 @@ class Link(Component):
 
     def __init__(
         self,
-        *children,
+        *children: Any,
         href: str,
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize a Link component.
 
@@ -856,8 +894,20 @@ class Link(Component):
         &quot;&quot;&quot;
         super().__init__(id=id, css=css, **attrs)
         if href:
-            self.attrs[&quot;href&quot;] = href
+            self.attrs[&quot;href&quot;] = self._safe_url(href)
         self.children = self._normalize_children(children)
+
+    @staticmethod
+    def _safe_url(url: str) -&gt; str:
+        &quot;&quot;&quot;Return the URL if its scheme is safe, otherwise return &#x27;#&#x27;.
+
+        Blocks javascript:, vbscript:, and data: URIs that can execute
+        arbitrary code. Leading whitespace is stripped before the check
+        because browsers ignore it when interpreting the scheme.
+        &quot;&quot;&quot;
+        if re.match(r&quot;(?i)^\s*(javascript|vbscript|data)\s*:&quot;, url):
+            return &quot;#&quot;
+        return url
 
     def render(self) -&gt; str:
         attrs = self._get_attrs_str()
@@ -886,7 +936,11 @@ class Text(Component):
     &quot;&quot;&quot;
 
     def __init__(
-        self, text: str | Callable[[], str], id: str | None = None, css: str | Callable[[], str] | None = None, **attrs
+        self,
+        text: str | Callable[[], str],
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize a Text component.
 
@@ -916,7 +970,9 @@ class Text(Component):
 class Icon(Component):
     &quot;&quot;&quot;SVG icon component.&quot;&quot;&quot;
 
-    def __init__(self, svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs):
+    def __init__(
+        self, svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs: Any
+    ):
         super().__init__(css=css, **attrs)
         self.svg = svg
 
@@ -924,7 +980,9 @@ class Icon(Component):
     def _replace_class(svg_str: str, css_value: str) -&gt; str:
         &quot;&quot;&quot;Replace or insert class attribute in SVG string.
 
-        Preserves all other attributes, quote style, and structure.
+        Uses xml.etree.ElementTree for robust parsing of SVG content.
+        Handles edge cases like self-closing tags, irregular whitespace,
+        and different quote styles. Preserves all other attributes and structure.
 
         Args:
             svg_str: The SVG HTML string
@@ -933,41 +991,57 @@ class Icon(Component):
         Returns:
             SVG string with updated class attribute
         &quot;&quot;&quot;
-        # Find class attribute with optional whitespace between class and =
-        idx = svg_str.find(&quot;class&quot;)
-        if idx != -1:
-            # Move past &#x27;class&#x27;
-            idx += len(&quot;class&quot;)
-            # Skip whitespace
-            while idx &lt; len(svg_str) and svg_str[idx] in &quot; \t&quot;:
-                idx += 1
-            # Check for &#x27;=&#x27;
-            if idx &lt; len(svg_str) and svg_str[idx] == &quot;=&quot;:
-                idx += 1
-                # Skip whitespace after &#x27;=&#x27;
-                while idx &lt; len(svg_str) and svg_str[idx] in &quot; \t&quot;:
-                    idx += 1
-                # Now at the opening quote
-                if idx &lt; len(svg_str) and svg_str[idx] in (&#x27;&quot;&#x27;, &quot;&#x27;&quot;):
-                    quote_char = svg_str[idx]
-                    # Find closing quote
-                    content_start = idx + 1
-                    content_end = svg_str.find(quote_char, content_start)
-                    if content_end != -1:
-                        # Replace the content between quotes
-                        return svg_str[:content_start] + css_value + svg_str[content_end:]
-        # No class attribute found - insert one
-        if svg_str.startswith(&quot;&lt;svg&quot;):
-            pos = len(&quot;&lt;svg&quot;)
-            return svg_str[:pos] + f&#x27; class=&quot;{css_value}&quot;&#x27; + svg_str[pos:]
-        return f&#x27;&lt;svg class=&quot;{css_value}&quot;&gt;{svg_str}&#x27;
+        # Extract the string content if it&#x27;s a Markup object
+        is_markup = isinstance(svg_str, markupsafe.Markup)
+        svg_string = str(svg_str) if is_markup else svg_str
+
+        try:
+            # Parse the SVG string
+            root = ET.fromstring(svg_string)
+
+            # Set the class attribute on the root element
+            root.set(&quot;class&quot;, css_value)
+
+            # Serialize back to string
+            result = ET.tostring(root, encoding=&quot;unicode&quot;, method=&quot;xml&quot;)
+
+            # Remove namespace prefixes and declarations to maintain clean HTML output
+            # Remove all namespace declarations (xmlns and xmlns:*)
+            result = re.sub(r&#x27;\s+xmlns(:\w+)?=&quot;[^&quot;]*&quot;&#x27;, &#x27;&#x27;, result)
+            # Remove namespace prefixes from opening tags (e.g., &lt;ns0:svg -&gt; &lt;svg)
+            result = re.sub(r&#x27;&lt;ns\d+:&#x27;, &#x27;&lt;&#x27;, result)
+            # Remove namespace prefixes from closing tags (e.g., &lt;/ns0:svg -&gt; &lt;/svg)
+            result = re.sub(r&#x27;&lt;/ns\d+:&#x27;, &#x27;&lt;/&#x27;, result)
+            # Remove namespace prefixes from attribute names (e.g., ns0:class=&quot;...&quot; -&gt; class=&quot;...&quot;)
+            result = re.sub(r&#x27;(\s)ns\d+:&#x27;, r&#x27;\1&#x27;, result)
+
+        except ET.ParseError as e:
+            raise ValueError(
+                f&quot;Invalid SVG XML: {e}. &quot;
+                f&quot;The Icon component requires well-formed SVG XML. &quot;
+                f&quot;Common issues: unquoted attributes, unclosed tags, or malformed syntax. &quot;
+                f&quot;Please validate your SVG input.&quot;
+            ) from e
+
+        # Preserve Markup type if input was Markup
+        if is_markup:
+            return markupsafe.Markup(result)
+        return result
 
     def render(self) -&gt; str:
-        resolved_svg: str = self._resolve(self.svg)
+        # SVG content is always developer-supplied markup, never user input.
+        # Resolve the callable if needed, then ensure it is treated as trusted
+        # by wrapping in Markup so it is never HTML-escaped.
+        raw_svg = self.svg() if callable(self.svg) else self.svg
+        resolved_svg = (
+            raw_svg if isinstance(raw_svg, markupsafe.Markup) else markupsafe.Markup(raw_svg)
+        )
 
         if self.css:
-            resolved_css: str = self._resolve(self.css)
-            resolved_svg = self._replace_class(resolved_svg, resolved_css)
+            # Get the raw CSS value (don&#x27;t resolve/escape it here - ET will handle
+            # XML escaping for attribute values in _replace_class)
+            css_value = self.css() if callable(self.css) else self.css
+            resolved_svg = markupsafe.Markup(self._replace_class(resolved_svg, css_value))
 
         return resolved_svg
 
@@ -988,7 +1062,7 @@ class Input(Component):
         value: str | Callable[[], str] | None = None,
         placeholder: str = &quot;&quot;,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize an Input component.
 
@@ -1042,7 +1116,7 @@ class Textarea(Component):
         placeholder: str = &quot;&quot;,
         rows: int = 3,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize a Textarea component.
 
@@ -1097,7 +1171,7 @@ class Select(Component):
         options: list[tuple[str, str]] | Callable[[], list[tuple[str, str]]] | None = None,
         value: str | Callable[[], str] | None = None,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize a Select component.
 
@@ -1118,12 +1192,21 @@ class Select(Component):
 
     def _render_options(self) -&gt; str:
         &quot;&quot;&quot;Render all option elements.&quot;&quot;&quot;
-        resolved_options = self._resolve(self.options) if self.options else []  # type: ignore
-        resolved_value = self._resolve(self.value) if self.value else None
+        # Get raw options for comparison (before resolving)
+        raw_options = self.options() if callable(self.options) else self.options
+        raw_value = self.value() if callable(self.value) else self.value
+        # Get resolved options for rendering
+        resolved_options = self._resolve(raw_options) if raw_options else []  # type: ignore
         option_tags = []
-        for val, text in resolved_options:  # type: ignore[str-unpack]
-            selected = &quot; selected&quot; if val == resolved_value else &quot;&quot;
-            option_tags.append(f&#x27;&lt;option value=&quot;{val}&quot;{selected}&gt;{text}&lt;/option&gt;&#x27;)
+        # Iterate through both raw and resolved options in parallel
+        for (raw_val, raw_text), (val, text) in zip(raw_options or [], resolved_options or []):  # type: ignore[str-unpack]
+            # val and text are already resolved (and escaped if they were strings)
+            # For attribute values, we need to ensure they&#x27;re strings
+            str_val = str(val) if val is not None else &quot;&quot;
+            str_text = str(text) if text is not None else &quot;&quot;
+            # Compare raw values to determine if selected
+            selected = &quot; selected&quot; if raw_val == raw_value else &quot;&quot;
+            option_tags.append(f&#x27;&lt;option value=&quot;{str_val}&quot;{selected}&gt;{str_text}&lt;/option&gt;&#x27;)
         return &quot;&quot;.join(option_tags)
 
     def render(self) -&gt; str:
@@ -1161,7 +1244,7 @@ class Checkbox(Component):
         css: str | Callable[[], str] | None = None,
         checked: bool | Callable[[], bool] = False,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize a Checkbox component.
 
@@ -1223,7 +1306,7 @@ class Radio(Component):
         value: str = &quot;&quot;,
         checked: bool | Callable[[], bool] = False,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize a Radio component.
 
@@ -1283,13 +1366,13 @@ class Form(Component):
 
     def __init__(
         self,
-        *children,
+        *children: Any,
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
         action: str = &quot;&quot;,
         method: str = &quot;post&quot;,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize a Form component.
 
@@ -1356,7 +1439,7 @@ class TemplateComponent(Component):
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
         listen_to: str | list[str] | None = None,
-        **context,
+        **context: Any,
     ):
         &quot;&quot;&quot;Initialize a TemplateComponent.
 
@@ -1378,7 +1461,7 @@ class TemplateComponent(Component):
         id: str | None = None,
         css_name: str | Callable[[], str] | None = None,
         listen_to: str | list[str] | None = None,
-        **context,
+        **context: Any,
     ):
         &quot;&quot;&quot;Create a TemplateComponent from a template file.
 
@@ -1406,7 +1489,9 @@ class TemplateComponent(Component):
             resolved_context[&quot;css&quot;] = self._resolve(self.css)
 
         # Create Jinja2 environment and render
-        env = jinja2.Environment(loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape([&quot;html&quot;, &quot;xml&quot;]))
+        env = jinja2.Environment(
+            loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape([&quot;html&quot;, &quot;xml&quot;])
+        )
         template = env.from_string(self.template_str)
         return template.render(**resolved_context)
 
@@ -1416,7 +1501,9 @@ class TemplateComponent(Component):
             return self.render()
         attrs = self._oob_attrs_str()
         # Render template content
-        env = jinja2.Environment(loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape([&quot;html&quot;, &quot;xml&quot;]))
+        env = jinja2.Environment(
+            loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape([&quot;html&quot;, &quot;xml&quot;])
+        )
         template = env.from_string(self.template_str)
         resolved_context = {}
         for key, value in self.context.items():
@@ -1486,9 +1573,12 @@ class DataTable(Component):
         data: list[dict] | Callable[[], list[dict]],
         columns: list[str] | Callable[[], list[str] | None] | None = None,
         id: str | None = None,
-        css: str | Mapping[str, str | Callable[[], str]] | Callable[[], str | Mapping[str, str | Callable[[], str]]] | None = None,
+        css: str
+        | Mapping[str, str | Callable[[], str]]
+        | Callable[[], str | Mapping[str, str | Callable[[], str]]]
+        | None = None,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         &quot;&quot;&quot;Initialize a DataTable component.
 
@@ -1580,7 +1670,8 @@ class DataTable(Component):
         value = row.get(column, &quot;&quot;)
         if value is None:
             return &quot;&quot;
-        return str(value)
+        # Escape the value for HTML output
+        return markupsafe.escape(str(value))
 
     def _render_table(self, resolved_data: list[dict], element_css: dict[str, str]) -&gt; str:
         &quot;&quot;&quot;Render the HTML table structure with resolved data and CSS.&quot;&quot;&quot;
@@ -1591,8 +1682,10 @@ class DataTable(Component):
         cell_css = element_css.get(&quot;cell&quot;, self._DEFAULT_ELEMENT_CSS[&quot;cell&quot;])
         row_css = element_css.get(&quot;row&quot;, self._DEFAULT_ELEMENT_CSS[&quot;row&quot;])
 
-        # Render thead
-        header_cells = &quot;&quot;.join(f&#x27;&lt;th class=&quot;{header_css}&quot;&gt;{col}&lt;/th&gt;&#x27; for col in columns)
+        # Render thead - escape column names
+        header_cells = &quot;&quot;.join(
+            f&#x27;&lt;th class=&quot;{header_css}&quot;&gt;{markupsafe.escape(str(col))}&lt;/th&gt;&#x27; for col in columns
+        )
         thead = f&quot;&lt;thead&gt;&lt;tr&gt;{header_cells}&lt;/tr&gt;&lt;/thead&gt;&quot;
 
         # Render tbody
@@ -1601,7 +1694,9 @@ class DataTable(Component):
         else:
             rows_html = []
             for row in resolved_data:
-                cells = &quot;&quot;.join(f&#x27;&lt;td class=&quot;{cell_css}&quot;&gt;{self._get_value(row, col)}&lt;/td&gt;&#x27; for col in columns)
+                cells = &quot;&quot;.join(
+                    f&#x27;&lt;td class=&quot;{cell_css}&quot;&gt;{self._get_value(row, col)}&lt;/td&gt;&#x27; for col in columns
+                )
                 rows_html.append(f&#x27;&lt;tr class=&quot;{row_css}&quot;&gt;{cells}&lt;/tr&gt;&#x27;)
             tbody = f&quot;&lt;tbody&gt;{&#x27;&#x27;.join(rows_html)}&lt;/tbody&gt;&quot;
 
@@ -1625,13 +1720,18 @@ class DataTable(Component):
         # Add root CSS to class attribute
         if root_css:
             if &quot;class&quot; in filtered_attrs:
-                filtered_attrs[&quot;class&quot;] += &quot; &quot; + root_css
+                filtered_attrs[&quot;class&quot;] = str(filtered_attrs[&quot;class&quot;]) + &quot; &quot; + root_css
             else:
                 filtered_attrs[&quot;class&quot;] = root_css
 
         # Add id if present
         if self.id:
-            filtered_attrs[&quot;id&quot;] = self.id
+            resolved_id = self._resolve(self.id)
+            filtered_attrs[&quot;id&quot;] = (
+                resolved_id
+                if isinstance(resolved_id, markupsafe.Markup)
+                else markupsafe.escape(str(resolved_id))
+            )
 
         attrs = &quot; &quot;.join(f&#x27;{k}=&quot;{v}&quot;&#x27; for k, v in filtered_attrs.items())
 
@@ -2046,18 +2146,21 @@ from __future__ import annotations
 
 import importlib.resources
 import inspect
+import traceback
 import uuid
 import warnings
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
+import markupsafe
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
 
+from inguitive.components import Component
 from inguitive.htmx import update_components
 from inguitive.session import (
     Session,
@@ -2078,9 +2181,35 @@ from inguitive.trigger import _trigger_args_context
 _P = ParamSpec(&quot;_P&quot;)
 _T = TypeVar(&quot;_T&quot;)
 
+# Type alias for head content (supports strings, Components, Markup, lists, or None)
+HeadContent = str | Component | markupsafe.Markup | list[str | Component | markupsafe.Markup] | None
+
 # Type aliases for decorator return types
 _TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
-_PageDecorator = Callable[[str | None, str | None, str | None], Callable[[Callable[_P, _T]], Callable[_P, _T]]]
+_PageDecorator = Callable[
+    [str | None, str | None, str | None, HeadContent], Callable[[Callable[_P, _T]], Callable[_P, _T]]
+]
+
+
+def _render_template_content(value: HeadContent) -&gt; str:
+    &quot;&quot;&quot;Render a value (Component, list, string, or Markup) to HTML string for template injection.
+
+    Args:
+        value: A string, Component instance, markupsafe.Markup, list of strings/Components/Markup, or None
+
+    Returns:
+        Rendered HTML string (safe for template insertion)
+    &quot;&quot;&quot;
+    if value is None:
+        return &quot;&quot;
+    if isinstance(value, markupsafe.Markup):
+        # Already marked as safe, don&#x27;t escape - return as string
+        return str(value)
+    if isinstance(value, list):
+        return &quot;&quot;.join(_render_template_content(item) for item in value)
+    if hasattr(value, &quot;render&quot;) and callable(value.render):
+        return value.render()
+    return str(value)
 
 
 @runtime_checkable
@@ -2102,6 +2231,7 @@ def _register_page_route(
     handler: Callable[_P, _T],
     page_title: str | None = None,
     page_favicon: str | None = None,
+    page_head: HeadContent = None,
 ):
     &quot;&quot;&quot;Helper to register a page route on an app.
 
@@ -2111,10 +2241,12 @@ def _register_page_route(
         handler: The handler function to call
         page_title: Optional page-specific title. Falls back to app.state.title or &quot;inguitive&quot;
         page_favicon: Optional page-specific favicon. Falls back to app.state.favicon or default
+        page_head: Optional page-specific head content. Can be a string, Component, or list of both.
+            This is appended AFTER app-level head content (from create_app).
     &quot;&quot;&quot;
 
     @app.get(path, response_class=HTMLResponse)
-    async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon):
+    async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon, ph=page_head):
         sig = inspect.signature(h)
         needs_request = &quot;request&quot; in sig.parameters
         needs_form_data = &quot;form_data&quot; in sig.parameters
@@ -2153,12 +2285,22 @@ def _register_page_route(
         # 3. Default favicon
         effective_favicon = pf or getattr(app.state, &quot;favicon&quot;, None) or &quot;/static/inguitive_favicon.svg&quot;
 
+        # Collect all head content sources in order: app-level first, then page-level
+        head_sources = []
+        app_head = getattr(app.state, &quot;head&quot;, None)
+        if app_head is not None:
+            head_sources.append(app_head)
+        if ph is not None:
+            head_sources.append(ph)
+        # Render and concatenate all sources
+        head_extra = &quot;&quot;.join(_render_template_content(source) for source in head_sources)
+
         # Wrap in base template with title and favicon
         templates = app.state.templates
         return templates.TemplateResponse(
             request,
             &quot;base.html&quot;,
-            {&quot;content&quot;: content, &quot;title&quot;: effective_title, &quot;favicon&quot;: effective_favicon},
+            {&quot;content&quot;: content, &quot;title&quot;: effective_title, &quot;favicon&quot;: effective_favicon, &quot;head_extra&quot;: head_extra},
         )
 
 
@@ -2247,7 +2389,7 @@ class SessionMiddleware:
         self._request_count += 1
         if self._request_count % self.cleanup_interval == 0:
             backend = get_session_backend()
-            backend.cleanup_expired()
+            await backend.cleanup_expired()
 
         # Extract cookies from headers
         headers = dict(scope.get(&quot;headers&quot;, []))
@@ -2263,13 +2405,15 @@ class SessionMiddleware:
         backend = get_session_backend()
 
         if session_id:
-            session = backend.get_session(session_id)
+            session = await backend.get_session(session_id)
             if session is None:
                 session = Session(session_id=session_id)
-                backend.save_session(session)
+                # Mark as dirty so the finally block below will save this new session
+                session.mark_dirty()
         else:
             session = Session(session_id=str(uuid.uuid4()))
-            backend.save_session(session)
+            # Mark as dirty so the finally block below will save this new session
+            session.mark_dirty()
 
         _set_current_session(session)
 
@@ -2291,7 +2435,9 @@ class SessionMiddleware:
         try:
             await self.app(scope, receive, send_with_cookie)
         finally:
-            backend.save_session(session)
+            if session._dirty:
+                await backend.save_session(session)
+                session.clear_dirty()
             _clear_current_session()
 
 
@@ -2338,16 +2484,50 @@ def _create_template_loader(template_dir: str | Path = &quot;templates&quot;) -&
     return ChoiceLoader(loaders)
 
 
+def _dev_error_handler(request: Request, exc: Exception) -&gt; HTMLResponse:
+    &quot;&quot;&quot;Exception handler that returns a styled error page.
+
+    In dev mode (dev_mode=True), displays full traceback.
+    In production mode (dev_mode=False), displays a simple error message.
+
+    Args:
+        request: The FastAPI request object
+        exc: The exception that was raised
+
+    Returns:
+        TemplateResponse with the error page template, status_code=500
+    &quot;&quot;&quot;
+
+    templates: Jinja2Templates = request.app.state.templates
+    dev_mode = getattr(request.app.state, &quot;dev_mode&quot;, False)
+    # Use format_exception to get the full traceback for the given exception
+    tb = &quot;&quot;.join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+
+    return templates.TemplateResponse(
+        request,
+        &quot;error.html&quot;,
+        {
+            &quot;dev_mode&quot;: dev_mode,
+            &quot;traceback&quot;: tb,
+            &quot;request_url&quot;: str(request.url),
+            &quot;request_method&quot;: request.method,
+        },
+        status_code=500,
+    )
+
+
 def create_app(
     template_dir: str | Path = &quot;templates&quot;,
     title: str = &quot;inguitive&quot;,
     favicon: str | None = None,
+    head: HeadContent = None,
     session_backend: SessionBackend | None = None,
     session_cookie_name: str = &quot;inguitive_session_id&quot;,
     session_cookie_max_age: int = 3600,
     session_cookie_secure: bool = False,
     session_cookie_httponly: bool = True,
     session_cleanup_interval: int = 100,
+    dev_mode: bool = True,
 ) -&gt; InguitiveApp[_P, _T]:
     &quot;&quot;&quot;Create and configure a FastAPI application for inguitive.
 
@@ -2361,12 +2541,19 @@ def create_app(
         favicon: Default favicon path for pages. Can be overridden per-page via the @app.page
             decorator. Can be a URL path (e.g. /static/favicon.ico) or an absolute URL (e.g. https://...).
             Defaults to None, which uses the bundled INGUITIVE favicon at /static/inguitive_favicon.svg.
+        head: Default head content for pages (e.g., CSS, JS, meta tags). This content is
+            applied to ALL pages and can be a string, Component, or list of both. Page-level
+            head content (via @app.page decorator) is appended AFTER app-level content,
+            allowing app-wide resources to load first followed by page-specific additions.
+            Defaults to None (empty).
         session_backend: Session backend to use (defaults to MemoryBackend)
         session_cookie_name: Name of the session cookie
         session_cookie_max_age: Cookie max age in seconds
         session_cookie_secure: Whether cookie is secure (HTTPS only)
         session_cookie_httponly: Whether cookie is HTTP-only
         session_cleanup_interval: Call cleanup_expired() every N requests (default: 100)
+        dev_mode: Enable development mode warnings (default: True). Set to False in production
+            to disable warnings about state mutations with no listeners.
 
     Returns:
         InguitiveApp - the FastAPI application with inguitive decorators
@@ -2381,11 +2568,20 @@ def create_app(
     templates = Jinja2Templates(env=env)
     app.state.templates = templates
 
+    # Store dev_mode on app state for exception handler access
+    app.state.dev_mode = dev_mode
+
     # Set the default title for pages
     app.state.title = title
 
     # Set the default favicon for pages
     app.state.favicon = favicon
+
+    # Set the default head content for pages
+    app.state.head = head
+
+    # Register exception handler for styled error pages
+    app.add_exception_handler(Exception, _dev_error_handler)
 
     # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
@@ -2396,11 +2592,12 @@ def create_app(
         path: str | None = None,
         title: str | None = None,
         favicon: str | None = None,
+        head: HeadContent = None,
     ):
         def decorator(func: Callable):
             actual_path = path if path is not None else &quot;/&quot;
             app.state.page_routes[actual_path] = func
-            _register_page_route(app, actual_path, func, title, favicon)
+            _register_page_route(app, actual_path, func, title, favicon, head)
             return func
 
         return decorator
@@ -2432,6 +2629,16 @@ def create_app(
     # Configure session backend
     if session_backend is not None:
         set_session_backend(session_backend)
+
+    # Enable or disable dev mode warnings based on dev_mode parameter
+    if dev_mode:
+        from inguitive.state import enable_dev_mode_warnings
+
+        enable_dev_mode_warnings()
+    else:
+        from inguitive.state import disable_dev_mode_warnings
+
+        disable_dev_mode_warnings()
 
     # Add session middleware
     app.add_middleware(
@@ -2480,7 +2687,7 @@ def run_app(app_module: str = &quot;app:app&quot;, host: str = &quot;0.0.0.0&quo
     uvicorn.run(app_module, host=host, port=port, reload=reload)
 
 
-def redirect(url: str, status_code: int = 302):
+def redirect(url: str, status_code: int = 302) -&gt; Any:
     &quot;&quot;&quot;Perform an HTTP redirect to the specified URL.
 
     Args:
@@ -3018,7 +3225,7 @@ def field(
     regex: str | None = None,
     validators: list[Validator] | None = None,
     coerce: bool = True,
-):
+) -&gt; Field:
     &quot;&quot;&quot;Define a form field with validation rules.
 
     This is the primary way to define fields in a FormSchema subclass.

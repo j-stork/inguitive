@@ -8,6 +8,7 @@ import re
 import uuid
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping
+from typing import Any
 
 import jinja2
 import markupsafe
@@ -33,7 +34,7 @@ class Component:
         listen_to: str | list[str] | None = None,
         trigger: str | None = None,
         trigger_args: dict[str, str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         # Generate UUID if no id provided
         if id is None:
@@ -159,7 +160,7 @@ class Div(Component):
     """HTML div component."""
 
     def __init__(
-        self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs
+        self, *children: Any, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any
     ):
         super().__init__(id=id, css=css, **attrs)
         self.children = self._normalize_children(children)
@@ -188,7 +189,7 @@ class Button(Component):
     """
 
     def __init__(
-        self, *children, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs
+        self, *children: Any, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any
     ):
         super().__init__(id=id, css=css, **attrs)
         self.children = self._normalize_children(children)
@@ -223,7 +224,7 @@ class Label(Component):
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
         for_: str | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize a Label component.
 
@@ -271,11 +272,11 @@ class Link(Component):
 
     def __init__(
         self,
-        *children,
+        *children: Any,
         href: str,
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize a Link component.
 
@@ -334,7 +335,7 @@ class Text(Component):
         text: str | Callable[[], str],
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize a Text component.
 
@@ -365,7 +366,7 @@ class Icon(Component):
     """SVG icon component."""
 
     def __init__(
-        self, svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs
+        self, svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs: Any
     ):
         super().__init__(css=css, **attrs)
         self.svg = svg
@@ -456,7 +457,7 @@ class Input(Component):
         value: str | Callable[[], str] | None = None,
         placeholder: str = "",
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize an Input component.
 
@@ -510,7 +511,7 @@ class Textarea(Component):
         placeholder: str = "",
         rows: int = 3,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize a Textarea component.
 
@@ -565,7 +566,7 @@ class Select(Component):
         options: list[tuple[str, str]] | Callable[[], list[tuple[str, str]]] | None = None,
         value: str | Callable[[], str] | None = None,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize a Select component.
 
@@ -638,7 +639,7 @@ class Checkbox(Component):
         css: str | Callable[[], str] | None = None,
         checked: bool | Callable[[], bool] = False,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize a Checkbox component.
 
@@ -700,7 +701,7 @@ class Radio(Component):
         value: str = "",
         checked: bool | Callable[[], bool] = False,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize a Radio component.
 
@@ -760,13 +761,13 @@ class Form(Component):
 
     def __init__(
         self,
-        *children,
+        *children: Any,
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
         action: str = "",
         method: str = "post",
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize a Form component.
 
@@ -833,7 +834,7 @@ class TemplateComponent(Component):
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
         listen_to: str | list[str] | None = None,
-        **context,
+        **context: Any,
     ):
         """Initialize a TemplateComponent.
 
@@ -855,7 +856,7 @@ class TemplateComponent(Component):
         id: str | None = None,
         css_name: str | Callable[[], str] | None = None,
         listen_to: str | list[str] | None = None,
-        **context,
+        **context: Any,
     ):
         """Create a TemplateComponent from a template file.
 
@@ -972,7 +973,7 @@ class DataTable(Component):
         | Callable[[], str | Mapping[str, str | Callable[[], str]]]
         | None = None,
         listen_to: str | list[str] | None = None,
-        **attrs,
+        **attrs: Any,
     ):
         """Initialize a DataTable component.
 
