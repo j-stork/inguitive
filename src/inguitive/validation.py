@@ -685,13 +685,13 @@ class FormSchema(metaclass=FormSchemaMeta):
 
 
 def _validate_and_call_sync(
-    handler: Callable[..., Any],
+    handler: Callable[_P, _T],
     schema_class: type[FormSchema],
     handle_errors: bool,
     form_data_param: str,
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-) -> Any:
+    args: _P.args,
+    kwargs: _P.kwargs,
+) -> _T:
     """Synchronous internal helper to perform validation and call handler."""
     # Get the handler signature to find the expected parameter name
     sig = inspect.signature(handler)
@@ -757,13 +757,13 @@ def _validate_and_call_sync(
 
 
 async def _validate_and_call_async(
-    handler: Callable[..., Any],
+    handler: Callable[_P, _T],
     schema_class: type[FormSchema],
     handle_errors: bool,
     form_data_param: str,
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-) -> Any:
+    args: _P.args,
+    kwargs: _P.kwargs,
+) -> _T:
     """Asynchronous internal helper to perform validation and call handler."""
     # Get the handler signature to find the expected parameter name
     sig = inspect.signature(handler)
@@ -903,14 +903,14 @@ def validate_form(
                     handler, schema_class, handle_errors, form_data_param, args, kwargs
                 )
 
-            wrapped = async_wrapper
+            wrapped: Callable[..., _T] = async_wrapper
         else:
 
             @functools.wraps(handler)
             def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
                 return _validate_and_call_sync(handler, schema_class, handle_errors, form_data_param, args, kwargs)
 
-            wrapped = sync_wrapper
+            wrapped: Callable[..., _T] = sync_wrapper
 
         # Set the new signature that includes form_data
         wrapped.__signature__ = new_sig  # type: ignore
