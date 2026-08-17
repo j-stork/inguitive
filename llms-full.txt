@@ -2555,6 +2555,934 @@ def nl2br(text: str | None) -&gt; str:
     if text is None:
         return &quot;&quot;
     return text.replace(&quot;\r\n&quot;, &quot;&lt;br&gt;&quot;).replace(&quot;\r&quot;, &quot;&lt;br&gt;&quot;).replace(&quot;\n&quot;, &quot;&lt;br&gt;&quot;)
+</doc><doc title="Validation" desc="FormSchema, field(), validate_form() — declarative form validation with type coercion, built-in and custom validators, and cross-field error support">&quot;&quot;&quot;
+Form validation layer for inguitive trigger handlers.
+
+Provides a declarative way to define form schemas with type coercion,
+required field validation, custom validators, and structured error messages.
+
+Example usage:
+    from inguitive import FormSchema, field, validate_form, ValidationError
+
+    class AddTodoSchema(FormSchema):
+        title = field(str, required=True, min_length=1)
+        priority = field(int, default=0, min_value=0, max_value=10)
+        completed = field(bool, default=False)
+
+    @app.trigger_handler
+    @validate_form(AddTodoSchema)
+    async def add_todo(form: AddTodoSchema) -&gt; str:
+        # form is validated and typed
+        return f&quot;Added: {form.title}&quot;
+&quot;&quot;&quot;
+
+import functools
+import inspect
+import re
+from collections.abc import Callable
+from typing import Any, ParamSpec, TypeVar
+
+# Type variables for decorator type annotations
+_P = ParamSpec(&quot;_P&quot;)
+_T = TypeVar(&quot;_T&quot;)
+
+
+class ValidationError(Exception):
+    &quot;&quot;&quot;Exception raised when form validation fails.
+
+    Stores field-level errors as a dictionary mapping field names to lists of error messages.
+    &quot;&quot;&quot;
+
+    def __init__(self, errors: dict[str, list[str]]):
+        &quot;&quot;&quot;Initialize ValidationError with field errors.
+
+        Args:
+            errors: Dictionary mapping field names to lists of error messages.
+                   Example: {&quot;username&quot;: [&quot;This field is required&quot;], &quot;email&quot;: [&quot;Invalid format&quot;]}
+        &quot;&quot;&quot;
+        self.errors = errors
+        super().__init__(str(errors))
+
+    def __str__(self) -&gt; str:
+        &quot;&quot;&quot;Return string representation of validation errors.&quot;&quot;&quot;
+        error_messages = []
+        for field_name, messages in self.errors.items():
+            for message in messages:
+                error_messages.append(f&quot;{field_name}: {message}&quot;)
+        if error_messages:
+            return &quot;Validation failed: &quot; + &quot;; &quot;.join(error_messages)
+        return &quot;Validation failed&quot;
+
+    def __repr__(self) -&gt; str:
+        return f&quot;ValidationError({self.errors!r})&quot;
+
+    def first_error(self, field: str | None = None) -&gt; str | None:
+        &quot;&quot;&quot;Get the first error message for a specific field or any field.
+
+        Args:
+            field: Field name to get error for. If None, returns first error from any field.
+
+        Returns:
+            First error message string, or None if no errors.
+        &quot;&quot;&quot;
+        if field is not None:
+            errors = self.errors.get(field, [])
+            return errors[0] if errors else None
+
+        for field_name, messages in self.errors.items():
+            if messages:
+                return messages[0]
+        return None
+
+    def has_errors(self, field: str | None = None) -&gt; bool:
+        &quot;&quot;&quot;Check if there are errors for a specific field or any field.
+
+        Args:
+            field: Field name to check. If None, checks if there are any errors.
+
+        Returns:
+            True if there are errors, False otherwise.
+        &quot;&quot;&quot;
+        if field is not None:
+            return field in self.errors and len(self.errors[field]) &gt; 0
+        return len(self.errors) &gt; 0
+
+
+class Validator:
+    &quot;&quot;&quot;Base validator class.&quot;&quot;&quot;
+
+    def __init__(self, error_message: str | None = None):
+        &quot;&quot;&quot;Initialize validator with optional custom error message.
+
+        Args:
+            error_message: Custom error message to use when validation fails.
+        &quot;&quot;&quot;
+        self.error_message = error_message
+
+    def validate(self, value: Any) -&gt; str | None:
+        &quot;&quot;&quot;Validate a value.
+
+        Args:
+            value: The value to validate.
+
+        Returns:
+            Error message string if validation fails, None if valid.
+        &quot;&quot;&quot;
+        raise NotImplementedError
+
+
+class RequiredValidator(Validator):
+    &quot;&quot;&quot;Validator that ensures a field is present and non-empty.&quot;&quot;&quot;
+
+    def validate(self, value: Any) -&gt; str | None:
+        &quot;&quot;&quot;Check if value is present and non-empty.
+
+        For strings, checks that the value is not None and not empty/whitespace.
+        For other types, checks that the value is not None.
+        &quot;&quot;&quot;
+        if value is None:
+            return self.error_message or &quot;This field is required&quot;
+        if isinstance(value, str) and not value.strip():
+            return self.error_message or &quot;This field cannot be empty&quot;
+        return None
+
+
+class MinLengthValidator(Validator):
+    &quot;&quot;&quot;Validator that ensures string length is at least a minimum value.&quot;&quot;&quot;
+
+    def __init__(self, min_length: int, error_message: str | None = None):
+        &quot;&quot;&quot;Initialize with minimum length requirement.
+
+        Args:
+            min_length: Minimum required length.
+            error_message: Custom error message.
+        &quot;&quot;&quot;
+        super().__init__(error_message)
+        self.min_length = min_length
+
+    def validate(self, value: Any) -&gt; str | None:
+        &quot;&quot;&quot;Check if string value has at least min_length characters.&quot;&quot;&quot;
+        if value is None or not isinstance(value, str):
+            return None
+        if len(value) &lt; self.min_length:
+            return self.error_message or f&quot;Must be at least {self.min_length} characters&quot;
+        return None
+
+
+class MaxLengthValidator(Validator):
+    &quot;&quot;&quot;Validator that ensures string length is at most a maximum value.&quot;&quot;&quot;
+
+    def __init__(self, max_length: int, error_message: str | None = None):
+        &quot;&quot;&quot;Initialize with maximum length requirement.
+
+        Args:
+            max_length: Maximum allowed length.
+            error_message: Custom error message.
+        &quot;&quot;&quot;
+        super().__init__(error_message)
+        self.max_length = max_length
+
+    def validate(self, value: Any) -&gt; str | None:
+        &quot;&quot;&quot;Check if string value has at most max_length characters.&quot;&quot;&quot;
+        if value is None or not isinstance(value, str):
+            return None
+        if len(value) &gt; self.max_length:
+            return self.error_message or f&quot;Must be at most {self.max_length} characters&quot;
+        return None
+
+
+class MinValueValidator(Validator):
+    &quot;&quot;&quot;Validator that ensures numeric value is at least a minimum value.&quot;&quot;&quot;
+
+    def __init__(self, min_value: float, error_message: str | None = None):
+        &quot;&quot;&quot;Initialize with minimum value requirement.
+
+        Args:
+            min_value: Minimum allowed value.
+            error_message: Custom error message.
+        &quot;&quot;&quot;
+        super().__init__(error_message)
+        self.min_value = min_value
+
+    def validate(self, value: Any) -&gt; str | None:
+        &quot;&quot;&quot;Check if numeric value is at least min_value.&quot;&quot;&quot;
+        if value is None:
+            return None
+        try:
+            if float(value) &lt; self.min_value:
+                return self.error_message or f&quot;Must be at least {self.min_value}&quot;
+        except (ValueError, TypeError):
+            pass
+        return None
+
+
+class MaxValueValidator(Validator):
+    &quot;&quot;&quot;Validator that ensures numeric value is at most a maximum value.&quot;&quot;&quot;
+
+    def __init__(self, max_value: float, error_message: str | None = None):
+        &quot;&quot;&quot;Initialize with maximum value requirement.
+
+        Args:
+            max_value: Maximum allowed value.
+            error_message: Custom error message.
+        &quot;&quot;&quot;
+        super().__init__(error_message)
+        self.max_value = max_value
+
+    def validate(self, value: Any) -&gt; str | None:
+        &quot;&quot;&quot;Check if numeric value is at most max_value.&quot;&quot;&quot;
+        if value is None:
+            return None
+        try:
+            if float(value) &gt; self.max_value:
+                return self.error_message or f&quot;Must be at most {self.max_value}&quot;
+        except (ValueError, TypeError):
+            pass
+        return None
+
+
+class RegexValidator(Validator):
+    &quot;&quot;&quot;Validator that ensures string value matches a regex pattern.&quot;&quot;&quot;
+
+    def __init__(self, pattern: str, error_message: str | None = None):
+        &quot;&quot;&quot;Initialize with regex pattern.
+
+        Args:
+            pattern: Regular expression pattern to match.
+            error_message: Custom error message.
+        &quot;&quot;&quot;
+        super().__init__(error_message)
+        self.pattern = pattern
+        self.compiled = re.compile(pattern)
+
+    def validate(self, value: Any) -&gt; str | None:
+        &quot;&quot;&quot;Check if string value matches the regex pattern.&quot;&quot;&quot;
+        if value is None or not isinstance(value, str):
+            return None
+        if not self.compiled.fullmatch(value):
+            return self.error_message or f&quot;Does not match pattern: {self.pattern}&quot;
+        return None
+
+
+class CustomValidator(Validator):
+    &quot;&quot;&quot;Validator that uses a custom validation function.&quot;&quot;&quot;
+
+    def __init__(self, func: Callable[[Any], bool | str | None], error_message: str | None = None):
+        &quot;&quot;&quot;Initialize with custom validation function.
+
+        Args:
+            func: Callable that takes a value and returns:
+                  - True/None if valid
+                  - False or error string if invalid
+            error_message: Custom error message (used if func returns False).
+        &quot;&quot;&quot;
+        super().__init__(error_message)
+        self.func = func
+
+    def validate(self, value: Any) -&gt; str | None:
+        &quot;&quot;&quot;Run custom validation function.&quot;&quot;&quot;
+        try:
+            result = self.func(value)
+            if result is False:
+                return self.error_message or &quot;Validation failed&quot;
+            if isinstance(result, str):
+                return result
+            return None
+        except Exception as e:
+            return self.error_message or str(e)
+
+
+class Field:
+    &quot;&quot;&quot;Represents a form field definition with type, validators, and metadata.&quot;&quot;&quot;
+
+    def __init__(
+        self,
+        field_type: type,
+        required: bool = False,
+        default: Any = None,
+        validators: list[Validator] | None = None,
+        error_message: str | None = None,
+        coerce: bool = True,
+    ):
+        &quot;&quot;&quot;Initialize a field definition.
+
+        Args:
+            field_type: The Python type to coerce to (str, int, float, bool).
+            required: If True, field must be present and non-empty.
+            default: Default value if field is missing or invalid.
+            validators: List of Validator instances to apply.
+            error_message: Custom error message for validation failures.
+            coerce: Whether to attempt type coercion.
+        &quot;&quot;&quot;
+        self.field_type = field_type
+        self.required = required
+        self.default = default
+        self.validators = validators or []
+        self.error_message = error_message
+        self.coerce = coerce
+
+    def coerce_value(self, raw_value: str | None) -&gt; Any:
+        &quot;&quot;&quot;Coerce a raw string value to the field&#x27;s type.
+
+        Args:
+            raw_value: Raw string value from form data, or None if missing.
+
+        Returns:
+            Coerced value of the appropriate type, or default if coercion fails.
+        &quot;&quot;&quot;
+        if not self.coerce:
+            return raw_value
+
+        # Handle None/missing
+        if raw_value is None:
+            return self.default
+
+        # String is always safe
+        if self.field_type is str:
+            if isinstance(raw_value, str):
+                return raw_value.strip() if raw_value.strip() != &quot;&quot; else (self.default if self.default is not None else &quot;&quot;)
+            return str(raw_value) if raw_value is not None else self.default
+
+        # Type-specific coercion
+        try:
+            if self.field_type is int:
+                if not raw_value:
+                    return self.default if self.default is not None else 0
+                if isinstance(raw_value, int):
+                    return raw_value
+                if not isinstance(raw_value, str):
+                    return self.default if self.default is not None else 0
+                stripped = raw_value.strip()
+                if not stripped:
+                    return self.default if self.default is not None else 0
+                return int(stripped)
+            elif self.field_type is float:
+                if not raw_value:
+                    return self.default if self.default is not None else 0.0
+                if isinstance(raw_value, (int, float)):
+                    return float(raw_value)
+                if not isinstance(raw_value, str):
+                    return self.default if self.default is not None else 0.0
+                stripped = raw_value.strip()
+                if not stripped:
+                    return self.default if self.default is not None else 0.0
+                return float(stripped)
+            elif self.field_type is bool:
+                return self._coerce_bool(raw_value)
+        except (ValueError, TypeError):
+            # Return default if set, otherwise type-specific default
+            if self.default is not None:
+                return self.default
+            if self.field_type is int:
+                return 0
+            elif self.field_type is float:
+                return 0.0
+            elif self.field_type is bool:
+                return False
+            return self.default
+
+        return raw_value
+
+    def _coerce_bool(self, raw_value: str | None) -&gt; bool:
+        &quot;&quot;&quot;Coerce a string value to boolean.
+
+        Truthy values: &quot;true&quot;, &quot;1&quot;, &quot;on&quot;, &quot;yes&quot;, &quot;y&quot; (case-insensitive)
+        Falsy values: &quot;false&quot;, &quot;0&quot;, &quot;off&quot;, &quot;no&quot;, &quot;n&quot;, &quot;&quot; (case-insensitive)
+        &quot;&quot;&quot;
+        if not raw_value or not isinstance(raw_value, str):
+            return self.default if self.default is not None else False
+
+        stripped = raw_value.strip().lower()
+        truthy_values = {&quot;true&quot;, &quot;1&quot;, &quot;on&quot;, &quot;yes&quot;, &quot;y&quot;}
+        falsy_values = {&quot;false&quot;, &quot;0&quot;, &quot;off&quot;, &quot;no&quot;, &quot;n&quot;, &quot;&quot;}
+
+        if stripped in truthy_values:
+            return True
+        if stripped in falsy_values:
+            return False
+
+        # Default to False for unknown values if no default is specified
+        return self.default if self.default is not None else False
+
+    def validate(self, value: Any) -&gt; list[str]:
+        &quot;&quot;&quot;Validate a coerced value against all validators.
+
+        Args:
+            value: The coerced value to validate.
+
+        Returns:
+            List of error messages. Empty list if validation passes.
+        &quot;&quot;&quot;
+        errors = []
+
+        # Required check (only if value came from form data, not default)
+        # Note: Required validation is handled at the schema level
+
+        # Run all validators
+        for validator in self.validators:
+            error = validator.validate(value)
+            if error:
+                errors.append(error)
+
+        return errors
+
+
+def field(
+    field_type: type,
+    required: bool = False,
+    default: Any = None,
+    error_message: str | None = None,
+    min_length: int | None = None,
+    max_length: int | None = None,
+    min_value: float | None = None,
+    max_value: float | None = None,
+    regex: str | None = None,
+    validators: list[Validator] | None = None,
+    coerce: bool = True,
+):
+    &quot;&quot;&quot;Define a form field with validation rules.
+
+    This is the primary way to define fields in a FormSchema subclass.
+
+    Args:
+        field_type: The Python type to coerce to (str, int, float, bool).
+        required: If True, field must be present and non-empty.
+        default: Default value if field is missing or invalid.
+        error_message: Custom error message for validation failures.
+            When multiple built-in validators are created (e.g., required + min_length),
+            this same message is used for all of them. For different messages per
+            constraint, use the `validators` parameter with explicit Validator instances.
+        min_length: Minimum string length (for str fields).
+        max_length: Maximum string length (for str fields).
+        min_value: Minimum numeric value (for int/float fields).
+        max_value: Maximum numeric value (for int/float fields).
+        regex: Regex pattern that string must match.
+        validators: List of custom Validator instances.
+        coerce: Whether to attempt type coercion (default: True).
+
+    Returns:
+        Field: Configured field definition.
+
+    Example:
+        class MySchema(FormSchema):
+            # Single error_message applies to all built-in validators
+            username = field(str, required=True, min_length=3, error_message=&quot;Invalid username&quot;)
+            
+            # Different messages per constraint using validators list
+            password = field(
+                str,
+                validators=[
+                    RequiredValidator(&quot;Password is required&quot;),
+                    MinLengthValidator(8, &quot;Password must be at least 8 characters&quot;),
+                ]
+            )
+            age = field(int, default=0, min_value=0, max_value=150)
+            email = field(str, regex=r&#x27;^[\\w.-]+@[\\w.-]+\\.\\w+$&#x27;)
+    &quot;&quot;&quot;
+    built_validators: list[Validator] = []
+
+    # Note: error_message is shared across all built-in validators created below.
+    # If you need different messages per constraint, use validators=[...] instead
+    # of the individual parameters (required, min_length, etc.).
+    # Add built-in validators based on parameters
+    if required:
+        built_validators.append(RequiredValidator(error_message))
+    if min_length is not None:
+        built_validators.append(MinLengthValidator(min_length, error_message))
+    if max_length is not None:
+        built_validators.append(MaxLengthValidator(max_length, error_message))
+    if min_value is not None:
+        built_validators.append(MinValueValidator(min_value, error_message))
+    if max_value is not None:
+        built_validators.append(MaxValueValidator(max_value, error_message))
+    if regex is not None:
+        built_validators.append(RegexValidator(regex, error_message))
+
+    # Combine with custom validators (custom validators run first)
+    all_validators = (validators or []) + built_validators
+
+    return Field(
+        field_type=field_type,
+        required=required,
+        default=default,
+        validators=all_validators,
+        error_message=error_message,
+        coerce=coerce,
+    )
+
+
+class FormSchemaMeta(type):
+    &quot;&quot;&quot;Metaclass to collect field definitions from schema classes.&quot;&quot;&quot;
+
+    def __new__(mcs, name: str, bases: tuple, namespace: dict) -&gt; type:
+        &quot;&quot;&quot;Create a new schema class, collecting Field instances from class attributes.
+
+        This metaclass removes Field instances from the class namespace and stores
+        them in a separate _fields dictionary, so that instance attribute access
+        works correctly. Also collects fields from parent classes to support inheritance.
+        &quot;&quot;&quot;
+        # Collect field definitions from parent classes first (in reverse MRO order)
+        fields: dict[str, Field] = {}
+
+        # Process base classes in reverse MRO order
+        # Using dict.update() ensures last-visited base wins conflicts
+        for base in reversed(bases):
+            if hasattr(base, &#x27;_fields&#x27;) and isinstance(base._fields, dict):
+                fields.update(base._fields)
+
+        # Create a clean namespace without Field instances
+        clean_namespace = {}
+
+        for attr_name, attr_value in namespace.items():
+            if isinstance(attr_value, Field):
+                # Child class fields override parent fields
+                fields[attr_name] = attr_value
+            else:
+                clean_namespace[attr_name] = attr_value
+
+        # Create the class with clean namespace
+        cls = super().__new__(mcs, name, bases, clean_namespace)
+        cls._fields = fields
+        return cls
+
+
+class FormSchema(metaclass=FormSchemaMeta):
+    &quot;&quot;&quot;Base class for form validation schemas.
+
+    Subclass this to define form schemas with typed, validated fields.
+
+    Example:
+        class UserForm(FormSchema):
+            username = field(str, required=True, min_length=3)
+            email = field(str, required=True, regex=r&#x27;@&#x27;)
+            age = field(int, default=18, min_value=0)
+
+        # Usage in a trigger handler:
+        @app.trigger_handler
+        @validate_form(UserForm)
+        async def create_user(form: UserForm) -&gt; str:
+            # form.username, form.email, form.age are validated and typed
+            return f&quot;Created user: {form.username}&quot;
+    &quot;&quot;&quot;
+
+    # Class attribute to store field definitions (populated by metaclass)
+    _fields: dict[str, Field] = {}
+
+    def __init__(self, data: dict[str, str] | None = None):
+        &quot;&quot;&quot;Initialize schema from form data.
+
+        Args:
+            data: Dictionary of form data (typically from request.form()).
+                 Keys are field names, values are string values.
+        &quot;&quot;&quot;
+        self._raw_data = data or {}
+        self._errors: dict[str, list[str]] = {}
+        self._values: dict[str, Any] = {}
+
+        # Process each field definition
+        for field_name, field_obj in self._fields.items():
+            raw_value = self._raw_data.get(field_name, None)
+
+            # Track if field is missing from input data
+            is_missing = field_name not in self._raw_data
+            
+            # Handle missing values (field not in data at all)
+            if is_missing:
+                raw_value = None
+                # fall through to coerce-then-validate below
+
+            # Coerce value
+            try:
+                coerced_value = field_obj.coerce_value(raw_value)
+            except Exception as e:
+                self._errors[field_name] = [f&quot;Invalid type: {e}&quot;]
+                self._values[field_name] = field_obj.default
+                continue
+
+            # For missing fields, only run RequiredValidator instances.
+            # Content validators (length, range, pattern, custom) are meaningless
+            # for a value that is absent, and custom validators may not handle None.
+            if is_missing:
+                errors = [
+                    err
+                    for v in field_obj.validators
+                    if isinstance(v, RequiredValidator)
+                    for err in [v.validate(None)]
+                    if err
+                ]
+                if errors:
+                    self._errors[field_name] = errors
+                    self._values[field_name] = field_obj.default
+                else:
+                    # No validator requires the field, use coerced default
+                    self._values[field_name] = coerced_value
+            # Check required for empty values (after coercion)
+            elif field_obj.required:
+                if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
+                    self._errors[field_name] = [field_obj.error_message or &quot;This field is required&quot;]
+                    self._values[field_name] = field_obj.default
+                elif isinstance(coerced_value, str) and not coerced_value.strip():
+                    self._errors[field_name] = [field_obj.error_message or &quot;This field cannot be empty&quot;]
+                    self._values[field_name] = field_obj.default
+                else:
+                    # Validate coerced value
+                    errors = field_obj.validate(coerced_value)
+                    if errors:
+                        self._errors[field_name] = errors
+                    self._values[field_name] = coerced_value
+            else:
+                # For non-required fields, just validate and store
+                errors = field_obj.validate(coerced_value)
+                if errors:
+                    self._errors[field_name] = errors
+                self._values[field_name] = coerced_value
+
+        # Run custom validate method if defined
+        # This allows subclasses to add custom validation logic
+        if hasattr(self, &#x27;validate&#x27;) and callable(self.validate):
+            # Get the method from the instance&#x27;s class to avoid infinite recursion
+            validate_method = self.__class__.validate
+            if validate_method is not FormSchema.validate:
+                # It&#x27;s a custom validate method, call it
+                try:
+                    validate_method(self)
+                except ValidationError as e:
+                    # Merge errors from the ValidationError into self._errors
+                    for field_name, field_errors in e.errors.items():
+                        if field_name not in self._errors:
+                            self._errors[field_name] = field_errors
+                        else:
+                            self._errors[field_name].extend(field_errors)
+
+    def __getattr__(self, name: str) -&gt; Any:
+        &quot;&quot;&quot;Allow attribute-style access to validated field values.
+
+        This enables `form.username` syntax instead of `form._values[&#x27;username&#x27;]`.
+        &quot;&quot;&quot;
+        if name in self._values:
+            return self._values[name]
+        # For IDE support, return default if field exists but has no value
+        if name in self._fields:
+            return self._values.get(name, self._fields[name].default)
+        raise AttributeError(f&quot;&#x27;{self.__class__.__name__}&#x27; object has no attribute &#x27;{name}&#x27;&quot;)
+
+    def __repr__(self) -&gt; str:
+        &quot;&quot;&quot;Return string representation of the schema instance.&quot;&quot;&quot;
+        values_repr = &quot;, &quot;.join(f&quot;{k}={v!r}&quot; for k, v in self._values.items())
+        return f&quot;{self.__class__.__name__}({values_repr})&quot;
+
+    @property
+    def errors(self) -&gt; dict[str, list[str]]:
+        &quot;&quot;&quot;Get validation errors as a dictionary.
+
+        Returns:
+            Dictionary mapping field names to lists of error messages.
+        &quot;&quot;&quot;
+        return self._errors.copy()
+
+    @property
+    def is_valid(self) -&gt; bool:
+        &quot;&quot;&quot;Check if the schema passed validation.
+
+        Returns:
+            True if there are no validation errors, False otherwise.
+        &quot;&quot;&quot;
+        return len(self._errors) == 0
+
+    def validate(self) -&gt; &quot;FormSchema&quot;:
+        &quot;&quot;&quot;Run validation and raise ValidationError if invalid.
+
+        Returns:
+            self for method chaining.
+
+        Raises:
+            ValidationError: If validation fails.
+        &quot;&quot;&quot;
+        if not self.is_valid:
+            raise ValidationError(self.errors)
+        return self
+
+
+def _validate_and_call_sync(
+    handler: Callable,
+    schema_class: type[FormSchema],
+    handle_errors: bool,
+    form_data_param: str,
+    args: tuple,
+    kwargs: dict,
+):
+    &quot;&quot;&quot;Synchronous internal helper to perform validation and call handler.&quot;&quot;&quot;
+    # Get the handler signature to find the expected parameter name
+    sig = inspect.signature(handler)
+    handler_params = list(sig.parameters.keys())
+
+    # Try to find form_data in kwargs first, using the specified param name
+    form_data = kwargs.pop(form_data_param, None)
+
+    # Also try &#x27;form_data&#x27; as a fallback since that&#x27;s what the trigger route uses
+    if form_data is None:
+        form_data = kwargs.pop(&quot;form_data&quot;, None)
+
+    # Try to find it in positional args based on handler signature
+    if form_data is None:
+        for i, param_name in enumerate(handler_params):
+            if param_name == form_data_param or param_name == &quot;form_data&quot;:
+                if i &lt; len(args):
+                    form_data = args[i]
+                    args = args[:i] + args[i + 1:]
+                break
+
+    # If still no form_data, use empty dict
+    if form_data is None:
+        form_data = {}
+
+    # Ensure form_data is a dict (it should be from request.form())
+    if not isinstance(form_data, dict):
+        form_data = {}
+
+    # Instantiate and validate schema
+    schema = schema_class(form_data)
+
+    if handle_errors and not schema.is_valid:
+        raise ValidationError(schema.errors)
+
+    # If handle_errors=False, inject errors dict
+    if not handle_errors:
+        kwargs[&quot;errors&quot;] = schema.errors
+
+    # Determine the parameter name to use for the schema instance
+    # Try the specified form_data_param first, then look for common names
+    target_param = form_data_param
+    if target_param not in handler_params and len(handler_params) &gt; 0:
+        # Try to find a parameter that could be the form parameter
+        for param in handler_params:
+            if param in (&quot;form&quot;, &quot;form_data&quot;, form_data_param):
+                target_param = param
+                break
+        else:
+            # Use the first parameter if we can&#x27;t find a match
+            target_param = handler_params[0]
+
+    # Inject the schema instance with the target parameter name
+    kwargs[target_param] = schema
+
+    # Call original handler
+    try:
+        return handler(*args, **kwargs)
+    except TypeError as e:
+        # Handle case where handler signature doesn&#x27;t match
+        # Try calling with just schema as the first argument
+        try:
+            return handler(schema)
+        except Exception:
+            # Re-raise original error
+            raise e
+
+
+async def _validate_and_call_async(
+    handler: Callable,
+    schema_class: type[FormSchema],
+    handle_errors: bool,
+    form_data_param: str,
+    args: tuple,
+    kwargs: dict,
+):
+    &quot;&quot;&quot;Asynchronous internal helper to perform validation and call handler.&quot;&quot;&quot;
+    # Get the handler signature to find the expected parameter name
+    sig = inspect.signature(handler)
+    handler_params = list(sig.parameters.keys())
+
+    # Try to find form_data in kwargs first, using the specified param name
+    form_data = kwargs.pop(form_data_param, None)
+
+    # Also try &#x27;form_data&#x27; as a fallback since that&#x27;s what the trigger route uses
+    if form_data is None:
+        form_data = kwargs.pop(&quot;form_data&quot;, None)
+
+    # Try to find it in positional args based on handler signature
+    if form_data is None:
+        for i, param_name in enumerate(handler_params):
+            if param_name == form_data_param or param_name == &quot;form_data&quot;:
+                if i &lt; len(args):
+                    form_data = args[i]
+                    args = args[:i] + args[i + 1:]
+                break
+
+    # If still no form_data, use empty dict
+    if form_data is None:
+        form_data = {}
+
+    # Ensure form_data is a dict (it should be from request.form())
+    if not isinstance(form_data, dict):
+        form_data = {}
+
+    # Instantiate and validate schema
+    schema = schema_class(form_data)
+
+    if handle_errors and not schema.is_valid:
+        raise ValidationError(schema.errors)
+
+    # If handle_errors=False, inject errors dict
+    if not handle_errors:
+        kwargs[&quot;errors&quot;] = schema.errors
+
+    # Determine the parameter name to use for the schema instance
+    # Try the specified form_data_param first, then look for common names
+    target_param = form_data_param
+    if target_param not in handler_params and len(handler_params) &gt; 0:
+        # Try to find a parameter that could be the form parameter
+        for param in handler_params:
+            if param in (&quot;form&quot;, &quot;form_data&quot;, form_data_param):
+                target_param = param
+                break
+        else:
+            # Use the first parameter if we can&#x27;t find a match
+            target_param = handler_params[0]
+
+    # Inject the schema instance with the target parameter name
+    kwargs[target_param] = schema
+
+    # Call original handler
+    try:
+        result = handler(*args, **kwargs)
+        if inspect.iscoroutinefunction(handler):
+            return await result
+        return result
+    except TypeError as e:
+        # Handle case where handler signature doesn&#x27;t match
+        # Try calling with just schema as the first argument
+        try:
+            result = handler(schema)
+            if inspect.iscoroutinefunction(handler):
+                return await result
+            return result
+        except Exception:
+            # Re-raise original error
+            raise e
+
+
+def validate_form(
+    schema_class: type[FormSchema],
+    handle_errors: bool = True,
+    form_data_param: str = &quot;form_data&quot;,
+):
+    &quot;&quot;&quot;Decorator to validate form data against a schema.
+
+    This decorator intercepts the form_data parameter from trigger handlers,
+    validates it against the specified schema, and injects the validated
+    schema instance as a parameter.
+
+    Args:
+        schema_class: The FormSchema subclass to use for validation.
+        handle_errors: If True, raises ValidationError on validation failure.
+                      If False, injects errors dict as additional parameter.
+        form_data_param: Name of the parameter containing form data (default: &quot;form_data&quot;).
+
+    Usage:
+        # With error handling (raises ValidationError on failure):
+        @app.trigger_handler
+        @validate_form(MySchema)
+        async def handler(form: MySchema) -&gt; str:
+            # form is validated schema instance
+            return f&quot;Received: {form.title}&quot;
+
+        # Without error handling (errors passed to handler):
+        @app.trigger_handler
+        @validate_form(MySchema, handle_errors=False)
+        async def handler(form: MySchema, errors: dict) -&gt; str:
+            if errors:
+                return show_errors(errors)
+            # Process valid form...
+
+    Raises:
+        ValidationError: If handle_errors=True and validation fails.
+    &quot;&quot;&quot;
+    def decorator(handler: Callable[_P, _T]) -&gt; Callable[..., _T]:
+        # Get the original signature
+        sig = inspect.signature(handler)
+
+        # Create new parameters that include form_data if not already present
+        # This ensures FastAPI&#x27;s route_wrapper detects that we need form_data
+        new_params = []
+        for param_name, param in sig.parameters.items():
+            new_params.append(param)
+
+        # Add form_data parameter if not present
+        if &quot;form_data&quot; not in sig.parameters:
+            new_params.append(
+                inspect.Parameter(
+                    &quot;form_data&quot;,
+                    inspect.Parameter.KEYWORD_ONLY,
+                    default=inspect.Parameter.empty,
+                    annotation=dict[str, str],
+                )
+            )
+
+        new_sig = sig.replace(parameters=new_params)
+
+        # Create wrapper functions
+        if inspect.iscoroutinefunction(handler):
+            @functools.wraps(handler)
+            async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -&gt; _T:
+                return await _validate_and_call_async(
+                    handler, schema_class, handle_errors, form_data_param, args, kwargs
+                )
+            wrapped = async_wrapper
+        else:
+            @functools.wraps(handler)
+            def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -&gt; _T:
+                return _validate_and_call_sync(
+                    handler, schema_class, handle_errors, form_data_param, args, kwargs
+                )
+            wrapped = sync_wrapper
+
+        # Set the new signature that includes form_data
+        wrapped.__signature__ = new_sig  # type: ignore
+        wrapped.__annotations__ = handler.__annotations__  # type: ignore
+
+        return wrapped  # type: ignore
+
+    return decorator
 </doc><doc title="CLI" desc="inguitive command-line interface — init (scaffold app.py) and run (start uvicorn) commands">&quot;&quot;&quot;Command-line interface for inguitive.&quot;&quot;&quot;
 
 import argparse

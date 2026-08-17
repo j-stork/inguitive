@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2026-08-17
+
+### Added
+
+- Form validation layer: `FormSchema`, `field()`, and `validate_form()` decorator for declarative type coercion, required-field enforcement, and per-constraint error messages in trigger handlers
+- Built-in validators: `RequiredValidator`, `MinLengthValidator`, `MaxLengthValidator`, `MinValueValidator`, `MaxValueValidator`, `RegexValidator`
+- `CustomValidator` for arbitrary per-field validation logic
+- `ValidationError` for raising cross-field errors inside `FormSchema.validate()`
+- `validate_form(SchemaClass)` decorator integrates directly with `@app.trigger_handler`; injects the validated schema as a typed parameter and returns structured errors on failure
+- Full inheritance support for `FormSchema` subclasses, including correct MRO-ordered field resolution for multiple inheritance
+- 95 unit tests covering all validators, coercion, inheritance, cross-field validation, and decorator integration
+
+---
+
 ## [0.4.1] - 2026-07-27
 
 ### Fixed
