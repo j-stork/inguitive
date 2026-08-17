@@ -288,6 +288,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2026-08-17
+
+### Added
+
+- Form validation layer: `FormSchema`, `field()`, and `validate_form()` decorator for declarative type coercion, required-field enforcement, and per-constraint error messages in trigger handlers
+- Built-in validators: `RequiredValidator`, `MinLengthValidator`, `MaxLengthValidator`, `MinValueValidator`, `MaxValueValidator`, `RegexValidator`
+- `CustomValidator` for arbitrary per-field validation logic
+- `ValidationError` for raising cross-field errors inside `FormSchema.validate()`
+- `validate_form(SchemaClass)` decorator integrates directly with `@app.trigger_handler`; injects the validated schema as a typed parameter and returns structured errors on failure
+- Full inheritance support for `FormSchema` subclasses, including correct MRO-ordered field resolution for multiple inheritance
+- 95 unit tests covering all validators, coercion, inheritance, cross-field validation, and decorator integration
+
+---
+
 ## [0.4.1] - 2026-07-27
 
 ### Fixed
@@ -315,7 +329,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Default favicon SVG included with the package
 - Warning message when static files cannot be mounted
 - Test coverage for static favicon endpoint
-- Command-line interface (`inguitive init`, `inguitive run`, `inguitive --version`)
 
 ### Changed
 
@@ -511,6 +524,21 @@ from inguitive.state import State
 from inguitive.svg import MOON, SUN
 from inguitive.trigger import get_trigger_args
 from inguitive.utils import nl2br
+from inguitive.validation import (
+    CustomValidator,
+    Field,
+    FormSchema,
+    MaxLengthValidator,
+    MaxValueValidator,
+    MinLengthValidator,
+    MinValueValidator,
+    RegexValidator,
+    RequiredValidator,
+    ValidationError,
+    Validator,
+    field,
+    validate_form,
+)
 
 __all__ = [
     # Components
@@ -558,9 +586,23 @@ __all__ = [
     &quot;SUN&quot;,
     # Utilities
     &quot;nl2br&quot;,
+    # Validation
+    &quot;Field&quot;,
+    &quot;FormSchema&quot;,
+    &quot;ValidationError&quot;,
+    &quot;Validator&quot;,
+    &quot;CustomValidator&quot;,
+    &quot;RequiredValidator&quot;,
+    &quot;MinLengthValidator&quot;,
+    &quot;MaxLengthValidator&quot;,
+    &quot;MinValueValidator&quot;,
+    &quot;MaxValueValidator&quot;,
+    &quot;RegexValidator&quot;,
+    &quot;field&quot;,
+    &quot;validate_form&quot;,
 ]
 
-__version__ = &quot;0.4.0&quot;
+__version__ = &quot;0.5.0&quot;
 </doc><doc title="Components" desc="All UI component classes (Div, Button, Input, DataTable, etc.) with render/update methods">&quot;&quot;&quot;
 Component classes for inguitive framework.
 &quot;&quot;&quot;
@@ -2579,8 +2621,8 @@ Example usage:
 import functools
 import inspect
 import re
-from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar
+from collections.abc import Awaitable, Callable
+from typing import Any, ParamSpec, TypeVar, cast
 
 # Type variables for decorator type annotations
 _P = ParamSpec(&quot;_P&quot;)
@@ -2605,7 +2647,7 @@ class ValidationError(Exception):
 
     def __str__(self) -&gt; str:
         &quot;&quot;&quot;Return string representation of validation errors.&quot;&quot;&quot;
-        error_messages = []
+        error_messages: list[str] = []
         for field_name, messages in self.errors.items():
             for message in messages:
                 error_messages.append(f&quot;{field_name}: {message}&quot;)
@@ -2629,7 +2671,7 @@ class ValidationError(Exception):
             errors = self.errors.get(field, [])
             return errors[0] if errors else None
 
-        for field_name, messages in self.errors.items():
+        for messages in self.errors.values():
             if messages:
                 return messages[0]
         return None
@@ -2879,9 +2921,8 @@ class Field:
 
         # String is always safe
         if self.field_type is str:
-            if isinstance(raw_value, str):
-                return raw_value.strip() if raw_value.strip() != &quot;&quot; else (self.default if self.default is not None else &quot;&quot;)
-            return str(raw_value) if raw_value is not None else self.default
+            stripped = raw_value.strip()
+            return stripped if stripped != &quot;&quot; else (self.default if self.default is not None else &quot;&quot;)
 
         # Type-specific coercion
         try:
@@ -2890,8 +2931,7 @@ class Field:
                     return self.default if self.default is not None else 0
                 if isinstance(raw_value, int):
                     return raw_value
-                if not isinstance(raw_value, str):
-                    return self.default if self.default is not None else 0
+                # After None/int checks and type hint, raw_value must be str
                 stripped = raw_value.strip()
                 if not stripped:
                     return self.default if self.default is not None else 0
@@ -2901,8 +2941,7 @@ class Field:
                     return self.default if self.default is not None else 0.0
                 if isinstance(raw_value, (int, float)):
                     return float(raw_value)
-                if not isinstance(raw_value, str):
-                    return self.default if self.default is not None else 0.0
+                # After None/int/float checks and type hint, raw_value must be str
                 stripped = raw_value.strip()
                 if not stripped:
                     return self.default if self.default is not None else 0.0
@@ -2929,7 +2968,7 @@ class Field:
         Truthy values: &quot;true&quot;, &quot;1&quot;, &quot;on&quot;, &quot;yes&quot;, &quot;y&quot; (case-insensitive)
         Falsy values: &quot;false&quot;, &quot;0&quot;, &quot;off&quot;, &quot;no&quot;, &quot;n&quot;, &quot;&quot; (case-insensitive)
         &quot;&quot;&quot;
-        if not raw_value or not isinstance(raw_value, str):
+        if not raw_value:
             return self.default if self.default is not None else False
 
         stripped = raw_value.strip().lower()
@@ -2953,7 +2992,7 @@ class Field:
         Returns:
             List of error messages. Empty list if validation passes.
         &quot;&quot;&quot;
-        errors = []
+        errors: list[str] = []
 
         # Required check (only if value came from form data, not default)
         # Note: Required validation is handled at the schema level
@@ -3007,7 +3046,7 @@ def field(
         class MySchema(FormSchema):
             # Single error_message applies to all built-in validators
             username = field(str, required=True, min_length=3, error_message=&quot;Invalid username&quot;)
-            
+
             # Different messages per constraint using validators list
             password = field(
                 str,
@@ -3054,7 +3093,7 @@ def field(
 class FormSchemaMeta(type):
     &quot;&quot;&quot;Metaclass to collect field definitions from schema classes.&quot;&quot;&quot;
 
-    def __new__(mcs, name: str, bases: tuple, namespace: dict) -&gt; type:
+    def __new__(mcs, name: str, bases: tuple[type, ...], namespace: dict[str, Any]) -&gt; type:
         &quot;&quot;&quot;Create a new schema class, collecting Field instances from class attributes.
 
         This metaclass removes Field instances from the class namespace and stores
@@ -3067,11 +3106,12 @@ class FormSchemaMeta(type):
         # Process base classes in reverse MRO order
         # Using dict.update() ensures last-visited base wins conflicts
         for base in reversed(bases):
-            if hasattr(base, &#x27;_fields&#x27;) and isinstance(base._fields, dict):
-                fields.update(base._fields)
+            base_fields: dict[str, Field] | None = getattr(base, &quot;_fields&quot;, None)
+            if base_fields is not None:
+                fields.update(base_fields)
 
         # Create a clean namespace without Field instances
-        clean_namespace = {}
+        clean_namespace: dict[str, Any] = {}
 
         for attr_name, attr_value in namespace.items():
             if isinstance(attr_value, Field):
@@ -3082,7 +3122,7 @@ class FormSchemaMeta(type):
 
         # Create the class with clean namespace
         cls = super().__new__(mcs, name, bases, clean_namespace)
-        cls._fields = fields
+        setattr(cls, &quot;_fields&quot;, fields)
         return cls
 
 
@@ -3125,7 +3165,7 @@ class FormSchema(metaclass=FormSchemaMeta):
 
             # Track if field is missing from input data
             is_missing = field_name not in self._raw_data
-            
+
             # Handle missing values (field not in data at all)
             if is_missing:
                 raw_value = None
@@ -3158,7 +3198,7 @@ class FormSchema(metaclass=FormSchemaMeta):
                     self._values[field_name] = coerced_value
             # Check required for empty values (after coercion)
             elif field_obj.required:
-                if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
+                if raw_value is None or not raw_value.strip():
                     self._errors[field_name] = [field_obj.error_message or &quot;This field is required&quot;]
                     self._values[field_name] = field_obj.default
                 elif isinstance(coerced_value, str) and not coerced_value.strip():
@@ -3179,7 +3219,7 @@ class FormSchema(metaclass=FormSchemaMeta):
 
         # Run custom validate method if defined
         # This allows subclasses to add custom validation logic
-        if hasattr(self, &#x27;validate&#x27;) and callable(self.validate):
+        if hasattr(self, &quot;validate&quot;) and callable(self.validate):
             # Get the method from the instance&#x27;s class to avoid infinite recursion
             validate_method = self.__class__.validate
             if validate_method is not FormSchema.validate:
@@ -3244,20 +3284,20 @@ class FormSchema(metaclass=FormSchemaMeta):
 
 
 def _validate_and_call_sync(
-    handler: Callable,
+    handler: Callable[..., Any],
     schema_class: type[FormSchema],
     handle_errors: bool,
     form_data_param: str,
-    args: tuple,
-    kwargs: dict,
-):
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -&gt; Any:
     &quot;&quot;&quot;Synchronous internal helper to perform validation and call handler.&quot;&quot;&quot;
     # Get the handler signature to find the expected parameter name
     sig = inspect.signature(handler)
     handler_params = list(sig.parameters.keys())
 
     # Try to find form_data in kwargs first, using the specified param name
-    form_data = kwargs.pop(form_data_param, None)
+    form_data: dict[str, str] | None = kwargs.pop(form_data_param, None)
 
     # Also try &#x27;form_data&#x27; as a fallback since that&#x27;s what the trigger route uses
     if form_data is None:
@@ -3269,15 +3309,11 @@ def _validate_and_call_sync(
             if param_name == form_data_param or param_name == &quot;form_data&quot;:
                 if i &lt; len(args):
                     form_data = args[i]
-                    args = args[:i] + args[i + 1:]
+                    args = args[:i] + args[i + 1 :]
                 break
 
     # If still no form_data, use empty dict
     if form_data is None:
-        form_data = {}
-
-    # Ensure form_data is a dict (it should be from request.form())
-    if not isinstance(form_data, dict):
         form_data = {}
 
     # Instantiate and validate schema
@@ -3320,20 +3356,20 @@ def _validate_and_call_sync(
 
 
 async def _validate_and_call_async(
-    handler: Callable,
+    handler: Callable[..., Awaitable[Any]],
     schema_class: type[FormSchema],
     handle_errors: bool,
     form_data_param: str,
-    args: tuple,
-    kwargs: dict,
-):
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -&gt; Any:
     &quot;&quot;&quot;Asynchronous internal helper to perform validation and call handler.&quot;&quot;&quot;
     # Get the handler signature to find the expected parameter name
     sig = inspect.signature(handler)
     handler_params = list(sig.parameters.keys())
 
     # Try to find form_data in kwargs first, using the specified param name
-    form_data = kwargs.pop(form_data_param, None)
+    form_data: dict[str, str] | None = kwargs.pop(form_data_param, None)
 
     # Also try &#x27;form_data&#x27; as a fallback since that&#x27;s what the trigger route uses
     if form_data is None:
@@ -3345,15 +3381,11 @@ async def _validate_and_call_async(
             if param_name == form_data_param or param_name == &quot;form_data&quot;:
                 if i &lt; len(args):
                     form_data = args[i]
-                    args = args[:i] + args[i + 1:]
+                    args = args[:i] + args[i + 1 :]
                 break
 
     # If still no form_data, use empty dict
     if form_data is None:
-        form_data = {}
-
-    # Ensure form_data is a dict (it should be from request.form())
-    if not isinstance(form_data, dict):
         form_data = {}
 
     # Instantiate and validate schema
@@ -3437,14 +3469,15 @@ def validate_form(
     Raises:
         ValidationError: If handle_errors=True and validation fails.
     &quot;&quot;&quot;
+
     def decorator(handler: Callable[_P, _T]) -&gt; Callable[..., _T]:
         # Get the original signature
         sig = inspect.signature(handler)
 
         # Create new parameters that include form_data if not already present
         # This ensures FastAPI&#x27;s route_wrapper detects that we need form_data
-        new_params = []
-        for param_name, param in sig.parameters.items():
+        new_params: list[inspect.Parameter] = []
+        for param in sig.parameters.values():
             new_params.append(param)
 
         # Add form_data parameter if not present
@@ -3462,19 +3495,25 @@ def validate_form(
 
         # Create wrapper functions
         if inspect.iscoroutinefunction(handler):
+
             @functools.wraps(handler)
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -&gt; _T:
-                return await _validate_and_call_async(
-                    handler, schema_class, handle_errors, form_data_param, args, kwargs
-                )
-            wrapped = async_wrapper
+                return cast(_T, await _validate_and_call_async(
+                    cast(Callable[..., Awaitable[Any]], handler),
+                    schema_class, handle_errors, form_data_param, args, kwargs,
+                ))
+
+            wrapped: Callable[..., _T] = cast(Callable[..., _T], async_wrapper)
         else:
+
             @functools.wraps(handler)
             def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -&gt; _T:
-                return _validate_and_call_sync(
-                    handler, schema_class, handle_errors, form_data_param, args, kwargs
-                )
-            wrapped = sync_wrapper
+                return cast(_T, _validate_and_call_sync(
+                    cast(Callable[..., Any], handler),
+                    schema_class, handle_errors, form_data_param, args, kwargs,
+                ))
+
+            wrapped = cast(Callable[..., _T], sync_wrapper)
 
         # Set the new signature that includes form_data
         wrapped.__signature__ = new_sig  # type: ignore

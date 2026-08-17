@@ -22,8 +22,8 @@ Example usage:
 import functools
 import inspect
 import re
-from collections.abc import Callable
-from typing import Any, ParamSpec, TypeVar
+from collections.abc import Awaitable, Callable
+from typing import Any, ParamSpec, TypeVar, cast
 
 # Type variables for decorator type annotations
 _P = ParamSpec("_P")
@@ -685,13 +685,13 @@ class FormSchema(metaclass=FormSchemaMeta):
 
 
 def _validate_and_call_sync(
-    handler: Callable[_P, _T],
+    handler: Callable[..., Any],
     schema_class: type[FormSchema],
     handle_errors: bool,
     form_data_param: str,
-    args: _P.args,
-    kwargs: _P.kwargs,
-) -> _T:
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> Any:
     """Synchronous internal helper to perform validation and call handler."""
     # Get the handler signature to find the expected parameter name
     sig = inspect.signature(handler)
@@ -757,13 +757,13 @@ def _validate_and_call_sync(
 
 
 async def _validate_and_call_async(
-    handler: Callable[_P, _T],
+    handler: Callable[..., Awaitable[Any]],
     schema_class: type[FormSchema],
     handle_errors: bool,
     form_data_param: str,
-    args: _P.args,
-    kwargs: _P.kwargs,
-) -> _T:
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+) -> Any:
     """Asynchronous internal helper to perform validation and call handler."""
     # Get the handler signature to find the expected parameter name
     sig = inspect.signature(handler)
@@ -899,18 +899,22 @@ def validate_form(
 
             @functools.wraps(handler)
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-                return await _validate_and_call_async(
-                    handler, schema_class, handle_errors, form_data_param, args, kwargs
-                )
+                return cast(_T, await _validate_and_call_async(
+                    cast(Callable[..., Awaitable[Any]], handler),
+                    schema_class, handle_errors, form_data_param, args, kwargs,
+                ))
 
-            wrapped: Callable[..., _T] = async_wrapper
+            wrapped: Callable[..., _T] = cast(Callable[..., _T], async_wrapper)
         else:
 
             @functools.wraps(handler)
             def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
-                return _validate_and_call_sync(handler, schema_class, handle_errors, form_data_param, args, kwargs)
+                return cast(_T, _validate_and_call_sync(
+                    cast(Callable[..., Any], handler),
+                    schema_class, handle_errors, form_data_param, args, kwargs,
+                ))
 
-            wrapped: Callable[..., _T] = sync_wrapper
+            wrapped = cast(Callable[..., _T], sync_wrapper)
 
         # Set the new signature that includes form_data
         wrapped.__signature__ = new_sig  # type: ignore
