@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.6.0] - 2026-08-17
+
+### Added
+
+- **SSE server-push support**: the server can now push component updates to any connected browser tab without a user interaction
+- `push_update(session_id, *component_ids)` — explicit per-session push from any async context; re-renders the named components as OOB swaps and streams the HTML to the client's SSE connection
+- `State.set()` from outside a request context (background tasks, startup handlers) now broadcasts the new value as a global and automatically pushes OOB HTML to every connected session whose components listen to that state — no extra API needed
+- `State.get()` from outside a request context returns the last broadcast value (or the initial value if none has been set), with per-session values still taking precedence inside a request
+- `GET /_sse` streaming endpoint registered by `create_app()`; each page opens this connection automatically via the `hx-ext="sse"` attribute on the hidden `#hx-target` div
+- HTMX SSE extension script added to `base.html`
+- 21 new tests covering the SSE registry, global state semantics, `_push_sse_for_state`, `push_update`, and the `/_sse` route
+
+### Internal
+
+- `src/inguitive/session.py`: `_sse_connections` registry dict; `_register_sse_connection`, `_unregister_sse_connection`, `_get_sse_queue` helpers
+- `src/inguitive/state.py`: `_global_state_values` broadcast dict; `_schedule_sse_push`, `_push_sse_for_state` for async push fanout; updated `State.get` and `State.set` for background-task semantics
+- `src/inguitive/fastapi.py`: `push_update` coroutine; `/_sse` route with disconnect-aware async generator (30 s heartbeat, 0.5 s disconnect poll)
+- `push_update` exported from `inguitive.__init__`
+
+---
+
 ## [0.5.0] - 2026-08-17
 
 ### Added

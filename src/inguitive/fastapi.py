@@ -4,6 +4,8 @@ FastAPI integration for inguitive.
 
 from __future__ import annotations
 
+import asyncio
+import contextvars
 import importlib.resources
 import inspect
 import traceback
@@ -15,7 +17,7 @@ from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 import markupsafe
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
@@ -26,7 +28,12 @@ from inguitive.session import (
     Session,
     SessionBackend,
     _clear_current_session,
+    _get_current_session_from_context,
+    _get_sse_queues,
+    _put_bounded,
+    _register_sse_connection,
     _set_current_session,
+    _unregister_sse_connection,
     get_session_backend,
     set_session_backend,
 )
@@ -530,7 +537,130 @@ def create_app(
                 stacklevel=2,
             )
 
+    # -----------------------------------------------------------------------
+    # SSE endpoint — GET /_sse
+    # -----------------------------------------------------------------------
+
+    @app.get("/_sse")
+    async def _sse_route(request: Request):  # type: ignore[return-value]
+        """Persistent SSE stream for server-initiated component updates.
+
+        Every inguitive page connects here automatically via the hidden
+        ``#hx-target`` div in ``base.html``.  The session is authenticated
+        by the standard session cookie (handled by :class:`SessionMiddleware`).
+        """
+        session = _get_current_session_from_context()
+        if session is None:
+            return HTMLResponse("No active session", status_code=401)
+
+        session_id = session.session_id
+        queue = _register_sse_connection(session_id)
+
+        async def _event_generator():
+            # Wrap is_disconnected() as an asyncio Future so we can race it
+            # against queue.get() without blocking on either for 30 seconds.
+            loop = asyncio.get_event_loop()
+
+            async def _disconnect_future() -> None:
+                while not await request.is_disconnected():
+                    await asyncio.sleep(0.5)
+
+            disconnect_task = loop.create_task(_disconnect_future())
+
+            try:
+                while True:
+                    queue_task = loop.create_task(queue.get())
+                    done, pending = await asyncio.wait(
+                        {queue_task, disconnect_task},
+                        timeout=30.0,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+
+                    if disconnect_task in done or not done:
+                        # Client disconnected or heartbeat timeout elapsed.
+                        queue_task.cancel()
+                        if not done:
+                            # Timeout — send keep-alive and loop.
+                            yield ": heartbeat\n\n"
+                            continue
+                        break
+
+                    # queue_task completed — send the HTML fragment.
+                    html: str | None = queue_task.result()
+                    if html is None:  # sentinel — close cleanly
+                        break
+                    lines = "\n".join(f"data: {line}" for line in html.splitlines())
+                    yield f"{lines}\n\n"
+            except asyncio.CancelledError:
+                pass
+            finally:
+                disconnect_task.cancel()
+                # Remove only this tab's queue; other tabs are unaffected.
+                _unregister_sse_connection(session_id, queue)
+
+        return StreamingResponse(
+            _event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
     return app  # type: ignore[return-value]
+
+
+async def push_update(session_id: str, *component_ids: str) -> None:
+    """Push OOB HTML for specific components to a session's SSE stream.
+
+    Use this for fine-grained, per-session pushes from background tasks or
+    webhook handlers.  For a broadcast push to *all* connected sessions, call
+    :meth:`State.set` from outside a request context instead.
+
+    Args:
+        session_id: The session to push to.  Obtain it from
+            :func:`~inguitive.session.get_session_id` during a request and
+            store it for later use.
+        *component_ids: IDs of the components to re-render as OOB swaps.
+            The components must already be registered in the session's
+            component registry (i.e. they must have been rendered at least
+            once when the page loaded).
+
+    Example::
+
+        from inguitive import push_update, get_session_id
+
+        # Inside a request handler — capture the session ID:
+        current_session = get_session_id()
+
+        # Later, in a background task:
+        async def notify():
+            await push_update(current_session, "notification-banner")
+    """
+    queues = _get_sse_queues(session_id)
+    if not queues:
+        return  # Session has no active SSE connections — nothing to do.
+
+    backend = get_session_backend()
+    session = await backend.get_session(session_id)
+    if session is None:
+        return
+
+    # Note: rendering requires a populated component_registry, which is only
+    # available with MemoryBackend.  With RedisBackend the registry is empty
+    # after deserialisation and update_components() returns empty HTML.
+    # See task #8 for the planned Redis fix.
+    def _render(s=session, ids=component_ids) -> str:
+        _set_current_session(s)
+        return update_components(*ids)
+
+    html = contextvars.copy_context().run(_render)
+    if html:
+        # Fan out to every open tab for this session.
+        # _put_bounded is non-blocking and applies drop-oldest backpressure.
+        for queue in list(queues):  # snapshot to avoid mutation during iteration
+            _put_bounded(queue, html)
 
 
 def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True):

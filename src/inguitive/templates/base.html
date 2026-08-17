@@ -7,6 +7,8 @@
         <link rel="icon" href="{{ favicon }}">
         <!-- HTMX -->
         <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+        <!-- HTMX SSE extension — enables server-initiated component updates -->
+        <script src="https://unpkg.com/htmx.org@1.9.6/dist/ext/sse.js"></script>
         <!-- Tailwind CSS -->
         <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
         <!-- Inter Font -->
@@ -21,8 +23,11 @@
     </head>
     <body class="min-h-screen">
         {{ content | safe }}
-        <!-- Dummy target for HTMX POST requests -->
-        <div id="hx-target" style="display: none;"></div>
+        <!-- Hidden target for HTMX requests (POST triggers and SSE updates) -->
+        <div id="hx-target"
+             hx-ext="sse"
+             sse-connect="/_sse"
+             sse-swap="message"
+             style="display: none;"></div>
     </body>
 </html>
-

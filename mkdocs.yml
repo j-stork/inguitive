@@ -69,6 +69,7 @@ nav:
     - Trigger Handlers: guide/trigger-handlers.md
     - Form Validation: guide/form-validation.md
     - Session Backends: guide/session-backends.md
+    - Server-Sent Events: guide/sse.md
   - API Reference:
     - Overview: api/index.md
     - Components: api/components.md

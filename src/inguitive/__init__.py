@@ -26,7 +26,7 @@ from inguitive.css import (
     BUTTON_PRIMARY_CSS,
     BUTTON_SECONDARY_CSS,
 )
-from inguitive.fastapi import InguitiveApp, create_app, redirect, run_app
+from inguitive.fastapi import InguitiveApp, create_app, push_update, redirect, run_app
 from inguitive.htmx import update_components
 from inguitive.session import (
     MemoryBackend,
@@ -86,6 +86,7 @@ __all__ = [
     # FastAPI
     "InguitiveApp",
     "create_app",
+    "push_update",
     "redirect",
     "run_app",
     # Session
@@ -121,4 +122,4 @@ __all__ = [
     "validate_form",
 ]
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"

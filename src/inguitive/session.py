@@ -298,7 +298,112 @@ def get_session_id() -> str | None:
     return session.session_id if session else None
 
 
+# ---------------------------------------------------------------------------
+# SSE connection registry
+# ---------------------------------------------------------------------------
+
+# Maximum number of pending SSE messages per tab.  When the queue is full
+# (slow / stalled consumer), _put_bounded drops the oldest entry before
+# adding the new one, so the client always receives the latest state rather
+# than stale intermediate values.  This bounds memory regardless of how
+# many pushes accumulate while a tab is backpressured.
+_SSE_QUEUE_MAX: int = 32
+
+# Maps session_id → set of asyncio.Queue[str].
+# One entry per open browser tab — each tab has its own queue so that a
+# user with two tabs receives pushes on both, and closing one tab removes
+# only that tab's queue without affecting the others.
+_sse_connections: dict[str, set[asyncio.Queue]] = {}
+
+
+def _put_bounded(queue: asyncio.Queue, item: str) -> None:
+    """Put *item* into *queue*, applying a drop-oldest backpressure policy.
+
+    If the queue is at capacity, the oldest (most stale) pending update is
+    discarded before the new item is enqueued.  This keeps memory bounded and
+    ensures a slow or stalled consumer always sees the *latest* state when it
+    eventually drains the queue.
+
+    Never blocks — safe to call from any synchronous or asynchronous context.
+
+    Args:
+        queue: The target SSE queue (must have a finite ``maxsize``).
+        item: The HTML fragment to enqueue.
+    """
+    try:
+        queue.put_nowait(item)
+    except asyncio.QueueFull:
+        # Discard the oldest stale update to make room.
+        try:
+            queue.get_nowait()
+        except asyncio.QueueEmpty:
+            pass
+        # Re-attempt after freeing one slot.
+        try:
+            queue.put_nowait(item)
+        except asyncio.QueueFull:
+            pass  # Genuinely stuck — skip this update rather than blocking.
+
+
+def _register_sse_connection(session_id: str) -> asyncio.Queue:
+    """Create and register a bounded asyncio Queue for one SSE stream.
+
+    Each call returns a *fresh* queue, so multiple open tabs for the same
+    session each get their own independent queue.  Call this whenever the
+    browser opens ``GET /_sse``; store the returned queue and pass it back
+    to :func:`_unregister_sse_connection` when the stream closes.
+
+    Args:
+        session_id: Session to register.
+
+    Returns:
+        A fresh bounded ``asyncio.Queue`` (capacity :data:`_SSE_QUEUE_MAX`)
+        bound to this tab's SSE stream.
+    """
+    queue: asyncio.Queue = asyncio.Queue(maxsize=_SSE_QUEUE_MAX)
+    _sse_connections.setdefault(session_id, set()).add(queue)
+    return queue
+
+
+def _unregister_sse_connection(session_id: str, queue: asyncio.Queue) -> None:
+    """Remove one specific SSE queue when its client disconnects.
+
+    Only the exact *queue* object is removed.  Other queues for the same
+    session (i.e. other open tabs) are left intact.  The session entry is
+    removed from the registry only when its last queue is gone.
+
+    Safe to call even if the session has no registered queues.
+
+    Args:
+        session_id: Session the stream belongs to.
+        queue: The exact queue object returned by :func:`_register_sse_connection`.
+    """
+    queues = _sse_connections.get(session_id)
+    if queues is None:
+        return
+    queues.discard(queue)
+    if not queues:
+        _sse_connections.pop(session_id, None)
+
+
+def _get_sse_queues(session_id: str) -> set[asyncio.Queue]:
+    """Return all active SSE queues for *session_id* (one per open tab).
+
+    Returns an empty set when the session has no active SSE connections.
+
+    Args:
+        session_id: Session to look up.
+
+    Returns:
+        A snapshot set of queues; iterate it to fan out a push.
+    """
+    return set(_sse_connections.get(session_id, set()))
+
+
+# ---------------------------------------------------------------------------
 # Convenience functions for registries
+# ---------------------------------------------------------------------------
+
 def _get_component_registry() -> dict[str, Any]:
     """Get the component registry for the current session."""
     session = _get_or_create_current_session()
