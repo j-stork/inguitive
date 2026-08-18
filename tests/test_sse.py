@@ -14,7 +14,6 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from fastapi.testclient import TestClient
 
 from inguitive import State, create_app, push_update
 from inguitive.session import (
@@ -29,7 +28,6 @@ from inguitive.session import (
     set_session_backend,
 )
 from inguitive.state import _global_state_values, _push_sse_for_state
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -418,7 +416,7 @@ def test_push_update_multiple_components():
 
 
 def test_put_bounded_accepts_items_within_capacity():
-    from inguitive.session import _put_bounded, _SSE_QUEUE_MAX
+    from inguitive.session import _SSE_QUEUE_MAX, _put_bounded
 
     q: asyncio.Queue = asyncio.Queue(maxsize=_SSE_QUEUE_MAX)
     for i in range(_SSE_QUEUE_MAX):
@@ -427,7 +425,7 @@ def test_put_bounded_accepts_items_within_capacity():
 
 
 def test_put_bounded_drops_oldest_when_full():
-    from inguitive.session import _put_bounded, _SSE_QUEUE_MAX
+    from inguitive.session import _SSE_QUEUE_MAX, _put_bounded
 
     q: asyncio.Queue = asyncio.Queue(maxsize=_SSE_QUEUE_MAX)
     for i in range(_SSE_QUEUE_MAX):
@@ -447,7 +445,7 @@ def test_put_bounded_drops_oldest_when_full():
 
 def test_queue_stays_bounded_under_many_pushes():
     """Simulates a stalled consumer receiving many rapid pushes: queue must stay bounded."""
-    from inguitive.session import _put_bounded, _SSE_QUEUE_MAX
+    from inguitive.session import _SSE_QUEUE_MAX, _put_bounded
 
     q: asyncio.Queue = asyncio.Queue(maxsize=_SSE_QUEUE_MAX)
     # Push far more items than the queue can hold without consuming any.
@@ -487,7 +485,7 @@ def test_push_sse_stays_bounded_for_stalled_tab():
 
 def test_cleanup_works_after_backpressure():
     """Unregistering a stalled (full) queue must still work correctly."""
-    from inguitive.session import _put_bounded, _SSE_QUEUE_MAX
+    from inguitive.session import _SSE_QUEUE_MAX, _put_bounded
 
     q: asyncio.Queue = asyncio.Queue(maxsize=_SSE_QUEUE_MAX)
     for i in range(_SSE_QUEUE_MAX * 3):
