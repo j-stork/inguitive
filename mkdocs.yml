@@ -1,8 +1,8 @@
 site_name: inguitive
 site_description: A pure Python reactive web framework — HTMX + Tailwind without JavaScript
-site_url: https://j-strk.github.io/inguitive/
-repo_url: https://github.com/j-strk/inguitive
-repo_name: j-strk/inguitive
+site_url: https://j-stork.github.io/inguitive/
+repo_url: https://github.com/j-stork/inguitive
+repo_name: j-stork/inguitive
 copyright: Copyright &copy; 2026 Johannes Stork
 
 theme:
