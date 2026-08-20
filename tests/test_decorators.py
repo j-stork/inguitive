@@ -701,3 +701,297 @@ class TestHeadContent:
         response = client.get("/test")
         assert response.status_code == 200
         assert '<meta name="app-only" content="test">' in response.text
+
+
+class TestPathParameters:
+    """Tests for URL path parameter support in @app.page decorator."""
+
+    def test_basic_path_parameter_str(self):
+        """Test basic string path parameter."""
+        app = create_app()
+
+        @app.page("/user/<username>")
+        def user_profile(username: str):
+            return Div(Text(f"Hello, {username}"))
+
+        client = TestClient(app)
+        response = client.get("/user/john")
+        assert response.status_code == 200
+        assert "Hello, john" in response.text
+
+    def test_explicit_str_type(self):
+        """Test explicit str type annotation."""
+        app = create_app()
+
+        @app.page("/user/<username:str>")
+        def user_profile(username: str):
+            return Div(Text(f"User: {username}"))
+
+        client = TestClient(app)
+        response = client.get("/user/jane")
+        assert response.status_code == 200
+        assert "User: jane" in response.text
+
+    def test_int_path_parameter(self):
+        """Test integer path parameter with type conversion."""
+        app = create_app()
+
+        @app.page("/post/<post_id:int>")
+        def show_post(post_id: int):
+            return Div(Text(f"Post {post_id}"))
+
+        client = TestClient(app)
+        # Test valid integer
+        response = client.get("/post/42")
+        assert response.status_code == 200
+        assert "Post 42" in response.text
+
+    def test_int_path_parameter_invalid(self):
+        """Test that invalid integer path parameter returns 400."""
+        app = create_app()
+
+        @app.page("/post/<post_id:int>")
+        def show_post(post_id: int):
+            return Div(Text(f"Post {post_id}"))
+
+        client = TestClient(app)
+        # Test invalid integer
+        response = client.get("/post/abc")
+        assert response.status_code == 400
+        assert "Invalid post_id" in response.json()["detail"]
+
+    def test_float_path_parameter(self):
+        """Test float path parameter with type conversion."""
+        app = create_app()
+
+        @app.page("/price/<amount:float>")
+        def show_price(amount: float):
+            return Div(Text(f"Price: ${amount:.2f}"))
+
+        client = TestClient(app)
+        # Test valid float
+        response = client.get("/price/19.99")
+        assert response.status_code == 200
+        assert "Price: $19.99" in response.text
+
+    def test_float_path_parameter_invalid(self):
+        """Test that invalid float path parameter returns 400."""
+        app = create_app()
+
+        @app.page("/price/<amount:float>")
+        def show_price(amount: float):
+            return Div(Text(f"Price: ${amount:.2f}"))
+
+        client = TestClient(app)
+        # Test invalid float
+        response = client.get("/price/not-a-number")
+        assert response.status_code == 400
+        assert "Invalid amount" in response.json()["detail"]
+
+    def test_bool_path_parameter_true_values(self):
+        """Test boolean path parameter with various true values."""
+        app = create_app()
+
+        @app.page("/toggle/<state:bool>")
+        def toggle(state: bool):
+            return Div(Text(f"State: {state}"))
+
+        client = TestClient(app)
+        
+        # Test various true values
+        for true_value in ["true", "True", "TRUE", "1", "yes", "YES", "on", "ON"]:
+            response = client.get(f"/toggle/{true_value}")
+            assert response.status_code == 200
+            assert "State: True" in response.text
+
+    def test_bool_path_parameter_false_values(self):
+        """Test boolean path parameter with various false values."""
+        app = create_app()
+
+        @app.page("/toggle/<state:bool>")
+        def toggle(state: bool):
+            return Div(Text(f"State: {state}"))
+
+        client = TestClient(app)
+        
+        # Test various false values
+        for false_value in ["false", "False", "FALSE", "0", "no", "NO", "off", "OFF"]:
+            response = client.get(f"/toggle/{false_value}")
+            assert response.status_code == 200
+            assert "State: False" in response.text
+
+    def test_uuid_path_parameter(self):
+        """Test UUID path parameter with type conversion."""
+        import uuid
+        
+        app = create_app()
+
+        test_uuid = uuid.uuid4()
+        
+        @app.page("/user/<user_id:uuid>")
+        def show_user(user_id: uuid.UUID):
+            return Div(Text(f"User: {user_id}"))
+
+        client = TestClient(app)
+        # Test valid UUID
+        response = client.get(f"/user/{test_uuid}")
+        assert response.status_code == 200
+        assert f"User: {test_uuid}" in response.text
+
+    def test_uuid_path_parameter_invalid(self):
+        """Test that invalid UUID path parameter returns 400."""
+        app = create_app()
+
+        @app.page("/user/<user_id:uuid>")
+        def show_user(user_id):
+            return Div(Text(f"User: {user_id}"))
+
+        client = TestClient(app)
+        # Test invalid UUID
+        response = client.get("/user/not-a-uuid")
+        assert response.status_code == 400
+        assert "Invalid user_id" in response.json()["detail"]
+
+    def test_path_type_parameter(self):
+        """Test path type parameter that accepts slashes."""
+        app = create_app()
+
+        @app.page("/files/<subpath:path>")
+        def show_file(subpath: str):
+            return Div(Text(f"File: {subpath}"))
+
+        client = TestClient(app)
+        # Test path with slashes
+        response = client.get("/files/a/b/c")
+        assert response.status_code == 200
+        assert "File: a/b/c" in response.text
+
+    def test_multiple_path_parameters(self):
+        """Test multiple path parameters in the same route."""
+        app = create_app()
+
+        @app.page("/user/<user_id:int>/post/<post_id:int>")
+        def show_user_post(user_id: int, post_id: int):
+            return Div(Text(f"User {user_id}, Post {post_id}"))
+
+        client = TestClient(app)
+        response = client.get("/user/123/post/456")
+        assert response.status_code == 200
+        assert "User 123, Post 456" in response.text
+
+    def test_mixed_parameter_types(self):
+        """Test mixed path parameter types in the same route."""
+        app = create_app()
+
+        @app.page("/category/<category:str>/page/<page:int>")
+        def show_category_page(category: str, page: int):
+            return Div(Text(f"{category} page {page}"))
+
+        client = TestClient(app)
+        response = client.get("/category/books/page/5")
+        assert response.status_code == 200
+        assert "books page 5" in response.text
+
+    def test_path_parameter_with_request(self):
+        """Test path parameters mixed with request parameter injection."""
+        app = create_app()
+
+        @app.page("/user/<user_id:int>")
+        def user_profile(user_id: int, request):
+            return Div(Text(f"User {user_id}, Method: {request.method}"))
+
+        client = TestClient(app)
+        response = client.get("/user/42")
+        assert response.status_code == 200
+        assert "User 42, Method: GET" in response.text
+
+    def test_path_parameter_with_form_data(self):
+        """Test path parameters mixed with form_data parameter injection."""
+        app = create_app()
+
+        @app.page("/user/<user_id:int>")
+        def user_profile(user_id: int, form_data: dict):
+            return Div(Text(f"User {user_id}, Form: {form_data}"))
+
+        client = TestClient(app)
+        # Note: This test may need adjustment since page routes are GET by default
+        # For now, we'll test that the path parameter works
+        response = client.get("/user/42")
+        assert response.status_code == 200
+        assert "User 42" in response.text
+
+    def test_backward_compatibility(self):
+        """Test that existing routes without path parameters still work."""
+        app = create_app()
+
+        @app.page("/about")
+        def about_page():
+            return Div(Text("About Us"))
+
+        client = TestClient(app)
+        response = client.get("/about")
+        assert response.status_code == 200
+        assert "About Us" in response.text
+
+    def test_path_parameter_name_collision_with_request(self):
+        """Test that path parameter takes precedence over request when names collide."""
+        app = create_app()
+
+        @app.page("/test/<request:str>")
+        def test_page(request: str):
+            return Div(Text(f"Param: {request}"))
+
+        client = TestClient(app)
+        response = client.get("/test/value123")
+        assert response.status_code == 200
+        assert "Param: value123" in response.text
+
+    def test_unknown_type_defaults_to_str(self):
+        """Test that unknown parameter types are treated as str."""
+        app = create_app()
+
+        @app.page("/test/<value:unknown_type>")
+        def test_page(value: str):
+            return Div(Text(f"Value: {value}"))
+
+        client = TestClient(app)
+        response = client.get("/test/hello")
+        assert response.status_code == 200
+        assert "Value: hello" in response.text
+
+    def test_path_parameter_in_root_path(self):
+        """Test path parameter in root path."""
+        app = create_app()
+
+        @app.page("/<page_name:str>")
+        def dynamic_page(page_name: str):
+            return Div(Text(f"Dynamic page: {page_name}"))
+
+        client = TestClient(app)
+        response = client.get("/home")
+        assert response.status_code == 200
+        assert "Dynamic page: home" in response.text
+
+    def test_multiple_routes_with_different_parameters(self):
+        """Test multiple routes with different path parameters."""
+        app = create_app()
+
+        @app.page("/user/<user_id:int>")
+        def user_page(user_id: int):
+            return Div(Text(f"User: {user_id}"))
+
+        @app.page("/post/<post_slug:str>")
+        def post_page(post_slug: str):
+            return Div(Text(f"Post: {post_slug}"))
+
+        client = TestClient(app)
+        
+        # Test user route
+        response = client.get("/user/123")
+        assert response.status_code == 200
+        assert "User: 123" in response.text
+        
+        # Test post route
+        response = client.get("/post/hello-world")
+        assert response.status_code == 200
+        assert "Post: hello-world" in response.text
