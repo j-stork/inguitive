@@ -109,10 +109,10 @@ def _parse_path_pattern(path: str) -> tuple[str, list[tuple[str, str]]]:
 
     # Regex to match <name:type> or <name> patterns
     pattern = r'<([a-zA-Z_][a-zA-Z0-9_]*)(?:\:([a-zA-Z_][a-zA-Z0-9_]*))?>'
-    
+
     fastapi_path = path
     params = []
-    
+
     # Find all parameter patterns and replace them
     for match in re.finditer(pattern, path):
         param_name = match.group(1)
@@ -124,7 +124,7 @@ def _parse_path_pattern(path: str) -> tuple[str, list[tuple[str, str]]]:
         else:
             replacement = "{" + param_name + "}"
         fastapi_path = fastapi_path.replace(match.group(0), replacement, 1)
-    
+
     return fastapi_path, params
 
 
@@ -183,7 +183,7 @@ def _register_page_route(
     """
     # Parse path pattern to extract path parameters
     fastapi_path, path_params = _parse_path_pattern(path)
-    
+
     # Store path parameter metadata on the handler for use in the wrapper
     handler._inguitive_path_params = path_params  # type: ignore
 
@@ -195,11 +195,11 @@ def _register_page_route(
         is_async = inspect.iscoroutinefunction(h)
 
         kwargs: dict[str, Any] = {}
-        
+
         # Extract and convert path parameters first (they take precedence)
         path_params_meta = getattr(h, '_inguitive_path_params', [])
         path_params_dict = dict(request.path_params)
-        
+
         for param_name, param_type in path_params_meta:
             if param_name in path_params_dict:
                 raw_value = path_params_dict[param_name]
@@ -212,7 +212,7 @@ def _register_page_route(
                         status_code=400,
                         detail=f"Invalid {param_name}: {e}"
                     )
-        
+
         # Only add request/form_data if not already provided by path parameters
         if needs_request and "request" not in kwargs:
             kwargs["request"] = request

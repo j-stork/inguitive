@@ -797,7 +797,7 @@ class TestPathParameters:
             return Div(Text(f"State: {state}"))
 
         client = TestClient(app)
-        
+
         # Test various true values
         for true_value in ["true", "True", "TRUE", "1", "yes", "YES", "on", "ON"]:
             response = client.get(f"/toggle/{true_value}")
@@ -813,7 +813,7 @@ class TestPathParameters:
             return Div(Text(f"State: {state}"))
 
         client = TestClient(app)
-        
+
         # Test various false values
         for false_value in ["false", "False", "FALSE", "0", "no", "NO", "off", "OFF"]:
             response = client.get(f"/toggle/{false_value}")
@@ -823,11 +823,11 @@ class TestPathParameters:
     def test_uuid_path_parameter(self):
         """Test UUID path parameter with type conversion."""
         import uuid
-        
+
         app = create_app()
 
         test_uuid = uuid.uuid4()
-        
+
         @app.page("/user/<user_id:uuid>")
         def show_user(user_id: uuid.UUID):
             return Div(Text(f"User: {user_id}"))
@@ -985,12 +985,12 @@ class TestPathParameters:
             return Div(Text(f"Post: {post_slug}"))
 
         client = TestClient(app)
-        
+
         # Test user route
         response = client.get("/user/123")
         assert response.status_code == 200
         assert "User: 123" in response.text
-        
+
         # Test post route
         response = client.get("/post/hello-world")
         assert response.status_code == 200
