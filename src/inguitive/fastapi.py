@@ -124,7 +124,7 @@ def _parse_path_pattern(path: str) -> tuple[str, list[tuple[str, str]]]:
                 f"Path parameter name '{param_name}' is reserved and cannot be used. "
                 f"These names are used for FastAPI request injection."
             )
-        
+
         # Validate that type names don't start with underscore
         if param_type and param_type.startswith("_"):
             raise ValueError(
