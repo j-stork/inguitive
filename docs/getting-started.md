@@ -99,6 +99,8 @@ def index():
 `@app.page` registers a GET route. The return value is rendered into a full HTML
 page with Tailwind and HTMX included.
 
+For dynamic URLs with parameters, see [Routing and URL Parameters](guide/routing.md).
+
 ### 6. Run
 
 ```bash
@@ -145,6 +147,7 @@ def index():
 ## Next steps
 
 - [Components](guide/components.md) — the full component library
+- [Routing and URL Parameters](guide/routing.md) — dynamic URLs with type validation
 - [Reactive State](guide/state.md) — how state isolation and propagation work
 - [Trigger Handlers](guide/trigger-handlers.md) — trigger args, async handlers, form data
 - [Form Validation](guide/form-validation.md) — declarative schemas with `FormSchema`

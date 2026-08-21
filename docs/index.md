@@ -40,6 +40,7 @@ def index():
 - **Component model** — composable, callable-attribute UI components
 - **Trigger handlers** — Python functions wired directly to HTMX POST actions
 - **Form validation** — declarative schemas with type coercion and per-constraint messages
+- **URL routing** — dynamic path parameters with type validation (`<name:type>`)
 - **Session backends** — `MemoryBackend` for development, `RedisBackend` for production
 - **CLI** — `inguitive init` and `inguitive run` to scaffold and serve
 

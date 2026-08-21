@@ -65,6 +65,7 @@ nav:
   - Getting Started: getting-started.md
   - User Guide:
     - Components: guide/components.md
+    - Routing and URL Parameters: guide/routing.md
     - Reactive State: guide/state.md
     - Trigger Handlers: guide/trigger-handlers.md
     - Form Validation: guide/form-validation.md
