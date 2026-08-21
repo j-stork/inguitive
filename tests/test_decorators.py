@@ -933,18 +933,23 @@ class TestPathParameters:
         assert response.status_code == 200
         assert "About Us" in response.text
 
-    def test_path_parameter_name_collision_with_request(self):
-        """Test that path parameter takes precedence over request when names collide."""
+    def test_reserved_path_parameter_names_raise_error(self):
+        """Test that using 'request' or 'form_data' as path parameter names raises ValueError."""
+        import pytest
+
         app = create_app()
 
-        @app.page("/test/<request:str>")
-        def test_page(request: str):
-            return Div(Text(f"Param: {request}"))
+        # Test 'request' as path parameter name
+        with pytest.raises(ValueError, match="Path parameter name 'request' is reserved"):
+            @app.page("/test/<request:str>")
+            def test_page_request(request: str):
+                return Div(Text(f"Param: {request}"))
 
-        client = TestClient(app)
-        response = client.get("/test/value123")
-        assert response.status_code == 200
-        assert "Param: value123" in response.text
+        # Test 'form_data' as path parameter name
+        with pytest.raises(ValueError, match="Path parameter name 'form_data' is reserved"):
+            @app.page("/test/<form_data:int>")
+            def test_page_form_data(form_data: int):
+                return Div(Text(f"Param: {form_data}"))
 
     def test_unknown_type_defaults_to_str(self):
         """Test that unknown parameter types are treated as str."""

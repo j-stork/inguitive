@@ -117,6 +117,14 @@ def _parse_path_pattern(path: str) -> tuple[str, list[tuple[str, str]]]:
     for match in re.finditer(pattern, path):
         param_name = match.group(1)
         param_type = match.group(2) if match.group(2) else "str"
+
+        # Prevent use of reserved parameter names
+        if param_name in ("request", "form_data"):
+            raise ValueError(
+                f"Path parameter name '{param_name}' is reserved and cannot be used. "
+                f"These names are used for FastAPI request injection."
+            )
+
         params.append((param_name, param_type))
         # Replace the <name:type> with {name} or {name:path} for path type
         if param_type == "path":
@@ -213,10 +221,10 @@ def _register_page_route(
                         detail=f"Invalid {param_name}: {e}"
                     )
 
-        # Only add request/form_data if not already provided by path parameters
-        if needs_request and "request" not in kwargs:
+        # Add request and form_data if the handler needs them
+        if needs_request:
             kwargs["request"] = request
-        if needs_form_data and "form_data" not in kwargs:
+        if needs_form_data:
             form_data_dict = dict(await request.form())
             kwargs["form_data"] = form_data_dict
 
