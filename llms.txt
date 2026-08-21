@@ -15,7 +15,7 @@ inguitive lets Python developers define pages and trigger handlers entirely in P
 - [Components](src/inguitive/components.py): All UI component classes (Div, Button, Input, DataTable, etc.) with render/update methods
 - [State](src/inguitive/state.py): Reactive State container with per-session isolation and auto-propagation of mutations
 - [Session](src/inguitive/session.py): Session dataclass, MemoryBackend, RedisBackend, and context-local session helpers
-- [FastAPI integration](src/inguitive/fastapi.py): create_app(), @app.page, @app.trigger_handler, push_update(), GET /_sse SSE endpoint, SessionMiddleware
+- [FastAPI integration](src/inguitive/fastapi.py): create_app(), @app.page (with URL path parameters `<name:type>`), @app.trigger_handler, push_update(), GET /_sse SSE endpoint, SessionMiddleware
 - [HTMX helpers](src/inguitive/htmx.py): update_components() — renders components as OOB HTML for partial page updates
 - [Trigger](src/inguitive/trigger.py): get_trigger_args() — access trigger_args dict inside a trigger handler
 - [SSE guide](docs/guide/sse.md): real-time server-push via push_update() and State.set() from background tasks

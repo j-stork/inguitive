@@ -1,4 +1,4 @@
-<project title="inguitive" summary="A pure Python web framework for building reactive, interactive web applications without writing JavaScript. Combines FastAPI, HTMX, and Tailwind CSS with a declarative component model, session-scoped reactive state management, and SSE server-push for real-time updates (v0.6.0).">inguitive lets Python developers define pages and trigger handlers entirely in Python. Components automatically re-render when state changes via HTMX out-of-band swaps. Each browser session has isolated state. Server-Sent Events (SSE) allow the server to push component updates to connected tabs — call State.set() from a background task to broadcast to all sessions, or push_update(session_id, *ids) for per-session pushes. The public API is exported from src/inguitive/__init__.py.<docs><doc title="README" desc="Full quick-start guide, component reference, session backend comparison, and production deployment checklist"># inguitive
+<project title="inguitive" summary="A pure Python web framework for building reactive, interactive web applications without writing JavaScript. Combines FastAPI, HTMX, and Tailwind CSS with a declarative component model, session-scoped reactive state management, and SSE server-push for real-time updates (v0.7.0).">inguitive lets Python developers define pages and trigger handlers entirely in Python. Components automatically re-render when state changes via HTMX out-of-band swaps. Each browser session has isolated state. Server-Sent Events (SSE) allow the server to push component updates to connected tabs — call State.set() from a background task to broadcast to all sessions, or push_update(session_id, *ids) for per-session pushes. The public API is exported from src/inguitive/__init__.py.<docs><doc title="README" desc="Full quick-start guide, component reference, session backend comparison, and production deployment checklist"># inguitive
 
 A pure Python web framework combining intuitive syntax with **HTMX** for partial page reloads and **Tailwind CSS** for styling.
 
@@ -285,6 +285,53 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.7.0] - 2026-08-21
+
+### Added
+
+- **URL path parameters for @app.page decorator**: Dynamic URL segments with type validation using `<name:type>` syntax
+- Supported types: `str`, `int`, `float`, `bool`, `path`, `uuid` with automatic conversion and validation
+- Type validation with HTTP 400 errors for invalid input
+- Boolean type accepts: `true`, `false`, `1`, `0`, `yes`, `no`, `on`, `off` (case-insensitive)
+- `path` type preserves slashes in URL segments
+- `uuid` type validates and converts to UUID objects
+- Multiple path parameters per route
+- Default type is `str` when no type is specified
+- Unknown type names are treated as `str`
+- Path parameters work alongside `request` and `form_data` parameters
+- Reserved parameter names `request` and `form_data` are rejected with clear error messages
+- Comprehensive documentation in `docs/guide/routing.md`
+- 20 new tests covering all type conversions, validation, and edge cases
+
+### Internal
+
+- `src/inguitive/fastapi.py`: Added `_PATH_PARAM_CONVERTERS` registry, `_parse_path_pattern()` for syntax conversion, `_convert_path_param()` for type conversion and validation, updated `_register_page_route()` to handle path parameters
+- Added validation to prevent reserved names (`request`, `form_data`) as path parameter names
+- Added validation to reject type names starting with underscore
+
+---
+
+## [0.6.0] - 2026-08-17
+
+### Added
+
+- **SSE server-push support**: the server can now push component updates to any connected browser tab without a user interaction
+- `push_update(session_id, *component_ids)` — explicit per-session push from any async context; re-renders the named components as OOB swaps and streams the HTML to the client's SSE connection
+- `State.set()` from outside a request context (background tasks, startup handlers) now broadcasts the new value as a global and automatically pushes OOB HTML to every connected session whose components listen to that state
+- `State.get()` from outside a request context returns the last broadcast value (or the initial value if none has been set), with per-session values still taking precedence inside a request
+- `GET /_sse` streaming endpoint registered by `create_app()`; each page opens this connection automatically via the `hx-ext="sse"` attribute on the hidden `#hx-target` div
+- HTMX SSE extension script added to `base.html`
+- 21 new tests covering the SSE registry, global state semantics, `_push_sse_for_state`, `push_update`, and the `/_sse` route
+
+### Internal
+
+- `src/inguitive/session.py`: `_sse_connections` registry dict; `_register_sse_connection`, `_unregister_sse_connection`, `_get_sse_queue` helpers
+- `src/inguitive/state.py`: `_global_state_values` broadcast dict; `_schedule_sse_push`, `_push_sse_for_state` for async push fanout; updated `State.get` and `State.set` for background-task semantics
+- `src/inguitive/fastapi.py`: `push_update` coroutine; `/_sse` route with disconnect-aware async generator (30 s heartbeat, 0.5 s disconnect poll)
+- `push_update` exported from `inguitive.__init__`
 
 ---
 
@@ -2138,7 +2185,7 @@ def _get_state_registry() -&gt; dict[str, Any]:
 def _get_data_registry() -&gt; dict[str, Any]:
     &quot;&quot;&quot;Get the data registry for the current session.&quot;&quot;&quot;
     return _get_or_create_current_session().data_registry
-</doc><doc title="FastAPI integration" desc="create_app(), @app.page, @app.trigger_handler, SessionMiddleware">&quot;&quot;&quot;
+</doc><doc title="FastAPI integration" desc="create_app(), @app.page (with URL path parameters &lt;name:type&gt;), @app.trigger_handler, SessionMiddleware">&quot;&quot;&quot;
 FastAPI integration for inguitive.
 &quot;&quot;&quot;
 

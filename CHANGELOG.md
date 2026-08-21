@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] - 2026-08-21
+
+### Added
+
+- **URL path parameters for @app.page decorator**: Dynamic URL segments with type validation using `<name:type>` syntax
+- Supported types: `str`, `int`, `float`, `bool`, `path`, `uuid` with automatic conversion and validation
+- Type validation with HTTP 400 errors for invalid input (e.g., `/user/abc` when expecting `int`)
+- Boolean type accepts: `true`, `false`, `1`, `0`, `yes`, `no`, `on`, `off` (case-insensitive)
+- `path` type preserves slashes in URL segments (e.g., `/files/a/b/c.txt`)
+- `uuid` type validates and converts to UUID objects
+- Multiple path parameters per route (e.g., `/user/<user_id:int>/post/<post_id:int>`)
+- Default type is `str` when no type is specified
+- Unknown type names are treated as `str`
+- Path parameters work alongside `request` and `form_data` parameters
+- Reserved parameter names `request` and `form_data` are rejected with clear error messages
+- Comprehensive documentation in `docs/guide/routing.md`
+- 20 new tests covering all type conversions, validation, and edge cases
+
+### Internal
+
+- `src/inguitive/fastapi.py`: Added `_PATH_PARAM_CONVERTERS` registry, `_parse_path_pattern()` for syntax conversion, `_convert_path_param()` for type conversion and validation, updated `_register_page_route()` to handle path parameters
+- Added validation to prevent reserved names (`request`, `form_data`) as path parameter names
+- Added validation to reject type names starting with underscore
+
+---
+
 ## [0.6.0] - 2026-08-17
 
 ### Added
