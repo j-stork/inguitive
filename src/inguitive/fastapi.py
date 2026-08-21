@@ -62,11 +62,11 @@ _PageDecorator = Callable[
 
 # Supported path parameter types and their converters
 _PATH_PARAM_CONVERTERS: dict[str, Callable[[str], Any]] = {
-    "str": lambda x: str(x),
+    "str": lambda x: x,
     "int": lambda x: int(x),
     "float": lambda x: float(x),
-    "bool": lambda x: x.lower() in ("true", "1", "yes", "on"),
-    "path": lambda x: str(x),  # Preserve as-is
+    "bool": lambda x: x.lower() in {"true", "1", "yes", "on"},
+    "path": lambda x: x,
     "uuid": lambda x: uuid.UUID(x),
 }
 
@@ -123,6 +123,13 @@ def _parse_path_pattern(path: str) -> tuple[str, list[tuple[str, str]]]:
             raise ValueError(
                 f"Path parameter name '{param_name}' is reserved and cannot be used. "
                 f"These names are used for FastAPI request injection."
+            )
+        
+        # Validate that type names don't start with underscore
+        if param_type and param_type.startswith("_"):
+            raise ValueError(
+                f"Path parameter type '{param_type}' is invalid. "
+                f"Type names cannot start with underscore."
             )
 
         params.append((param_name, param_type))
