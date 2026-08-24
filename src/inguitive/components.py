@@ -362,6 +362,55 @@ class Text(Component):
         return f"<p {attrs}>{resolved_text}</p>"
 
 
+class Header(Component):
+    """HTML heading component.
+
+    Renders an <h1> through <h6> tag based on the level parameter.
+    Use for page titles, section headings, and hierarchical content structure.
+
+    Example:
+        Header("Main Title", level=1)
+        Header("Section Heading", level=2, css="text-blue-600")
+        Header(lambda: get_title(), level=3, listen_to="title_state")
+    """
+
+    def __init__(
+        self,
+        text: str | Callable[[], str],
+        level: int = 1,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        **attrs: Any,
+    ):
+        """Initialize a Header component.
+
+        Args:
+            text: Text content (string or callable returning string)
+            level: Heading level (1-6), defaults to 1 for <h1>
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            **attrs: Additional HTML attributes
+        """
+        if not 1 <= level <= 6:
+            raise ValueError("Header level must be between 1 and 6")
+        super().__init__(id=id, css=css, **attrs)
+        self.text = text
+        self.level = level
+
+    def render(self) -> str:
+        attrs = self._get_attrs_str()
+        resolved_text = self._resolve(self.text)
+        return f"<h{self.level} {attrs}>{resolved_text}</h{self.level}>"
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        resolved_text = self._resolve(self.text)
+        return f"<h{self.level} {attrs}>{resolved_text}</h{self.level}>"
+
+
 class Icon(Component):
     """SVG icon component."""
 
