@@ -23,7 +23,9 @@ def error_display(message: str, title: str = "Error"):
     error_console.print(panel)
 
 
-APP_CONTENT = """from inguitive import create_app, Div, Text
+APP_CONTENT = """from css import BRAND_COLORS
+from inguitive import Div, Icon, Link, Text, create_app
+from svg import BOOK, GLOBE
 
 app = create_app()
 
@@ -31,19 +33,52 @@ app = create_app()
 @app.page("/")
 def home():
     return Div(
-        Text("Welcome!"),
-        css="w-full min-h-screen flex justify-center items-center",
+        Div(
+            Text("Welcome to"),
+            Text("inguitive", css="text-3xl font-bold"),
+            Text("The modern web framework."),
+            Text("Intuitive. Reactive. Pure-Python.", css="italic"),
+            Div(
+                Link(
+                    Icon(GLOBE, css="w-5 h-5"),
+                    "Go to inguitive.com",
+                    href="#",
+                    css="inline-flex items-center gap-x-2 px-3 py-2 bg-blue-500 rounded-md",
+                ),
+                Link(
+                    Icon(BOOK, css="w-5 h-5"),
+                    "Read the docs",
+                    href="#",
+                    css="inline-flex items-center gap-x-2 px-3 py-2 bg-blue-500 rounded-md",
+                ),
+                css="flex gap-6",
+            ),
+            css=f"flex flex-col gap-6 justify-center items-center h-full p-6 rounded-xl bg-{BRAND_COLORS['navy_900']}",
+        ),
+        css=f"h-dvh p-3 bg-{BRAND_COLORS['navy_950']}"
     )
+
 """
 
 CSS_CONTENT = """# Insert Tailwind CSS class constants here. The examples below show you how it works.
+
+BRAND_COLORS = {
+    "navy_900": "#10182E",
+    "navy_950": "#090E1B",
+}
+
+# Wrap the color values in square brackets for Tailwind CSS compatibility
+for color_name, color_value in BRAND_COLORS.items():
+    if "#" in color_value:
+        BRAND_COLORS[color_name] = "[" + color_value.strip() + "]"
+
 """
 
 SVG_CONTENT = '''# Insert SVG icon constants here. The examples below show you how it works.
 # In app.py, you can use these icons like this:
-# from inguitive import Icon
-# from svg import ICON_NAME
-# Icon(ICON_NAME, css="w-6 h-6 text-gray-800 dark:text-white")
+#   from inguitive import Icon
+#   from svg import ICON_NAME
+#   Icon(ICON_NAME, css="w-6 h-6 text-gray-800 dark:text-white")
 
 from markupsafe import Markup
 
@@ -58,6 +93,7 @@ BOOK = Markup("""
   <path d="M12,24c-.555,0-1.109-.077-1.648-.231l-6.726-1.921c-2.135-.61-3.626-2.587-3.626-4.808V4c0-.552,.448-1,1-1s1,.448,1,1v13.04c0,1.333,.895,2.519,2.176,2.885l6.726,1.921c.719,.205,1.478,.205,2.198,0l6.725-1.921c1.281-.366,2.176-1.552,2.176-2.885V3c0-.552,.448-1,1-1s1,.448,1,1v14.04c0,2.22-1.491,4.197-3.626,4.808l-6.726,1.921c-.54,.154-1.094,.231-1.648,.231ZM18.023,.155c-.728-.269-1.539-.202-2.26,.086l-.877,.35c-1.139,.455-1.887,1.559-1.887,2.786v14.496c-.328,.084-.663,.127-1,.127s-.672-.043-1-.127V3.377c0-1.227-.747-2.331-1.887-2.786l-.878-.351c-.721-.288-1.532-.355-2.26-.085-1.215,.45-1.976,1.583-1.976,2.822V15.691c0,1.339,.888,2.516,2.175,2.884l4.176,1.194c.538,.153,1.093,.23,1.648,.23s1.11-.077,1.648-.23l4.176-1.194c1.288-.368,2.175-1.545,2.175-2.884V2.977c0-1.239-.762-2.373-1.977-2.822Z"/>
 </svg>
 """)
+
 '''
 
 def init_command(args):
