@@ -50,6 +50,19 @@ def init_command(args):
 
     target_file.write_text(STARTER_TEMPLATE)
     console.print(f"Created {target_file}")
+
+    # Create css.py and svg.py files
+    css_file = Path("css.py")
+    svg_file = Path("svg.py")
+
+    if not css_file.exists():
+        css_file.write_text("# Content...")
+        console.print(f"Created {css_file}")
+
+    if not svg_file.exists():
+        svg_file.write_text("# Content...")
+        console.print(f"Created {svg_file}")
+
     console.print("\nRun your app with '[bold]inguitive run[/bold]'")
 
 
