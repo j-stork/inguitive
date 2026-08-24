@@ -24,7 +24,9 @@ def error_display(message: str, title: str = "Error"):
     error_console.print(panel)
 
 
-APP_CONTENT = """from css import BRAND_COLORS
+APP_CONTENT = """from markupsafe import Markup
+
+from css import BRAND_COLORS
 from inguitive import Div, Icon, Link, Text, create_app
 from svg import BOOK, GLOBE
 
@@ -35,11 +37,10 @@ app = create_app()
 def home():
     return Div(
         Div(
-            '<img src="/static/inguitive_logo_white_text.png" alt="Inguitive" class="h-16 w-auto">',
-            Text("Welcome to"),
-            Text("inguitive", css="text-3xl font-bold"),
-            Text("The modern web framework."),
-            Text("Intuitive. Reactive. Pure-Python.", css="italic"),
+            Text("WELCOME TO", css="tracking-widest text-white"),
+            Markup('<img src="/static/inguitive_logo_white_text.png" alt="Inguitive" class="h-60 w-auto">'),
+            Text("The modern web framework.", css="text-white"),
+            Text("Intuitive. Reactive. Pure-Python.", css="italic text-white"),
             Div(
                 Link(
                     Icon(GLOBE, css="w-5 h-5"),
