@@ -2,6 +2,7 @@
 
 import markupsafe
 import pytest
+from svg import MOON
 
 from inguitive.components import (
     Button,
@@ -27,7 +28,6 @@ from inguitive.session import (
     set_session_backend,
 )
 from inguitive.state import State
-from svg import MOON
 
 
 @pytest.fixture(autouse=True)
