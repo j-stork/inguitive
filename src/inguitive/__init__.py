@@ -20,12 +20,6 @@ from inguitive.components import (
     Textarea,
 )
 
-# Re-export styling constants for convenience
-from inguitive.css import (
-    BUTTON_BASE_CSS,
-    BUTTON_PRIMARY_CSS,
-    BUTTON_SECONDARY_CSS,
-)
 from inguitive.fastapi import InguitiveApp, create_app, push_update, redirect, run_app
 from inguitive.htmx import update_components
 from inguitive.session import (
@@ -38,9 +32,6 @@ from inguitive.session import (
     set_session_backend,
 )
 from inguitive.state import State
-
-# Re-export SVG icons for convenience
-from inguitive.svg import MOON, SUN
 from inguitive.trigger import get_trigger_args
 from inguitive.utils import nl2br
 from inguitive.validation import (
@@ -97,13 +88,6 @@ __all__ = [
     "set_session_backend",
     "get_session_backend",
     "get_session_id",
-    # Styling
-    "BUTTON_BASE_CSS",
-    "BUTTON_PRIMARY_CSS",
-    "BUTTON_SECONDARY_CSS",
-    # Icons
-    "MOON",
-    "SUN",
     # Utilities
     "nl2br",
     # Validation
