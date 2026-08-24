@@ -8,6 +8,8 @@
 
 ::: inguitive.components.Label
 
+::: inguitive.components.Header
+
 ::: inguitive.components.Button
 
 ::: inguitive.components.Input

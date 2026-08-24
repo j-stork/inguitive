@@ -65,6 +65,17 @@ Renders a `<label>` element. The `for_` parameter sets the `for` attribute
 Label("Email address", for_="email", css="block text-sm font-medium")
 ```
 
+### `Header`
+
+Renders heading elements `<h1>` through `<h6>`. Use `level` to specify the heading
+level (default: 1).
+
+```python
+Header("Main Title", level=1)
+Header("Section Heading", level=2, css="text-blue-600")
+Header(lambda: get_title(), level=3, listen_to="title_state")
+```
+
 ## Form components
 
 ### `Form`

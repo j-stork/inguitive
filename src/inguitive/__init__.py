@@ -9,6 +9,7 @@ from inguitive.components import (
     DataTable,
     Div,
     Form,
+    Header,
     Icon,
     Input,
     Label,
@@ -64,6 +65,7 @@ __all__ = [
     "Form",
     "Text",
     "Link",
+    "Header",
     "TemplateComponent",
     "DataTable",
     # State
@@ -105,4 +107,4 @@ __all__ = [
     "validate_form",
 ]
 
-__version__ = "0.6.0"
+__version__ = "0.8.0"

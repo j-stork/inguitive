@@ -1,4 +1,4 @@
-<project title="inguitive" summary="A pure Python web framework for building reactive, interactive web applications without writing JavaScript. Combines FastAPI, HTMX, and Tailwind CSS with a declarative component model, session-scoped reactive state management, and SSE server-push for real-time updates (v0.7.0).">inguitive lets Python developers define pages and trigger handlers entirely in Python. Components automatically re-render when state changes via HTMX out-of-band swaps. Each browser session has isolated state. Server-Sent Events (SSE) allow the server to push component updates to connected tabs — call State.set() from a background task to broadcast to all sessions, or push_update(session_id, *ids) for per-session pushes. The public API is exported from src/inguitive/__init__.py.<docs><doc title="README" desc="Full quick-start guide, component reference, session backend comparison, and production deployment checklist"># inguitive
+<project title="inguitive" summary="A pure Python web framework for building reactive, interactive web applications without writing JavaScript. Combines FastAPI, HTMX, and Tailwind CSS with a declarative component model, session-scoped reactive state management, and SSE server-push for real-time updates (v0.8.0).">inguitive lets Python developers define pages and trigger handlers entirely in Python. Components automatically re-render when state changes via HTMX out-of-band swaps. Each browser session has isolated state. Server-Sent Events (SSE) allow the server to push component updates to connected tabs — call State.set() from a background task to broadcast to all sessions, or push_update(session_id, *ids) for per-session pushes. The public API is exported from src/inguitive/__init__.py.<docs><doc title="README" desc="Full quick-start guide, component reference, session backend comparison, and production deployment checklist"># inguitive
 
 A pure Python web framework combining intuitive syntax with **HTMX** for partial page reloads and **Tailwind CSS** for styling.
 
@@ -285,6 +285,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.8.0] - 2026-08-24
+
+### Added
+
+- **Header component**: Renders `<h1>` through `<h6>` headings with configurable `level` parameter (default: 1). Supports dynamic text, CSS styling, and HTMX out-of-band updates.
 
 ---
 
@@ -649,7 +657,7 @@ __all__ = [
     &quot;validate_form&quot;,
 ]
 
-__version__ = &quot;0.7.0&quot;
+__version__ = &quot;0.8.0&quot;
 </doc><doc title="Components" desc="All UI component classes (Div, Button, Input, DataTable, etc.) with render/update methods">&quot;&quot;&quot;
 Component classes for inguitive framework.
 &quot;&quot;&quot;

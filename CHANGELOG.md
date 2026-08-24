@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] - 2026-08-24
+
+### Added
+
+- **Header component**: Renders `<h1>` through `<h6>` headings with configurable `level` parameter (default: 1). Supports dynamic text, CSS styling, and HTMX out-of-band updates.
+
+---
+
 ## [0.7.0] - 2026-08-21
 
 ### Added
@@ -191,7 +199,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Trigger argument context via `get_trigger_args()`
 
 **Component System**
-- 15 built-in components: `Component`, `Div`, `Button`, `Label`, `Icon`, `Input`, `Textarea`, `Select`, `Checkbox`, `Radio`, `Form`, `Text`, `Link`, `TemplateComponent`, `DataTable`
+- 16 built-in components: `Component`, `Div`, `Button`, `Label`, `Icon`, `Input`, `Textarea`, `Select`, `Checkbox`, `Radio`, `Form`, `Text`, `Link`, `Header`, `TemplateComponent`, `DataTable`
 - All component attributes support dynamic values via callables
 - Composable UI components with clean Python syntax
 - Tailwind CSS first-class support for all components
