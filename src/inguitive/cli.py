@@ -23,7 +23,7 @@ def error_display(message: str, title: str = "Error"):
     error_console.print(panel)
 
 
-STARTER_TEMPLATE = """from inguitive import create_app, Div, Text
+APP_CONTENT = """from inguitive import create_app, Div, Text
 
 app = create_app()
 
@@ -36,6 +36,29 @@ def home():
     )
 """
 
+CSS_CONTENT = """# Insert Tailwind CSS class constants here. The examples below show you how it works.
+"""
+
+SVG_CONTENT = '''# Insert SVG icon constants here. The examples below show you how it works.
+# In app.py, you can use these icons like this:
+# from inguitive import Icon
+# from svg import ICON_NAME
+# Icon(ICON_NAME, css="w-6 h-6 text-gray-800 dark:text-white")
+
+from markupsafe import Markup
+
+GLOBE = Markup("""
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
+  <path d="M12,0A12,12,0,1,0,24,12,12.013,12.013,0,0,0,12,0Zm8.647,7H17.426a19.676,19.676,0,0,0-2.821-4.644A10.031,10.031,0,0,1,20.647,7ZM16.5,12a10.211,10.211,0,0,1-.476,3H7.976A10.211,10.211,0,0,1,7.5,12a10.211,10.211,0,0,1,.476-3h8.048A10.211,10.211,0,0,1,16.5,12ZM8.778,17h6.444A19.614,19.614,0,0,1,12,21.588,19.57,19.57,0,0,1,8.778,17Zm0-10A19.614,19.614,0,0,1,12,2.412,19.57,19.57,0,0,1,15.222,7ZM9.4,2.356A19.676,19.676,0,0,0,6.574,7H3.353A10.031,10.031,0,0,1,9.4,2.356ZM2.461,9H5.9a12.016,12.016,0,0,0-.4,3,12.016,12.016,0,0,0,.4,3H2.461a9.992,9.992,0,0,1,0-6Zm.892,8H6.574A19.676,19.676,0,0,0,9.4,21.644,10.031,10.031,0,0,1,3.353,17Zm11.252,4.644A19.676,19.676,0,0,0,17.426,17h3.221A10.031,10.031,0,0,1,14.605,21.644ZM21.539,15H18.1a12.016,12.016,0,0,0,.4-3,12.016,12.016,0,0,0-.4-3h3.437a9.992,9.992,0,0,1,0,6Z"/>
+</svg>
+""")
+
+BOOK = Markup("""
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
+  <path d="M12,24c-.555,0-1.109-.077-1.648-.231l-6.726-1.921c-2.135-.61-3.626-2.587-3.626-4.808V4c0-.552,.448-1,1-1s1,.448,1,1v13.04c0,1.333,.895,2.519,2.176,2.885l6.726,1.921c.719,.205,1.478,.205,2.198,0l6.725-1.921c1.281-.366,2.176-1.552,2.176-2.885V3c0-.552,.448-1,1-1s1,.448,1,1v14.04c0,2.22-1.491,4.197-3.626,4.808l-6.726,1.921c-.54,.154-1.094,.231-1.648,.231ZM18.023,.155c-.728-.269-1.539-.202-2.26,.086l-.877,.35c-1.139,.455-1.887,1.559-1.887,2.786v14.496c-.328,.084-.663,.127-1,.127s-.672-.043-1-.127V3.377c0-1.227-.747-2.331-1.887-2.786l-.878-.351c-.721-.288-1.532-.355-2.26-.085-1.215,.45-1.976,1.583-1.976,2.822V15.691c0,1.339,.888,2.516,2.175,2.884l4.176,1.194c.538,.153,1.093,.23,1.648,.23s1.11-.077,1.648-.23l4.176-1.194c1.288-.368,2.175-1.545,2.175-2.884V2.977c0-1.239-.762-2.373-1.977-2.822Z"/>
+</svg>
+""")
+'''
 
 def init_command(args):
     """Handle the init command - creates a new app.py file."""
@@ -48,7 +71,7 @@ def init_command(args):
         )
         sys.exit(1)
 
-    target_file.write_text(STARTER_TEMPLATE)
+    target_file.write_text(APP_CONTENT)
     console.print(f"Created {target_file}")
 
     # Create css.py and svg.py files
@@ -56,11 +79,11 @@ def init_command(args):
     svg_file = Path("svg.py")
 
     if not css_file.exists():
-        css_file.write_text("# Content...")
+        css_file.write_text(CSS_CONTENT)
         console.print(f"Created {css_file}")
 
     if not svg_file.exists():
-        svg_file.write_text("# Content...")
+        svg_file.write_text(SVG_CONTENT)
         console.print(f"Created {svg_file}")
 
     console.print("\nRun your app with '[bold]inguitive run[/bold]'")
