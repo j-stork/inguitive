@@ -69,7 +69,7 @@ automatically.
 
 ```python
 from inguitive import Div, Label, Button
-from inguitive.css import BUTTON_PRIMARY_CSS
+from css import BUTTON_PRIMARY_CSS
 
 def Counter():
     return Div(
@@ -113,7 +113,7 @@ uvicorn app:app --reload
 
 ```python
 from inguitive import Div, Button, Label, State, create_app
-from inguitive.css import BUTTON_PRIMARY_CSS
+from css import BUTTON_PRIMARY_CSS
 
 app = create_app(title="Counter")
 counter = State(0, "counter")

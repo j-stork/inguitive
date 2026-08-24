@@ -26,7 +26,7 @@ pip install inguitive
 
 ```python
 from inguitive import Div, Button, Label, State, create_app
-from inguitive.css import BUTTON_PRIMARY_CSS
+from css import BUTTON_PRIMARY_CSS
 
 # Create FastAPI app
 # Optionally, you can assign a title and/or favicon to the app (which will appear

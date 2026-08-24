@@ -134,7 +134,7 @@ Radio(id="size-lg", name="size", value="lg")
 Renders `<button>`. Wire it to a trigger handler with `trigger`.
 
 ```python
-from inguitive.css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
+from css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 
 Button("Save",   trigger="save_form",   css=BUTTON_PRIMARY_CSS)
 Button("Cancel", trigger="cancel_form", css=BUTTON_SECONDARY_CSS)
@@ -189,7 +189,7 @@ icon constants from `inguitive.svg`.
 
 ```python
 from inguitive import Icon
-from inguitive.svg import MOON, SUN
+from svg import MOON, SUN
 
 Icon(SUN, css="w-5 h-5 text-yellow-400")
 Icon(MOON, css="w-5 h-5 text-indigo-300")

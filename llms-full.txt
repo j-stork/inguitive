@@ -26,7 +26,7 @@ pip install inguitive
 
 ```python
 from inguitive import Div, Button, Label, State, create_app
-from inguitive.css import BUTTON_PRIMARY_CSS
+from css import BUTTON_PRIMARY_CSS
 
 # Create FastAPI app
 # Optionally, you can assign a title and/or favicon to the app (which will appear
@@ -549,7 +549,7 @@ from inguitive.components import (
 )
 
 # Re-export styling constants for convenience
-from inguitive.css import (
+from css import (
     BUTTON_BASE_CSS,
     BUTTON_PRIMARY_CSS,
     BUTTON_SECONDARY_CSS,
@@ -568,7 +568,7 @@ from inguitive.session import (
 from inguitive.state import State
 
 # Re-export SVG icons for convenience
-from inguitive.svg import MOON, SUN
+from svg import MOON, SUN
 from inguitive.trigger import get_trigger_args
 from inguitive.utils import nl2br
 from inguitive.validation import (
@@ -3985,7 +3985,7 @@ This proves that State values are fully isolated per user session.
 &quot;&quot;&quot;
 
 from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
-from inguitive.svg import MOON, SUN
+from svg import MOON, SUN
 
 # --- App Setup ---
 # template_dir defaults to &quot;templates&quot; which will use bundled templates from the package

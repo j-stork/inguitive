@@ -18,7 +18,7 @@ This proves that State values are fully isolated per user session.
 """
 
 from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
-from inguitive.svg import MOON, SUN
+from svg import MOON, SUN
 
 # --- App Setup ---
 # template_dir defaults to "templates" which will use bundled templates from the package

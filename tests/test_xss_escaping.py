@@ -27,7 +27,7 @@ from inguitive.session import (
     set_session_backend,
 )
 from inguitive.state import State
-from inguitive.svg import MOON
+from svg import MOON
 
 
 @pytest.fixture(autouse=True)

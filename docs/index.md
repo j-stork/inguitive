@@ -8,7 +8,7 @@ Each browser session has isolated state — no global mutable variables, no Java
 
 ```python
 from inguitive import Div, Button, Label, State, create_app
-from inguitive.css import BUTTON_PRIMARY_CSS
+from css import BUTTON_PRIMARY_CSS
 
 app = create_app(title="Counter")
 counter = State(0, "counter")
