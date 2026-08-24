@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -34,6 +35,7 @@ app = create_app()
 def home():
     return Div(
         Div(
+            '<img src="/static/inguitive_logo_white_text.png" alt="Inguitive" class="h-16 w-auto">',
             Text("Welcome to"),
             Text("inguitive", css="text-3xl font-bold"),
             Text("The modern web framework."),
@@ -121,6 +123,15 @@ def init_command(args):
     if not svg_file.exists():
         svg_file.write_text(SVG_CONTENT)
         console.print(f"Created {svg_file}")
+
+    # Copy the logo image
+    static_dir = Path("static")
+    static_dir.mkdir(exist_ok=True)
+    logo_src = Path(__file__).parent / "static" / "inguitive_logo_white_text.png"
+    logo_dst = static_dir / "inguitive_logo_white_text.png"
+    if logo_src.exists():
+        shutil.copy(logo_src, logo_dst)
+        console.print(f"Created {logo_dst}")
 
     console.print("\nRun your app with '[bold]inguitive run[/bold]'")
 
