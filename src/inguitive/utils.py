@@ -107,7 +107,6 @@ def _get_top_level_defs(content: list[str]) -> list[tuple[int, int, str]]:
 
                 # Find end of this definition
                 j = i + 1
-                indent = len(line) - len(line.lstrip())
 
                 while j < len(content):
                     next_line = content[j]
