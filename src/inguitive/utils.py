@@ -54,7 +54,7 @@ def _extract_docstring(content: list[str], start_index: int) -> tuple[str, int]:
         return "", start_index
 
     # Check if it's a single-line docstring
-    if stripped_line.endswith(quote):
+    if stripped_line.endswith(quote) and stripped_line[len(quote):-len(quote)].strip():
         # Extract content between quotes
         docstring = "```\n" + stripped_line[len(quote) : -len(quote)].strip() + "\n```"
         return docstring, start_index + 1
