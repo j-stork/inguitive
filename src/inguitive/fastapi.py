@@ -8,6 +8,7 @@ import asyncio
 import contextvars
 import importlib.resources
 import inspect
+import os
 import traceback
 import uuid
 import warnings
@@ -17,7 +18,7 @@ from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 
 import markupsafe
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
@@ -633,25 +634,48 @@ def create_app(
         cleanup_interval=session_cleanup_interval,
     )
 
-    # Mount static files from the package
-    try:
-        importlib.resources.files("inguitive")
-        static_path = importlib.resources.files("inguitive").joinpath("static")
-        app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
-    except (ImportError, AttributeError, RuntimeError):
-        # Fallback: try to find static directory relative to __file__
-        static_path = Path(__file__).parent / "static"
-        if static_path.exists():
-            app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
-        else:
-            warnings.warn(
-                "Could not mount static files directory. "
-                "The default favicon at '/static/inguitive_favicon.svg' will not be available. "
-                "To fix this, either install the package properly or provide a custom favicon "
-                "path to create_app(favicon='...').",
-                UserWarning,
-                stacklevel=2,
+    # Mount static files - prioritize CWD/static/, then package static/
+    static_dirs = []
+    
+    # 1. Check CWD/static/ first (user's project static files)
+    cwd_static = Path.cwd() / "static"
+    if cwd_static.exists() and cwd_static.is_dir():
+        static_dirs.append(str(cwd_static))
+    
+    # 2. Check package static/ directory (Python 3.10+ guarantees importlib.resources exists)
+    pkg_static = importlib.resources.files("inguitive").joinpath("static")
+    if pkg_static.exists() and pkg_static.is_dir():
+        static_dirs.append(str(pkg_static))
+    
+    if static_dirs:
+        # Create a custom static files app that checks all directories in order
+        async def static_files_app(scope, receive, send):
+            if scope["type"] != "http":
+                return
+            
+            path = scope["path"].lstrip("/")
+            for directory in static_dirs:
+                file_path = Path(directory) / path
+                if file_path.exists() and file_path.is_file():
+                    return FileResponse(str(file_path))
+            
+            # If no file found, return 404
+            return FileResponse(
+                content=b"Not Found",
+                status_code=404,
+                media_type="text/plain"
             )
+        
+        app.mount("/static", static_files_app, name="static")
+    else:
+        warnings.warn(
+            "Could not mount static files directory. "
+            "The default favicon at '/static/inguitive_favicon.svg' will not be available. "
+            "To fix this, either install the package properly or provide a custom favicon "
+            "path to create_app(favicon='...').",
+            UserWarning,
+            stacklevel=2,
+        )
 
     # -----------------------------------------------------------------------
     # SSE endpoint — GET /_sse
