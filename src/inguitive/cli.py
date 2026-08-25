@@ -9,6 +9,8 @@ from pathlib import Path
 from rich.console import Console
 from rich.panel import Panel
 
+from inguitive.utils import gather_package_documentation
+
 console = Console()
 error_console = Console(file=sys.stderr)
 
@@ -136,6 +138,14 @@ def init_command(args):
     if logo_src.exists():
         shutil.copy(logo_src, logo_dst)
         console.print(f"Created {logo_dst}")
+
+    # Ask if user wants to create llms-inguitive.txt
+    llms_file = Path("llms-inguitive.txt")
+    response = input("Create llms-inguitive.txt for LLM indexing? [y/N]: ").lower()
+    if response in ("y", "yes"):
+        llms_content = gather_package_documentation()
+        llms_file.write_text(llms_content)
+        console.print(f"Created {llms_file}")
 
     console.print("\nRun your app with '[bold]inguitive run[/bold]'")
 
