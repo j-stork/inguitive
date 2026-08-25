@@ -658,7 +658,8 @@ def create_app(
                     return FileResponse(str(file_path))
 
             # If no file found, return 404
-            return FileResponse(
+            from starlette.responses import Response
+            return Response(
                 content=b"Not Found",
                 status_code=404,
                 media_type="text/plain"
