@@ -99,26 +99,30 @@ def _get_top_level_defs(content: list[str]) -> list[tuple[int, int, str]]:
         # Only consider top-level (not indented)
         if not line.startswith(" ") and not line.startswith("\t") and line.strip():
             if line.startswith("class ") or line.startswith("def "):
-                # Extract name
-                name_part = line.strip()
-                if line.startswith("class "):
-                    name = "`" + name_part[len("class ") :].split("(")[0].split(":")[0].strip() + "` (class)"
-                else:
-                    name = "`" + name_part[len("def ") :].split("(")[0].split(":")[0].strip() + "` (function)"
-
-                # Find end of this definition
+                # Find end of this definition first
                 j = i + 1
-
                 while j < len(content):
                     next_line = content[j]
                     next_stripped = next_line.strip()
-
                     # Check if we've hit another top-level definition
                     if next_line and not next_line.startswith(" ") and not next_line.startswith("\t"):
                         if next_stripped.startswith("class ") or next_stripped.startswith("def "):
                             break
                     j += 1
 
+                # Extract name
+                name_part = line.strip()
+                if line.startswith("class "):
+                    raw_name = name_part[len("class ") :].split("(")[0].split(":")[0].strip()
+                else:
+                    raw_name = name_part[len("def ") :].split("(")[0].split(":")[0].strip()
+
+                # Skip internal classes and functions (names starting with _)
+                if raw_name.startswith("_"):
+                    i = j - 1
+                    continue
+
+                name = "`" + raw_name + "` (class)" if line.startswith("class ") else "`" + raw_name + "` (function)"
                 definitions.append((i, j - 1, name))
                 i = j - 1  # Skip to end of definition
 
@@ -150,6 +154,21 @@ def gather_package_documentation() -> str:
 
         with open(py_file) as f:
             content = f.readlines()
+
+        # Check for module-level docstring
+        module_docstring_start = 0
+        while module_docstring_start < len(content):
+            stripped = content[module_docstring_start].strip()
+            if stripped:
+                break
+            module_docstring_start += 1
+
+        if module_docstring_start < len(content):
+            stripped = content[module_docstring_start].strip()
+            if stripped.startswith('"""') or stripped.startswith("'''"):
+                module_docstring, _ = _extract_docstring(content, module_docstring_start)
+                if module_docstring:
+                    output_lines.append(f"**Module Docstring:**\n\n{module_docstring}\n")
 
         # Get all top-level definitions
         definitions = _get_top_level_defs(content)
