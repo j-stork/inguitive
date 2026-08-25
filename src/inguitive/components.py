@@ -489,6 +489,43 @@ class Icon(Component):
 
         return resolved_svg
 
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        # Parse the SVG and add hx-swap-oob="true" and id attributes
+        raw_svg = self.svg() if callable(self.svg) else self.svg
+        is_markup = isinstance(raw_svg, markupsafe.Markup)
+        svg_string = str(raw_svg) if is_markup else raw_svg
+
+        try:
+            root = ET.fromstring(svg_string)
+            root.set("hx-swap-oob", "true")
+            root.set("id", self.id)
+
+            result = ET.tostring(root, encoding="unicode", method="xml")
+
+            # Clean up namespace prefixes (same as _replace_class)
+            result = re.sub(r'\s+xmlns(:\w+)?="[^"]*"', '', result)
+            result = re.sub(r'<ns\d+:', '<', result)
+            result = re.sub(r'</ns\d+:', '</', result)
+            result = re.sub(r'(\s)ns\d+:', r'\1', result)
+
+        except ET.ParseError as e:
+            raise ValueError(
+                f"Invalid SVG XML: {e}. "
+                f"The Icon component requires well-formed SVG XML."
+            ) from e
+
+        # Apply CSS class replacement if needed
+        if self.css:
+            css_value = self.css() if callable(self.css) else self.css
+            result = self._replace_class(result, css_value)
+
+        if is_markup:
+            return markupsafe.Markup(result)
+        return result
+
 
 class Image(Component):
     """HTML image component.

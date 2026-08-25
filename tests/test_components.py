@@ -229,6 +229,26 @@ class TestIcon:
         # ns0: prefix should be removed
         assert "ns0:" not in result
 
+    def test_update_method(self):
+        """Test Icon update method for HTMX out-of-band updates."""
+        from .svg import MOON
+
+        icon = Icon(MOON, id="my-icon", css="w-6 h-6")
+        html = icon.update()
+        assert 'hx-swap-oob="true"' in html
+        assert 'id="my-icon"' in html
+
+    def test_update_without_explicit_id(self):
+        """Test that update() includes hx-swap-oob even with auto-generated id."""
+        from .svg import MOON
+
+        icon = Icon(MOON)
+        html = icon.update()
+        # Component always gets an auto-generated id, so hx-swap-oob is always present
+        assert '<svg' in html
+        assert 'hx-swap-oob="true"' in html
+        assert 'id=' in html
+
 
 class TestImage:
     def test_basic_render(self):
