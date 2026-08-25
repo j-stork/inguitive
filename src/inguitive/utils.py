@@ -60,7 +60,7 @@ def _extract_docstring(content: list[str], start_index: int) -> tuple[str, int]:
         return docstring, start_index + 1
 
     # Multi-line docstring - collect until closing quote
-    docstring_lines = []
+    docstring_lines = ["```"]
 
     # Extract first line (after opening quote)
     first_line = stripped_line[len(quote) :].strip()
@@ -80,6 +80,7 @@ def _extract_docstring(content: list[str], start_index: int) -> tuple[str, int]:
         docstring_lines.append(content[end_index].rstrip())
         end_index += 1
 
+    docstring_lines.append("```")
     docstring = "\n".join(docstring_lines).strip()
     return docstring, end_index + 1
 
@@ -101,9 +102,9 @@ def _get_top_level_defs(content: list[str]) -> list[tuple[int, int, str]]:
                 # Extract name
                 name_part = line.strip()
                 if line.startswith("class "):
-                    name = name_part[len("class ") :].split("(")[0].split(":")[0].strip()
+                    name = name_part[len("class ") :].split("(")[0].split(":")[0].strip() + " (class)"
                 else:
-                    name = name_part[len("def ") :].split("(")[0].split(":")[0].strip()
+                    name = name_part[len("def ") :].split("(")[0].split(":")[0].strip() + " (function)"
 
                 # Find end of this definition
                 j = i + 1
@@ -139,7 +140,7 @@ def gather_package_documentation() -> str:
     # List all Python files in the inguitive package directory
     python_files = [f for f in inguitive_src_path.iterdir() if f.suffix == ".py"]
 
-    output_lines = []
+    output_lines = ["# inguitive Package Documentation\n"]
 
     # Add Python files with their classes and functions
     for py_file in python_files:
@@ -154,6 +155,7 @@ def gather_package_documentation() -> str:
         definitions = _get_top_level_defs(content)
 
         for start, end, name in definitions:
+            output_lines.append("---\n")
             output_lines.append(f"### {name}\n")
             output_lines.append(f"*Defined at lines {start + 1}-{end}*\n")
 

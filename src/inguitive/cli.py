@@ -139,9 +139,9 @@ def init_command(args):
         shutil.copy(logo_src, logo_dst)
         console.print(f"Created {logo_dst}")
 
-    # Ask if user wants to create llms-inguitive.txt
-    llms_file = Path("llms-inguitive.txt")
-    response = input("Create llms-inguitive.txt for LLM indexing? [y/N]: ").lower()
+    # Ask if user wants to create llms-inguitive.md
+    llms_file = Path("llms-inguitive.md")
+    response = input("Create llms-inguitive.md for LLM indexing? [y/N]: ").lower()
     if response in ("y", "yes"):
         llms_content = gather_package_documentation()
         llms_file.write_text(llms_content)
