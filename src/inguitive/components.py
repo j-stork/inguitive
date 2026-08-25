@@ -421,6 +421,50 @@ class Icon(Component):
         self.svg = svg
 
     @staticmethod
+    def _set_svg_attrs(
+        svg_content: str | markupsafe.Markup,
+        attrs: dict[str, str],
+        error_context: str = "Icon component",
+    ) -> str | markupsafe.Markup:
+        """Set attributes on the root element of an SVG.
+
+        Args:
+            svg_content: The SVG HTML string or Markup object
+            attrs: Dictionary of attribute name -> value to set on root element
+            error_context: Context string for error messages
+
+        Returns:
+            Processed SVG string or Markup with attributes set
+        """
+        is_markup = isinstance(svg_content, markupsafe.Markup)
+        svg_string = str(svg_content) if is_markup else svg_content
+
+        try:
+            root = ET.fromstring(svg_string)
+            for name, value in attrs.items():
+                root.set(name, value)
+
+            result = ET.tostring(root, encoding="unicode", method="xml")
+
+            # Remove namespace prefixes and declarations
+            result = re.sub(r'\s+xmlns(:\w+)?="[^"]*"', '', result)
+            result = re.sub(r'<ns\d+:', '<', result)
+            result = re.sub(r'</ns\d+:', '</', result)
+            result = re.sub(r'(\s)ns\d+:', r'\1', result)
+
+        except ET.ParseError as e:
+            raise ValueError(
+                f"Invalid SVG XML: {e}. "
+                f"The {error_context} requires well-formed SVG XML. "
+                f"Common issues: unquoted attributes, unclosed tags, or malformed syntax. "
+                f"Please validate your SVG input."
+            ) from e
+
+        if is_markup:
+            return markupsafe.Markup(result)
+        return result
+
+    @staticmethod
     def _replace_class(svg_str: str, css_value: str) -> str:
         """Replace or insert class attribute in SVG string.
 
@@ -435,42 +479,7 @@ class Icon(Component):
         Returns:
             SVG string with updated class attribute
         """
-        # Extract the string content if it's a Markup object
-        is_markup = isinstance(svg_str, markupsafe.Markup)
-        svg_string = str(svg_str) if is_markup else svg_str
-
-        try:
-            # Parse the SVG string
-            root = ET.fromstring(svg_string)
-
-            # Set the class attribute on the root element
-            root.set("class", css_value)
-
-            # Serialize back to string
-            result = ET.tostring(root, encoding="unicode", method="xml")
-
-            # Remove namespace prefixes and declarations to maintain clean HTML output
-            # Remove all namespace declarations (xmlns and xmlns:*)
-            result = re.sub(r'\s+xmlns(:\w+)?="[^"]*"', '', result)
-            # Remove namespace prefixes from opening tags (e.g., <ns0:svg -> <svg)
-            result = re.sub(r'<ns\d+:', '<', result)
-            # Remove namespace prefixes from closing tags (e.g., </ns0:svg -> </svg)
-            result = re.sub(r'</ns\d+:', '</', result)
-            # Remove namespace prefixes from attribute names (e.g., ns0:class="..." -> class="...")
-            result = re.sub(r'(\s)ns\d+:', r'\1', result)
-
-        except ET.ParseError as e:
-            raise ValueError(
-                f"Invalid SVG XML: {e}. "
-                f"The Icon component requires well-formed SVG XML. "
-                f"Common issues: unquoted attributes, unclosed tags, or malformed syntax. "
-                f"Please validate your SVG input."
-            ) from e
-
-        # Preserve Markup type if input was Markup
-        if is_markup:
-            return markupsafe.Markup(result)
-        return result
+        return Icon._set_svg_attrs(svg_str, {"class": css_value}, error_context="Icon component")
 
     def render(self) -> str:
         # SVG content is always developer-supplied markup, never user input.
@@ -493,37 +502,18 @@ class Icon(Component):
         """Render with hx-swap-oob for HTMX out-of-band updates."""
         if not self.id:
             return self.render()
-        # Parse the SVG and add hx-swap-oob="true" and id attributes
-        raw_svg = self.svg() if callable(self.svg) else self.svg
-        is_markup = isinstance(raw_svg, markupsafe.Markup)
-        svg_string = str(raw_svg) if is_markup else raw_svg
 
-        try:
-            root = ET.fromstring(svg_string)
-            root.set("hx-swap-oob", "true")
-            root.set("id", self.id)
-
-            result = ET.tostring(root, encoding="unicode", method="xml")
-
-            # Clean up namespace prefixes (same as _replace_class)
-            result = re.sub(r'\s+xmlns(:\w+)?="[^"]*"', '', result)
-            result = re.sub(r'<ns\d+:', '<', result)
-            result = re.sub(r'</ns\d+:', '</', result)
-            result = re.sub(r'(\s)ns\d+:', r'\1', result)
-
-        except ET.ParseError as e:
-            raise ValueError(
-                f"Invalid SVG XML: {e}. "
-                f"The Icon component requires well-formed SVG XML."
-            ) from e
+        result = self._set_svg_attrs(
+            self.svg() if callable(self.svg) else self.svg,
+            {"hx-swap-oob": "true", "id": self.id},
+            error_context="Icon component",
+        )
 
         # Apply CSS class replacement if needed
         if self.css:
             css_value = self.css() if callable(self.css) else self.css
             result = self._replace_class(result, css_value)
 
-        if is_markup:
-            return markupsafe.Markup(result)
         return result
 
 
