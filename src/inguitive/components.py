@@ -424,14 +424,12 @@ class Icon(Component):
     def _set_svg_attrs(
         svg_content: str | markupsafe.Markup,
         attrs: dict[str, str],
-        error_context: str = "Icon component",
     ) -> str | markupsafe.Markup:
         """Set attributes on the root element of an SVG.
 
         Args:
             svg_content: The SVG HTML string or Markup object
             attrs: Dictionary of attribute name -> value to set on root element
-            error_context: Context string for error messages
 
         Returns:
             Processed SVG string or Markup with attributes set
@@ -455,7 +453,7 @@ class Icon(Component):
         except ET.ParseError as e:
             raise ValueError(
                 f"Invalid SVG XML: {e}. "
-                f"The {error_context} requires well-formed SVG XML. "
+                f"The Icon component requires well-formed SVG XML. "
                 f"Common issues: unquoted attributes, unclosed tags, or malformed syntax. "
                 f"Please validate your SVG input."
             ) from e
@@ -479,7 +477,7 @@ class Icon(Component):
         Returns:
             SVG string with updated class attribute
         """
-        return Icon._set_svg_attrs(svg_str, {"class": css_value}, error_context="Icon component")
+        return Icon._set_svg_attrs(svg_str, {"class": css_value})
 
     def render(self) -> str:
         # SVG content is always developer-supplied markup, never user input.
@@ -506,7 +504,6 @@ class Icon(Component):
         result = self._set_svg_attrs(
             self.svg() if callable(self.svg) else self.svg,
             {"hx-swap-oob": "true", "id": self.id},
-            error_context="Icon component",
         )
 
         # Apply CSS class replacement if needed
