@@ -641,7 +641,7 @@ def create_app(
         static_dirs.append(str(cwd_static))
 
     # 2. Check package static/ directory (Python 3.10+ guarantees importlib.resources exists)
-    pkg_static = importlib.resources.files("inguitive").joinpath("static")
+    pkg_static = Path(str(importlib.resources.files("inguitive"))) / "static"
     if pkg_static.exists() and pkg_static.is_dir():
         static_dirs.append(str(pkg_static))
 
