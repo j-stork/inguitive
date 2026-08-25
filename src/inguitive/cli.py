@@ -37,22 +37,21 @@ app = create_app()
 def home():
     return Div(
         Div(
-            Text("WELCOME TO", css="tracking-widest text-white"),
-            Markup('<img src="/static/inguitive_logo_white_text.png" alt="Inguitive" class="h-60 w-auto">'),
-            Text("The modern web framework.", css="text-white"),
-            Text("Intuitive. Reactive. Pure-Python.", css="italic text-white"),
+            Text("WELCOME TO", css=f"tracking-widest text-{BRAND_COLORS['navy_500']}"),
+            Markup('<img src="/static/inguitive_logo_white_text.svg" alt="Inguitive" class="h-60 w-auto">'),
+            Text("Intuitive. Reactive. Pure-Python.", css="text-2xl text-white"),
             Div(
                 Link(
-                    Icon(GLOBE, css="w-5 h-5"),
-                    "Go to inguitive.com",
+                    Icon(GLOBE),
+                    "Visit inguitive.com",
                     href="#",
-                    css="inline-flex items-center gap-x-2 px-3 py-2 bg-blue-500 rounded-md",
+                    css=f"inline-flex items-center gap-x-2 px-3 py-2 rounded-md font-medium cursor-pointer text-white bg-{BRAND_COLORS['blue_500']} hover:bg-{BRAND_COLORS['blue_400']} active:bg-{BRAND_COLORS['blue_500']}",
                 ),
                 Link(
-                    Icon(BOOK, css="w-5 h-5"),
+                    Icon(BOOK),
                     "Read the docs",
                     href="#",
-                    css="inline-flex items-center gap-x-2 px-3 py-2 bg-blue-500 rounded-md",
+                    css="inline-flex items-center gap-x-2 px-3 py-2 rounded-md font-medium cursor-pointer text-white border border-white hover:bg-white/10 active:bg-transparent",
                 ),
                 css="flex gap-6",
             ),
@@ -66,6 +65,10 @@ def home():
 CSS_CONTENT = """# Insert Tailwind CSS class constants here. The examples below show you how it works.
 
 BRAND_COLORS = {
+    "blue_400": "#3D6EF0",
+    "blue_500": "#1147E8",
+    "violet_600": "#CA00E0",
+    "navy_500": "#4977C1",
     "navy_900": "#10182E",
     "navy_950": "#090E1B",
 }
@@ -86,14 +89,14 @@ SVG_CONTENT = '''# Insert SVG icon constants here. The examples below show you h
 from markupsafe import Markup
 
 GLOBE = Markup("""
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
-  <path d="M12,0A12,12,0,1,0,24,12,12.013,12.013,0,0,0,12,0Zm8.647,7H17.426a19.676,19.676,0,0,0-2.821-4.644A10.031,10.031,0,0,1,20.647,7ZM16.5,12a10.211,10.211,0,0,1-.476,3H7.976A10.211,10.211,0,0,1,7.5,12a10.211,10.211,0,0,1,.476-3h8.048A10.211,10.211,0,0,1,16.5,12ZM8.778,17h6.444A19.614,19.614,0,0,1,12,21.588,19.57,19.57,0,0,1,8.778,17Zm0-10A19.614,19.614,0,0,1,12,2.412,19.57,19.57,0,0,1,15.222,7ZM9.4,2.356A19.676,19.676,0,0,0,6.574,7H3.353A10.031,10.031,0,0,1,9.4,2.356ZM2.461,9H5.9a12.016,12.016,0,0,0-.4,3,12.016,12.016,0,0,0,.4,3H2.461a9.992,9.992,0,0,1,0-6Zm.892,8H6.574A19.676,19.676,0,0,0,9.4,21.644,10.031,10.031,0,0,1,3.353,17Zm11.252,4.644A19.676,19.676,0,0,0,17.426,17h3.221A10.031,10.031,0,0,1,14.605,21.644ZM21.539,15H18.1a12.016,12.016,0,0,0,.4-3,12.016,12.016,0,0,0-.4-3h3.437a9.992,9.992,0,0,1,0,6Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
 </svg>
 """)
 
 BOOK = Markup("""
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">
-  <path d="M12,24c-.555,0-1.109-.077-1.648-.231l-6.726-1.921c-2.135-.61-3.626-2.587-3.626-4.808V4c0-.552,.448-1,1-1s1,.448,1,1v13.04c0,1.333,.895,2.519,2.176,2.885l6.726,1.921c.719,.205,1.478,.205,2.198,0l6.725-1.921c1.281-.366,2.176-1.552,2.176-2.885V3c0-.552,.448-1,1-1s1,.448,1,1v14.04c0,2.22-1.491,4.197-3.626,4.808l-6.726,1.921c-.54,.154-1.094,.231-1.648,.231ZM18.023,.155c-.728-.269-1.539-.202-2.26,.086l-.877,.35c-1.139,.455-1.887,1.559-1.887,2.786v14.496c-.328,.084-.663,.127-1,.127s-.672-.043-1-.127V3.377c0-1.227-.747-2.331-1.887-2.786l-.878-.351c-.721-.288-1.532-.355-2.26-.085-1.215,.45-1.976,1.583-1.976,2.822V15.691c0,1.339,.888,2.516,2.175,2.884l4.176,1.194c.538,.153,1.093,.23,1.648,.23s1.11-.077,1.648-.23l4.176-1.194c1.288-.368,2.175-1.545,2.175-2.884V2.977c0-1.239-.762-2.373-1.977-2.822Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+  <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
 </svg>
 """)
 
@@ -128,8 +131,8 @@ def init_command(args):
     # Copy the logo image
     static_dir = Path("static")
     static_dir.mkdir(exist_ok=True)
-    logo_src = Path(__file__).parent / "static" / "inguitive_logo_white_text.png"
-    logo_dst = static_dir / "inguitive_logo_white_text.png"
+    logo_src = Path(__file__).parent / "static" / "inguitive_logo_white_text.svg"
+    logo_dst = static_dir / "inguitive_logo_white_text.svg"
     if logo_src.exists():
         shutil.copy(logo_src, logo_dst)
         console.print(f"Created {logo_dst}")
