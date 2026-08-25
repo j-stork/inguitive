@@ -8,7 +8,6 @@ import asyncio
 import contextvars
 import importlib.resources
 import inspect
-import os
 import traceback
 import uuid
 import warnings
@@ -19,7 +18,6 @@ from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 import markupsafe
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
 
@@ -636,36 +634,36 @@ def create_app(
 
     # Mount static files - prioritize CWD/static/, then package static/
     static_dirs = []
-    
+
     # 1. Check CWD/static/ first (user's project static files)
     cwd_static = Path.cwd() / "static"
     if cwd_static.exists() and cwd_static.is_dir():
         static_dirs.append(str(cwd_static))
-    
+
     # 2. Check package static/ directory (Python 3.10+ guarantees importlib.resources exists)
     pkg_static = importlib.resources.files("inguitive").joinpath("static")
     if pkg_static.exists() and pkg_static.is_dir():
         static_dirs.append(str(pkg_static))
-    
+
     if static_dirs:
         # Create a custom static files app that checks all directories in order
         async def static_files_app(scope, receive, send):
             if scope["type"] != "http":
                 return
-            
+
             path = scope["path"].lstrip("/")
             for directory in static_dirs:
                 file_path = Path(directory) / path
                 if file_path.exists() and file_path.is_file():
                     return FileResponse(str(file_path))
-            
+
             # If no file found, return 404
             return FileResponse(
                 content=b"Not Found",
                 status_code=404,
                 media_type="text/plain"
             )
-        
+
         app.mount("/static", static_files_app, name="static")
     else:
         warnings.warn(
