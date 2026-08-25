@@ -2,7 +2,7 @@
 
 import pytest
 
-from inguitive.components import Button, Div, Icon, Label
+from inguitive.components import Button, Div, Icon, Image, Label
 from inguitive.session import (
     MemoryBackend,
     Session,
@@ -228,6 +228,83 @@ class TestIcon:
         assert "old-class" not in result
         # ns0: prefix should be removed
         assert "ns0:" not in result
+
+
+class TestImage:
+    def test_basic_render(self):
+        """Test basic image rendering."""
+        img = Image(src="/static/test.png", alt="Test Image")
+        html = img.render()
+        assert 'src="/static/test.png"' in html
+        assert 'alt="Test Image"' in html
+        assert "<img" in html
+
+    def test_render_without_alt(self):
+        """Test image rendering without alt attribute."""
+        img = Image(src="/static/test.png")
+        html = img.render()
+        assert 'src="/static/test.png"' in html
+        assert "alt=" not in html
+
+    def test_render_with_css(self):
+        """Test image rendering with CSS classes."""
+        img = Image(src="/static/test.png", alt="Test", css="w-10 h-10")
+        html = img.render()
+        assert 'class="w-10 h-10"' in html
+
+    def test_render_with_additional_attrs(self):
+        """Test image rendering with additional HTML attributes."""
+        img = Image(
+            src="/static/test.png",
+            alt="Test",
+            width="100",
+            height="200",
+            loading="lazy",
+        )
+        html = img.render()
+        assert 'width="100"' in html
+        assert 'height="200"' in html
+        assert 'loading="lazy"' in html
+
+    def test_callable_src(self):
+        """Test dynamic src via callable."""
+        state = State("/static/initial.png")
+        img = Image(src=lambda: state.get(), alt="Dynamic")
+
+        html = img.render()
+        assert 'src="/static/initial.png"' in html
+
+        state.set("/static/updated.png")
+        html = img.render()
+        assert 'src="/static/updated.png"' in html
+
+    def test_callable_alt(self):
+        """Test dynamic alt via callable."""
+        state = State("Initial Alt")
+        img = Image(src="/static/test.png", alt=lambda: state.get())
+
+        html = img.render()
+        assert 'alt="Initial Alt"' in html
+
+        state.set("Updated Alt")
+        html = img.render()
+        assert 'alt="Updated Alt"' in html
+
+    def test_update_method(self):
+        """Test Image update method for HTMX out-of-band updates."""
+        img = Image(src="/static/test.png", alt="Test", id="my-image")
+        html = img.update()
+        assert 'hx-swap-oob="true"' in html
+        assert 'id="my-image"' in html
+
+    def test_update_without_explicit_id(self):
+        """Test that update() includes hx-swap-oob even with auto-generated id."""
+        img = Image(src="/static/test.png", alt="Test")
+        html = img.update()
+        # Component always gets an auto-generated id, so hx-swap-oob is always present
+        assert 'hx-swap-oob="true"' in html
+        assert 'src="/static/test.png"' in html
+        assert 'alt="Test"' in html
 
 
 class TestState:

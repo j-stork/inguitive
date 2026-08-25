@@ -490,6 +490,60 @@ class Icon(Component):
         return resolved_svg
 
 
+class Image(Component):
+    """HTML image component.
+
+    Renders an <img> tag for displaying images. Use for logos, icons, photos,
+    and any visual content.
+
+    Example:
+        Image(src="/static/logo.png", alt="Company Logo", css="h-10 w-auto")
+        Image(src=lambda: get_avatar_url(), alt="User Avatar", css="rounded-full h-12 w-12")
+        Image(src="/static/hero.jpg", alt="Hero", loading="lazy", width="800", height="400")
+    """
+
+    def __init__(
+        self,
+        src: str | Callable[[], str],
+        alt: str | Callable[[], str] | None = None,
+        id: str | None = None,
+        css: str | Callable[[], str] | None = None,
+        **attrs: Any,
+    ):
+        """Initialize an Image component.
+
+        Args:
+            src: Image source URL (string or callable returning string)
+            alt: Alternative text for accessibility (string or callable returning string)
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            **attrs: Additional HTML attributes (width, height, loading, etc.)
+        """
+        super().__init__(id=id, css=css, **attrs)
+        self.src = src
+        self.alt = alt
+
+    def render(self) -> str:
+        """Render the image element."""
+        attrs = self._get_attrs_str()
+        resolved_src = self._resolve(self.src)
+        if self.alt:
+            resolved_alt = self._resolve(self.alt)
+            return f'<img src="{resolved_src}" alt="{resolved_alt}" {attrs}>'
+        return f'<img src="{resolved_src}" {attrs}>'
+
+    def update(self) -> str:
+        """Render with hx-swap-oob for HTMX out-of-band updates."""
+        if not self.id:
+            return self.render()
+        attrs = self._oob_attrs_str()
+        resolved_src = self._resolve(self.src)
+        if self.alt:
+            resolved_alt = self._resolve(self.alt)
+            return f'<img src="{resolved_src}" alt="{resolved_alt}" {attrs}>'
+        return f'<img src="{resolved_src}" {attrs}>'
+
+
 class Input(Component):
     """HTML input component for text, email, password, etc.
 
