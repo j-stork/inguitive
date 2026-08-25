@@ -56,7 +56,7 @@ def _extract_docstring(content: list[str], start_index: int) -> tuple[str, int]:
     # Check if it's a single-line docstring
     if stripped_line.endswith(quote):
         # Extract content between quotes
-        docstring = stripped_line[len(quote) : -len(quote)].strip()
+        docstring = "```\n" + stripped_line[len(quote) : -len(quote)].strip() + "\n```"
         return docstring, start_index + 1
 
     # Multi-line docstring - collect until closing quote
@@ -102,9 +102,9 @@ def _get_top_level_defs(content: list[str]) -> list[tuple[int, int, str]]:
                 # Extract name
                 name_part = line.strip()
                 if line.startswith("class "):
-                    name = name_part[len("class ") :].split("(")[0].split(":")[0].strip() + " (class)"
+                    name = "`" + name_part[len("class ") :].split("(")[0].split(":")[0].strip() + "` (class)"
                 else:
-                    name = name_part[len("def ") :].split("(")[0].split(":")[0].strip() + " (function)"
+                    name = "`" + name_part[len("def ") :].split("(")[0].split(":")[0].strip() + "` (function)"
 
                 # Find end of this definition
                 j = i + 1
