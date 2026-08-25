@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.9.0] - 2026-08-25
+
+### Added
+
+- **Image component**: Renders `<img>` tags for displaying images. Supports `src`, `alt`, `css`, and all standard HTML image attributes (width, height, loading, etc.). Supports dynamic values via callables and HTMX out-of-band updates.
+- **Icon.update() method**: Added `update()` method to Icon component for HTMX out-of-band update support, consistent with all other components.
+
+---
+
 ## [0.8.0] - 2026-08-24
 
 ### Added

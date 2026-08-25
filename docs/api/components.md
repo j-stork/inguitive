@@ -28,6 +28,8 @@
 
 ::: inguitive.components.Icon
 
+::: inguitive.components.Image
+
 ::: inguitive.components.DataTable
 
 ::: inguitive.components.TemplateComponent
