@@ -142,12 +142,13 @@ def gather_package_documentation() -> str:
                 output_lines.append(f"### `{template_file.name}`\n")
                 output_lines.append(f"**Location:**\n\n`{template_file}`\n")
 
-    # Embed complete example applications. These ship inside the package
-    # (see [tool.setuptools.packages.find] in pyproject.toml) so the docs are
-    # available regardless of whether inguitive was pip-installed or run from
-    # a source checkout. Full apps show how State, trigger handlers,
-    # components, and SSE compose — context that a per-symbol API reference
-    # cannot convey and that an LLM in a vibe-coding context benefits from.
+    # List example applications as an index, not embedded source. The apps
+    # ship inside the package (see [tool.setuptools.packages.find] in
+    # pyproject.toml), so an LLM with file access can read any of them on
+    # demand via the listed path. Embedding ~1500 lines of source would
+    # bloat the index and crowd the context window with content the reader
+    # may never need; a compact, descriptive map lets the reader decide
+    # which file to open.
     examples_path = inguitive_src_path / "examples"
     if examples_path.is_dir():
         _append_examples_section(output_lines, examples_path)
@@ -181,66 +182,38 @@ def _example_description(path: Path) -> str:
 
 
 def _append_examples_section(output_lines: list[str], examples_path: Path) -> None:
-    """Append the Example Applications section to ``output_lines`` in place.
+    """Append the Example Applications index section to ``output_lines`` in place.
 
-    The section has two parts:
+    Emits a compact, descriptive list rather than embedded source: each app
+    is one entry with its filename, a one-line description (from its module
+    docstring), and its on-disk location as a path an LLM with file access
+    can ``read_file`` on demand. A short note records the shared support
+    files (``css.py``, ``svg.py``) every app imports, so the reader knows
+    where those symbols are defined without having to embed them.
 
-    1. *Support files* — ``css.py`` and ``svg.py``, the small scaffolds that
-       ``inguitive init`` writes to the user's CWD and that every example app
-       imports. Including them once here means the app sources below are
-       self-explanatory (the reader can see what ``BRAND_COLORS`` or ``GLOBE``
-       refer to).
-    2. *Applications* — each runnable example app with its full source in a
-       fenced code block, ordered alphabetically for deterministic output.
+    Apps are ordered alphabetically for deterministic, diff-friendly output.
 
     Args:
         output_lines: The running list of Markdown lines to append to.
         examples_path: Path to the ``inguitive/examples/`` directory.
     """
-    output_lines.append("---\n")
-    output_lines.append("## Example Applications\n")
-    output_lines.append(
-        "Complete runnable apps shipped with the package. They demonstrate "
-        "how State, trigger handlers, components, forms, and SSE compose "
-        "into a working application.\n"
-    )
-
-    # Split support files from real apps. Support files are the scaffolds
-    # every app imports; apps are everything else except the package marker.
-    support_files = ["css.py", "svg.py"]
+    support_files = {"css.py", "svg.py"}
     all_files = sorted(p for p in examples_path.glob("*.py") if p.name != "__init__.py")
     apps = [p for p in all_files if p.name not in support_files]
 
-    # Support files first, so the app sources below them are self-contained.
     output_lines.append("---\n")
-    output_lines.append("### Support files\n")
+    output_lines.append("## Example Applications\n")
     output_lines.append(
-        "These are the scaffolds `inguitive init` creates in the project "
-        "directory and that the example apps import.\n"
+        "Complete runnable apps shipped with the package, demonstrating how "
+        "State, trigger handlers, components, forms, and SSE compose into a "
+        "working application. Read any of them via the listed path when you "
+        "need the full source.\n"
     )
-    for name in support_files:
-        path = examples_path / name
-        if path.is_file():
-            _append_example_file(output_lines, path, header_level=4)
-
-    # Then the apps themselves.
+    output_lines.append(
+        "All apps import the shared scaffolds `css.py` and `svg.py` from the "
+        "same directory (`inguitive init` writes these into a project).\n"
+    )
     for path in apps:
-        _append_example_file(output_lines, path, header_level=3)
-
-
-def _append_example_file(
-    output_lines: list[str], path: Path, header_level: int
-) -> None:
-    """Append one example file's header, description, and fenced source.
-
-    Args:
-        output_lines: The running list of Markdown lines to append to.
-        path: Path to the example ``.py`` file.
-        header_level: Markdown header level for the file's heading (e.g. 3
-            for apps, 4 for support files nested under a subsection).
-    """
-    header = "#" * header_level
-    output_lines.append(f"{header} `{path.name}`\n")
-    output_lines.append(f"{_example_description(path)}\n")
-    output_lines.append(f"*Location:* `{path}`\n")
-    output_lines.append(f"```python\n{path.read_text()}```\n")
+        desc = _example_description(path)
+        output_lines.append(f"- **`{path.name}`** — {desc}\n")
+        output_lines.append(f"  `{path}`\n")
