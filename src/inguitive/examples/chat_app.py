@@ -11,7 +11,7 @@ Features:
 - Bot responds with funny answers
 - Chat history persists during the session
 
-Run with: uvicorn examples.chat_app:app --reload
+Run with: uvicorn inguitive.examples.chat_app:app --reload
 """
 
 import random
@@ -223,4 +223,4 @@ def index():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("examples.chat_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("inguitive.examples.chat_app:app", host="0.0.0.0", port=8000, reload=True)

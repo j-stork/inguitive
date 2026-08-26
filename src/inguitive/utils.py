@@ -142,6 +142,105 @@ def gather_package_documentation() -> str:
                 output_lines.append(f"### `{template_file.name}`\n")
                 output_lines.append(f"**Location:**\n\n`{template_file}`\n")
 
+    # Embed complete example applications. These ship inside the package
+    # (see [tool.setuptools.packages.find] in pyproject.toml) so the docs are
+    # available regardless of whether inguitive was pip-installed or run from
+    # a source checkout. Full apps show how State, trigger handlers,
+    # components, and SSE compose — context that a per-symbol API reference
+    # cannot convey and that an LLM in a vibe-coding context benefits from.
+    examples_path = inguitive_src_path / "examples"
+    if examples_path.is_dir():
+        _append_examples_section(output_lines, examples_path)
+
     output_lines.append("\n")
 
     return "\n".join(output_lines)
+
+
+def _example_description(path: Path) -> str:
+    """Return a one-line description for an example file, from its module docstring.
+
+    Falls back to the filename when the file has no module docstring (e.g.
+    ``svg.py``). Keeps the section readable when listed in a flat index.
+
+    Args:
+        path: Path to the example ``.py`` file.
+
+    Returns:
+        First non-empty line of the module docstring, or the file's stem.
+    """
+    try:
+        tree = ast.parse(path.read_text())
+    except SyntaxError:
+        return path.stem
+    docstring = ast.get_docstring(tree)
+    if not docstring:
+        return path.stem
+    first_line = docstring.strip().splitlines()[0]
+    return first_line or path.stem
+
+
+def _append_examples_section(output_lines: list[str], examples_path: Path) -> None:
+    """Append the Example Applications section to ``output_lines`` in place.
+
+    The section has two parts:
+
+    1. *Support files* — ``css.py`` and ``svg.py``, the small scaffolds that
+       ``inguitive init`` writes to the user's CWD and that every example app
+       imports. Including them once here means the app sources below are
+       self-explanatory (the reader can see what ``BRAND_COLORS`` or ``GLOBE``
+       refer to).
+    2. *Applications* — each runnable example app with its full source in a
+       fenced code block, ordered alphabetically for deterministic output.
+
+    Args:
+        output_lines: The running list of Markdown lines to append to.
+        examples_path: Path to the ``inguitive/examples/`` directory.
+    """
+    output_lines.append("---\n")
+    output_lines.append("## Example Applications\n")
+    output_lines.append(
+        "Complete runnable apps shipped with the package. They demonstrate "
+        "how State, trigger handlers, components, forms, and SSE compose "
+        "into a working application.\n"
+    )
+
+    # Split support files from real apps. Support files are the scaffolds
+    # every app imports; apps are everything else except the package marker.
+    support_files = ["css.py", "svg.py"]
+    all_files = sorted(p for p in examples_path.glob("*.py") if p.name != "__init__.py")
+    apps = [p for p in all_files if p.name not in support_files]
+
+    # Support files first, so the app sources below them are self-contained.
+    output_lines.append("---\n")
+    output_lines.append("### Support files\n")
+    output_lines.append(
+        "These are the scaffolds `inguitive init` creates in the project "
+        "directory and that the example apps import.\n"
+    )
+    for name in support_files:
+        path = examples_path / name
+        if path.is_file():
+            _append_example_file(output_lines, path, header_level=4)
+
+    # Then the apps themselves.
+    for path in apps:
+        _append_example_file(output_lines, path, header_level=3)
+
+
+def _append_example_file(
+    output_lines: list[str], path: Path, header_level: int
+) -> None:
+    """Append one example file's header, description, and fenced source.
+
+    Args:
+        output_lines: The running list of Markdown lines to append to.
+        path: Path to the example ``.py`` file.
+        header_level: Markdown header level for the file's heading (e.g. 3
+            for apps, 4 for support files nested under a subsection).
+    """
+    header = "#" * header_level
+    output_lines.append(f"{header} `{path.name}`\n")
+    output_lines.append(f"{_example_description(path)}\n")
+    output_lines.append(f"*Location:* `{path}`\n")
+    output_lines.append(f"```python\n{path.read_text()}```\n")

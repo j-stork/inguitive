@@ -27,7 +27,7 @@ Features:
 - Trigger handlers access arguments via get_trigger_args() without form_data parameter
 - Form submission with form_data for dynamic input
 
-Run with: uvicorn examples.data_table_app:app --reload
+Run with: uvicorn inguitive.examples.data_table_app:app --reload
 """
 
 from inguitive import Button, DataTable, Div, Form, Input, State, Text, create_app, get_trigger_args
@@ -400,4 +400,4 @@ def index():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("examples.data_table_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("inguitive.examples.data_table_app:app", host="0.0.0.0", port=8000, reload=True)

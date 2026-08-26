@@ -3,7 +3,7 @@
 from fastapi.testclient import TestClient
 
 # Import after setting up path
-from examples.counter_app import app
+from inguitive.examples.counter_app import app
 
 
 def get_client():

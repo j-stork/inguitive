@@ -12,7 +12,7 @@ Features:
 - Real-time count of remaining items
 - Session isolation (each browser tab has independent state)
 
-Run with: uvicorn examples.todo_app:app --reload
+Run with: uvicorn inguitive.examples.todo_app:app --reload
 """
 
 import uuid
@@ -306,4 +306,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("examples.todo_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("inguitive.examples.todo_app:app", host="0.0.0.0", port=8000, reload=True)

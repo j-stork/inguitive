@@ -5,7 +5,7 @@ Demonstrates two approaches to navigation:
 1. Traditional multi-page navigation (URL changes)
 2. SPA-style content switching (URL stays constant, content changes)
 
-Run with: uvicorn examples.navigation_demo:app --reload
+Run with: uvicorn inguitive.examples.navigation_demo:app --reload
 """
 
 from inguitive import Button, Div, Link, State, Text, create_app, redirect, update_components
@@ -194,4 +194,4 @@ def page2():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("examples.navigation_demo:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("inguitive.examples.navigation_demo:app", host="0.0.0.0", port=8000, reload=True)

@@ -3,7 +3,7 @@ Registration form example using inguitive framework.
 
 Demonstrates form components (Form, Input, Button, Label) with reactive state.
 
-Run with: uvicorn examples.registration_form:app --reload
+Run with: uvicorn inguitive.examples.registration_form:app --reload
 """
 
 from inguitive import (
@@ -201,4 +201,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("examples.registration_form:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("inguitive.examples.registration_form:app", host="0.0.0.0", port=8000, reload=True)

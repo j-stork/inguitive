@@ -1,7 +1,7 @@
 """
 Counter example application using inguitive framework.
 
-Run with: uvicorn examples.counter_app:app --reload
+Run with: uvicorn inguitive.examples.counter_app:app --reload
 
 Per-Session Isolation Demonstration
 -----------------------------------
@@ -149,4 +149,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("examples.counter_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("inguitive.examples.counter_app:app", host="0.0.0.0", port=8000, reload=True)
