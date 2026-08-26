@@ -1,6 +1,8 @@
 """Utility functions for inguitive framework."""
 
+import ast
 import importlib.resources
+from pathlib import Path
 
 
 def nl2br(text: str | None) -> str:
@@ -32,172 +34,107 @@ def nl2br(text: str | None) -> str:
     return text.replace("\r\n", "<br>").replace("\r", "<br>").replace("\n", "<br>")
 
 
-def _extract_docstring(content: list[str], start_index: int) -> tuple[str, int]:
-    """Extract a docstring starting at start_index from file content.
+def _render_docstring(docstring: str | None) -> str:
+    """Render a docstring as a fenced Markdown code block.
+
+    Returns an empty string when there is no docstring, so the caller can
+    ``if rendered:``-guard the output section. Keeping the fencing decision
+    in this single helper means the rendering style can be changed in one
+    place without touching the parser.
+
+    Args:
+        docstring: Raw docstring text (typically from ``ast.get_docstring``,
+            which already dedents and trims it). May be None or empty.
 
     Returns:
-        Tuple of (docstring_text, end_index) where end_index is the line after the closing quote.
-        Returns ("", start_index) if no docstring is found.
+        The docstring wrapped in a ``` ``` ``` fence, or "" if empty.
     """
-    if start_index >= len(content):
-        return "", start_index
-
-    line = content[start_index]
-    stripped_line = line.strip()
-
-    # Check for both triple-quote styles
-    if stripped_line.startswith('"""'):
-        quote = '"""'
-    elif stripped_line.startswith("'''"):
-        quote = "'''"
-    else:
-        return "", start_index
-
-    # Check if it's a single-line docstring
-    if stripped_line.endswith(quote) and stripped_line[len(quote):-len(quote)].strip():
-        # Extract content between quotes
-        docstring = "```\n" + stripped_line[len(quote) : -len(quote)].strip() + "\n```"
-        return docstring, start_index + 1
-
-    # Multi-line docstring - collect until closing quote
-    docstring_lines = ["```"]
-
-    # Extract first line (after opening quote)
-    first_line = stripped_line[len(quote) :].strip()
-    if first_line:
-        docstring_lines.append(first_line)
-
-    end_index = start_index + 1
-
-    while end_index < len(content):
-        if quote in content[end_index]:
-            # Extract content from this line (before the closing quote)
-            closing_line = content[end_index]
-            quote_pos = closing_line.find(quote)
-            if quote_pos > 0:
-                docstring_lines.append(closing_line[:quote_pos].rstrip())
-            break
-        docstring_lines.append(content[end_index].rstrip())
-        end_index += 1
-
-    docstring_lines.append("```")
-    docstring = "\n".join(docstring_lines).strip()
-    return docstring, end_index + 1
+    if not docstring:
+        return ""
+    return "```\n" + docstring.strip() + "\n```"
 
 
-def _get_top_level_defs(content: list[str]) -> list[tuple[int, int, str]]:
-    """Get all top-level class and function definitions.
+def _top_level_definitions(tree: ast.Module) -> list[ast.AST]:
+    """Return public top-level class and function definitions of ``tree``.
 
-    Returns list of tuples: (start_line, end_line, name)
+    "Public" means the name does not start with an underscore, matching the
+    previous behaviour of skipping internal helpers. Both ``def`` and
+    ``async def`` are included (the old line-based scanner silently dropped
+    ``async def``). Decorators are not part of the returned nodes' line
+    ranges; ``node.lineno`` points at the ``def``/``class`` keyword.
+
+    Args:
+        tree: A parsed module AST (``ast.parse(source)``).
+
+    Returns:
+        List of ``ast.FunctionDef``, ``ast.AsyncFunctionDef``, and
+        ``ast.ClassDef`` nodes in source order.
     """
-    definitions = []
-    i = 0
+    return [
+        node
+        for node in tree.body
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        and not node.name.startswith("_")
+    ]
 
-    while i < len(content):
-        line = content[i]
 
-        # Only consider top-level (not indented)
-        if not line.startswith(" ") and not line.startswith("\t") and line.strip():
-            if line.startswith("class ") or line.startswith("def "):
-                # Find end of this definition first
-                j = i + 1
-                while j < len(content):
-                    next_line = content[j]
-                    next_stripped = next_line.strip()
-                    # Check if we've hit another top-level definition
-                    if next_line and not next_line.startswith(" ") and not next_line.startswith("\t"):
-                        if next_stripped.startswith("class ") or next_stripped.startswith("def "):
-                            break
-                    j += 1
-
-                # Extract name
-                name_part = line.strip()
-                if line.startswith("class "):
-                    raw_name = name_part[len("class ") :].split("(")[0].split(":")[0].strip()
-                else:
-                    raw_name = name_part[len("def ") :].split("(")[0].split(":")[0].strip()
-
-                # Skip internal classes and functions (names starting with _)
-                if raw_name.startswith("_"):
-                    i = j - 1
-                    continue
-
-                name = "`" + raw_name + "` (class)" if line.startswith("class ") else "`" + raw_name + "` (function)"
-                definitions.append((i, j - 1, name))
-                i = j - 1  # Skip to end of definition
-
-        i += 1
-
-    return definitions
+def _kind_of(node: ast.AST) -> str:
+    """Return the display kind for a definition node: 'class' or 'function'."""
+    return "class" if isinstance(node, ast.ClassDef) else "function"
 
 
 def gather_package_documentation() -> str:
     """Gather package documentation including classes, functions, and templates.
 
-    Returns a Markdown string listing all classes and functions with their
-    line ranges and docstrings, plus template files with their paths.
+    Walks every ``.py`` file in the installed ``inguitive`` package, and for
+    each one emits its module docstring plus a section per public top-level
+    class/function with its line range and docstring. Template files are
+    listed at the end. The result is a Markdown string suitable for an
+    ``llms-inguitive.md`` index file.
+
+    Parsing relies on the stdlib ``ast`` module rather than a hand-rolled
+    line scanner, so names, exact line ranges (``end_lineno``), and real
+    docstrings (``ast.get_docstring``) come straight from the syntax tree.
+
+    Returns:
+        Markdown documentation string.
     """
-    from pathlib import Path
-
     inguitive_src_path = Path(str(importlib.resources.files("inguitive")))
-
-    # List all Python files in the inguitive package directory
-    python_files = [f for f in inguitive_src_path.iterdir() if f.suffix == ".py"]
 
     output_lines = ["# inguitive Package Documentation\n"]
 
-    # Add Python files with their classes and functions
-    for py_file in python_files:
+    # Sort for deterministic, diff-friendly output regardless of filesystem
+    # iteration order.
+    for py_file in sorted(inguitive_src_path.glob("*.py")):
         output_lines.append("---\n")
         output_lines.append(f"## {py_file.name}\n")
         output_lines.append(f"*Location: {py_file}*\n")
 
-        with open(py_file) as f:
-            content = f.readlines()
+        tree = ast.parse(py_file.read_text())
 
-        # Check for module-level docstring
-        module_docstring_start = 0
-        while module_docstring_start < len(content):
-            stripped = content[module_docstring_start].strip()
-            if stripped:
-                break
-            module_docstring_start += 1
+        # Module docstring: the first top-level string-literal expression.
+        module_docstring = ast.get_docstring(tree)
+        if module_docstring:
+            rendered = _render_docstring(module_docstring)
+            output_lines.append(f"**Module Docstring:**\n\n{rendered}\n")
 
-        if module_docstring_start < len(content):
-            stripped = content[module_docstring_start].strip()
-            if stripped.startswith('"""') or stripped.startswith("'''"):
-                module_docstring, _ = _extract_docstring(content, module_docstring_start)
-                if module_docstring:
-                    output_lines.append(f"**Module Docstring:**\n\n{module_docstring}\n")
-
-        # Get all top-level definitions
-        definitions = _get_top_level_defs(content)
-
-        for start, end, name in definitions:
+        for node in _top_level_definitions(tree):
+            name = f"`{node.name}` ({_kind_of(node)})"
             output_lines.append("---\n")
             output_lines.append(f"### {name}\n")
-            output_lines.append(f"*Defined at lines {start + 1}-{end}*\n")
+            output_lines.append(f"*Defined at lines {node.lineno}-{node.end_lineno}*\n")
 
-            # Extract docstring for classes and functions
-            # Look for docstring immediately after definition
-            docstring_start = start + 1
+            docstring = ast.get_docstring(node)
+            if docstring:
+                rendered = _render_docstring(docstring)
+                output_lines.append(f"**Docstring:**\n\n{rendered}\n")
 
-            # Skip empty lines
-            while docstring_start <= end and content[docstring_start].strip() == "":
-                docstring_start += 1
-
-            # Check if we're at a docstring
-            if docstring_start <= end:
-                stripped = content[docstring_start].strip()
-                if stripped.startswith('"""') or stripped.startswith("'''"):
-                    docstring, _ = _extract_docstring(content, docstring_start)
-                    if docstring:
-                        output_lines.append(f"**Docstring:**\n\n{docstring}\n")
-
-    # Add template files
+    # List template files if the package ships a templates directory.
     templates_path = inguitive_src_path / "templates"
     if templates_path.exists():
-        template_files = [f for f in templates_path.iterdir() if f.is_file()]
+        template_files = sorted(
+            f for f in templates_path.iterdir() if f.is_file()
+        )
         if template_files:
             output_lines.append("---\n")
             output_lines.append("## Templates\n")
