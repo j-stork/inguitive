@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
+import functools
 import importlib.resources
 import inspect
 import traceback
@@ -324,6 +325,111 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
                 return update_components(*all_component_ids)
 
 
+def page_decorator(
+    app,
+    path: str | None = None,
+    title: str | None = None,
+    favicon: str | None = None,
+    head: HeadContent = None,
+):
+    """Register a page handler at ``path`` and expose it as a route.
+
+    Bound onto a FastAPI app instance in :func:`create_app` as ``app.page``
+    (via :func:`functools.partial`), so user code writes ``@app.page("/")``.
+
+    The decorated function is stored in ``app.state.page_routes`` and
+    registered as a real FastAPI GET route through
+    :func:`_register_page_route`. The handler may declare ``request``,
+    ``form_data``, and any path parameters as parameters; these are
+    injected at request time.
+
+    Args:
+        app: The FastAPI application to register the route on. Bound
+            automatically when attached as ``app.page``, so users never
+            pass it.
+        path: URL path for the route. Supports ``{name}`` path parameters
+            (e.g. ``"/items/{item_id}"``). Defaults to ``"/"`` when None.
+        title: Optional page-specific ``<title>``. Falls back to the
+            app-level title from ``create_app(title=...)``, then to
+            ``"inguitive"``.
+        favicon: Optional page-specific favicon path. Falls back to the
+            app-level favicon, then the bundled
+            ``/static/inguitive_favicon.svg``.
+        head: Optional page-specific head content (string, Component, or
+            list). Appended *after* any app-level head content.
+
+    Returns:
+        A decorator that registers ``func`` and returns it unchanged.
+
+    Usage:
+        @app.page("/")
+        def home():
+            return Div(Text("Hello"))
+    """
+    def decorator(func: Callable):
+        actual_path = path if path is not None else "/"
+        app.state.page_routes[actual_path] = func
+        _register_page_route(app, actual_path, func, title, favicon, head)
+        return func
+
+    return decorator
+
+
+def trigger_handler_decorator(app, trigger_name: str | None | Callable = None):
+    """Register a trigger handler callable, exposed as ``app.trigger_handler``.
+
+    Bound onto a FastAPI app instance in :func:`create_app` as
+    ``app.trigger_handler`` (via :func:`functools.partial`). Supports two
+    call styles:
+
+    - ``@app.trigger_handler`` (no parentheses): the handler is registered
+      under its own function name.
+    - ``@app.trigger_handler("name")`` (with parentheses): the handler is
+      registered under the explicit name ``"name"``.
+
+    The handler is stored in ``app.state.trigger_handlers`` and registered
+    as a POST route at ``/_trigger/<name>`` via
+    :func:`_register_trigger_route`. Trigger arguments sent from
+    components are available inside the handler via
+    :func:`inguitive.get_trigger_args`.
+
+    Args:
+        app: The FastAPI application to register the handler on. Bound
+            automatically when attached as ``app.trigger_handler``.
+        trigger_name: Either a callable (used directly when the decorator
+            is applied without parentheses) or a string name, or None to
+            fall back to the function's ``__name__``.
+
+    Returns:
+        When applied without parentheses, returns the handler unchanged.
+        When applied with parentheses, returns a decorator that does the
+        same.
+
+    Usage:
+        @app.trigger_handler
+        def increment():
+            counter_state.set(counter_state.get() + 1)
+    """
+    if callable(trigger_name):
+        # Called as @app.trigger_handler (without parentheses)
+        # trigger_name is actually the function
+        func = trigger_name
+        actual_trigger_name = func.__name__
+        app.state.trigger_handlers[actual_trigger_name] = func
+        _register_trigger_route(app, actual_trigger_name, func)
+        return func
+    else:
+        # Called as @app.trigger_handler("name") (with parentheses)
+        # trigger_name is the name string
+        def decorator(func: Callable):
+            actual_trigger_name = trigger_name or func.__name__
+            app.state.trigger_handlers[actual_trigger_name] = func
+            _register_trigger_route(app, actual_trigger_name, func)
+            return func
+
+        return decorator
+
+
 class SessionMiddleware:
     """FastAPI/Starlette ASGI middleware for session management."""
 
@@ -569,44 +675,13 @@ def create_app(
     app.state.trigger_handlers = {}
     app.state.page_routes = {}
 
-    # Add app-scoped decorator methods
-    def _page_decorator(
-        path: str | None = None,
-        title: str | None = None,
-        favicon: str | None = None,
-        head: HeadContent = None,
-    ):
-        def decorator(func: Callable):
-            actual_path = path if path is not None else "/"
-            app.state.page_routes[actual_path] = func
-            _register_page_route(app, actual_path, func, title, favicon, head)
-            return func
-
-        return decorator
-
-    def _trigger_decorator(trigger_name: str | None | Callable = None):
-        if callable(trigger_name):
-            # Called as @app.trigger_handler (without parentheses)
-            # trigger_name is actually the function
-            func = trigger_name
-            actual_trigger_name = func.__name__
-            app.state.trigger_handlers[actual_trigger_name] = func
-            _register_trigger_route(app, actual_trigger_name, func)
-            return func
-        else:
-            # Called as @app.trigger_handler("name") (with parentheses)
-            # trigger_name is the name string
-            def decorator(func: Callable):
-                actual_trigger_name = trigger_name or func.__name__
-                app.state.trigger_handlers[actual_trigger_name] = func
-                _register_trigger_route(app, actual_trigger_name, func)
-                return func
-
-            return decorator
-
-    # Attach decorator methods to app
-    app.page = _page_decorator  # type: ignore
-    app.trigger_handler = _trigger_decorator  # type: ignore
+    # Attach app-scoped decorator methods. The actual logic lives in the
+    # module-level page_decorator / trigger_handler_decorator functions so
+    # they are statically discoverable (e.g. by gather_package_documentation);
+    # functools.partial binds `app` so user code calls @app.page(...) and
+    # @app.trigger_handler exactly as before.
+    app.page = functools.partial(page_decorator, app)  # type: ignore
+    app.trigger_handler = functools.partial(trigger_handler_decorator, app)  # type: ignore
 
     # Configure session backend
     if session_backend is not None:
