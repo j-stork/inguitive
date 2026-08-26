@@ -158,38 +158,36 @@ def gather_package_documentation() -> str:
     return "\n".join(output_lines)
 
 
-def _example_description(path: Path) -> str:
-    """Return a one-line description for an example file, from its module docstring.
+def _example_docstring(path: Path) -> str:
+    """Return the full module docstring for an example file.
 
-    Falls back to the filename when the file has no module docstring (e.g.
-    ``svg.py``). Keeps the section readable when listed in a flat index.
+    Returns an empty string when the file has no module docstring (e.g.
+    ``svg.py``), so the caller can ``if docstring:``-guard the section.
 
     Args:
         path: Path to the example ``.py`` file.
 
     Returns:
-        First non-empty line of the module docstring, or the file's stem.
+        The complete, dedented module docstring, or "" if absent.
     """
     try:
         tree = ast.parse(path.read_text())
     except SyntaxError:
-        return path.stem
-    docstring = ast.get_docstring(tree)
-    if not docstring:
-        return path.stem
-    first_line = docstring.strip().splitlines()[0]
-    return first_line or path.stem
+        return ""
+    return ast.get_docstring(tree) or ""
 
 
 def _append_examples_section(output_lines: list[str], examples_path: Path) -> None:
-    """Append the Example Applications index section to ``output_lines`` in place.
+    """Append the Example Applications section to ``output_lines`` in place.
 
-    Emits a compact, descriptive list rather than embedded source: each app
-    is one entry with its filename, a one-line description (from its module
-    docstring), and its on-disk location as a path an LLM with file access
-    can ``read_file`` on demand. A short note records the shared support
-    files (``css.py``, ``svg.py``) every app imports, so the reader knows
-    where those symbols are defined without having to embed them.
+    Emits one subsection per runnable example app, mirroring the structure
+    used for classes and functions: a ``### `name``` heading, a
+    ``**Location:**`` line with the on-disk path, a ``**Description:**``
+    block with the file's complete module docstring, and a trailing
+    ``---`` separator. Source is deliberately not embedded — the apps ship
+    inside the package, so an LLM with file access reads them on demand via
+    the listed path. A short intro records the shared support files
+    (``css.py``, ``svg.py``) every app imports.
 
     Apps are ordered alphabetically for deterministic, diff-friendly output.
 
@@ -202,18 +200,21 @@ def _append_examples_section(output_lines: list[str], examples_path: Path) -> No
     apps = [p for p in all_files if p.name not in support_files]
 
     output_lines.append("---\n")
-    output_lines.append("## Example Applications\n")
+    output_lines.append("## Examples\n")
     output_lines.append(
         "Complete runnable apps shipped with the package, demonstrating how "
         "State, trigger handlers, components, forms, and SSE compose into a "
         "working application. Read any of them via the listed path when you "
-        "need the full source.\n"
+        "need the full source. All apps import the shared scaffolds `css.py` "
+        "and `svg.py` from the same directory (`inguitive init` writes these "
+        "into a project).\n"
     )
-    output_lines.append(
-        "All apps import the shared scaffolds `css.py` and `svg.py` from the "
-        "same directory (`inguitive init` writes these into a project).\n"
-    )
+
     for path in apps:
-        desc = _example_description(path)
-        output_lines.append(f"- **`{path.name}`** — {desc}\n")
-        output_lines.append(f"  `{path}`\n")
+        output_lines.append("---\n")
+        output_lines.append(f"### `{path.name}`\n")
+        output_lines.append(f"**Location:**\n\n`{path}`\n")
+        docstring = _example_docstring(path)
+        if docstring:
+            rendered = _render_docstring(docstring)
+            output_lines.append(f"**Description:**\n\n{rendered}\n")
