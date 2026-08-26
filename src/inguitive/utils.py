@@ -108,7 +108,7 @@ def gather_package_documentation() -> str:
     for py_file in sorted(inguitive_src_path.glob("*.py")):
         output_lines.append("---\n")
         output_lines.append(f"## {py_file.name}\n")
-        output_lines.append(f"*Location: {py_file}*\n")
+        output_lines.append(f"**Module Location:**\n\n{py_file}\n")
 
         tree = ast.parse(py_file.read_text())
 
@@ -122,7 +122,7 @@ def gather_package_documentation() -> str:
             name = f"`{node.name}` ({_kind_of(node)})"
             output_lines.append("---\n")
             output_lines.append(f"### {name}\n")
-            output_lines.append(f"*Defined at lines {node.lineno}-{node.end_lineno}*\n")
+            output_lines.append(f"**Location:**\n\n{py_file}:{node.lineno}-{node.end_lineno}\n")
 
             docstring = ast.get_docstring(node)
             if docstring:
