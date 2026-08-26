@@ -142,4 +142,6 @@ def gather_package_documentation() -> str:
                 output_lines.append(f"### `{template_file.name}`\n")
                 output_lines.append(f"**Location:**\n\n`{template_file}`\n")
 
+    output_lines.append("\n")
+
     return "\n".join(output_lines)
