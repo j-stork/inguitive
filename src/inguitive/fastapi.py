@@ -646,24 +646,33 @@ def create_app(
         static_dirs.append(str(pkg_static))
 
     if static_dirs:
-        # Create a custom static files app that checks all directories in order
+        # Custom static files app that checks all candidate directories in order.
+        #
+        # Note on path handling: Starlette's `Mount` does not strip the mount
+        # prefix from ``scope["path"]`` for a raw ASGI sub-app. The remainder
+        # is exposed via ``scope["root_path"]`` (set to the mount prefix), so we
+        # use Starlette's ``get_route_path`` helper which strips ``root_path``
+        # from ``scope["path"]`` to recover the path relative to the mount.
+        from starlette.responses import Response
+        from starlette.routing import get_route_path
+
         async def static_files_app(scope, receive, send):
             if scope["type"] != "http":
                 return
 
-            path = scope["path"].lstrip("/")
+            # Relative path below the mount, e.g. "inguitive_favicon.svg".
+            path = get_route_path(scope).lstrip("/")
             for directory in static_dirs:
                 file_path = Path(directory) / path
                 if file_path.exists() and file_path.is_file():
-                    return FileResponse(str(file_path))
+                    return await FileResponse(str(file_path))(scope, receive, send)
 
-            # If no file found, return 404
-            from starlette.responses import Response
-            return Response(
+            # No matching file in any directory — return a plain 404.
+            return await Response(
                 content=b"Not Found",
                 status_code=404,
-                media_type="text/plain"
-            )
+                media_type="text/plain",
+            )(scope, receive, send)
 
         app.mount("/static", static_files_app, name="static")
     else:
