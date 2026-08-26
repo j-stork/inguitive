@@ -34,6 +34,8 @@ from inguitive import (
     session_context,
 )
 
+from .css import BUTTON_PRIMARY_CSS
+
 # --- App Setup ---
 app = create_app()
 
@@ -66,8 +68,7 @@ async def _tick(session_id: str):
             if session is None:
                 return
             counter_state.set(counter_state.get() + 1)
-            ids = list(counter_state.listeners)
-        await push_update(session_id, *ids)
+        await push_update(session_id, *counter_state.listeners)
 
 
 # --- Routes ---
@@ -79,8 +80,12 @@ def home():
             id="counter-display",
             listen_to="counter_state",
         ),
-        Button("Start my counter", trigger="start_counter"),
-        css="flex flex-col items-center gap-4 p-8 text-3xl",
+        Button(
+            "Start my counter",
+            trigger="start_counter",
+            css=BUTTON_PRIMARY_CSS,
+        ),
+        css="flex flex-col justify-center items-center gap-6 p-6",
     )
 
 

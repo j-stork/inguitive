@@ -8,7 +8,6 @@ from inguitive.session import (
     Session,
     _clear_current_session,
     _get_current_session_from_context,
-    _set_current_session,
     get_session_backend,
     set_session_backend,
 )

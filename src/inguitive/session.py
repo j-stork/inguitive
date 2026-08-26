@@ -9,10 +9,11 @@ import json
 import time
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator
+from typing import Any
 
 # Type aliases
 SessionId = str
