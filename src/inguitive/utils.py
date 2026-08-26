@@ -107,8 +107,8 @@ def gather_package_documentation() -> str:
     # iteration order.
     for py_file in sorted(inguitive_src_path.glob("*.py")):
         output_lines.append("---\n")
-        output_lines.append(f"## {py_file.name}\n")
-        output_lines.append(f"**Module Location:**\n\n{py_file}\n")
+        output_lines.append(f"## `{py_file.name}`\n")
+        output_lines.append(f"**Module Location:**\n\n`{py_file}`\n")
 
         tree = ast.parse(py_file.read_text())
 
@@ -122,7 +122,7 @@ def gather_package_documentation() -> str:
             name = f"`{node.name}` ({_kind_of(node)})"
             output_lines.append("---\n")
             output_lines.append(f"### {name}\n")
-            output_lines.append(f"**Location:**\n\n{py_file}:{node.lineno}-{node.end_lineno}\n")
+            output_lines.append(f"**Location:**\n\n`{py_file}:{node.lineno}-{node.end_lineno}`\n")
 
             docstring = ast.get_docstring(node)
             if docstring:
@@ -139,7 +139,7 @@ def gather_package_documentation() -> str:
             output_lines.append("---\n")
             output_lines.append("## Templates\n")
             for template_file in template_files:
-                output_lines.append(f"### {template_file.name}\n")
-                output_lines.append(f"*Location: {template_file}*\n")
+                output_lines.append(f"### `{template_file.name}`\n")
+                output_lines.append(f"**Location:**\n\n`{template_file}`\n")
 
     return "\n".join(output_lines)
