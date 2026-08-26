@@ -30,6 +30,7 @@ from inguitive.session import (
     SessionBackend,
     get_session_backend,
     get_session_id,
+    session_context,
     set_session_backend,
 )
 from inguitive.state import State
@@ -91,6 +92,7 @@ __all__ = [
     "set_session_backend",
     "get_session_backend",
     "get_session_id",
+    "session_context",
     # Utilities
     "nl2br",
     # Validation

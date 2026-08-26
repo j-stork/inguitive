@@ -29,9 +29,9 @@ from inguitive import (
     State,
     Text,
     create_app,
-    get_session_backend,
     get_session_id,
     push_update,
+    session_context,
 )
 
 # --- App Setup ---
@@ -54,26 +54,20 @@ def start_counter():
 async def _tick(session_id: str):
     """Increment the per-user counter once per second and push via SSE.
 
-    The value is stored in the session's data_registry under the state's key
-    ("counter_state"); push_update then re-renders only this session's
-    counter-display component. The loop exits cleanly when the session is
-    evicted (e.g. after the tab closes and the TTL elapses).
+    session_context binds the session so State.set() writes to this user's
+    isolated data and the session is persisted on exit. Listener IDs are
+    captured inside the context (State.listeners reads the active session),
+    and push_update runs after the context exits so it sees the saved value.
+    The loop stops cleanly when the session no longer exists.
     """
-    backend = get_session_backend()
     while True:
         await asyncio.sleep(1)
-        session = await backend.get_session(session_id)
-        if session is None:
-            return  # session expired / tab gone — stop the loop
-
-        session.data_registry["counter_state"] = (
-            session.data_registry.get("counter_state", 0) + 1
-        )
-        session.mark_dirty()
-        await backend.save_session(session)
-
-        # Re-render only this user's counter component over their SSE stream.
-        await push_update(session_id, "counter-display")
+        async with session_context(session_id) as session:
+            if session is None:
+                return
+            counter_state.set(counter_state.get() + 1)
+            ids = list(counter_state.listeners)
+        await push_update(session_id, *ids)
 
 
 # --- Routes ---

@@ -9,9 +9,10 @@ import json
 import time
 import uuid
 from abc import ABC, abstractmethod
+from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, AsyncIterator
 
 # Type aliases
 SessionId = str
@@ -313,6 +314,60 @@ def get_session_id() -> str | None:
     """Get the current session ID, or None if no session is active."""
     session = _get_current_session_from_context()
     return session.session_id if session else None
+
+
+@asynccontextmanager
+async def session_context(session_id: str) -> AsyncIterator[Session | None]:
+    """Bind a session into the current context for the duration of the block.
+
+    This is the background-task analog of the request middleware: it loads the
+    session from the backend, restores its live component registry, makes it
+    the active session so that ``State.get()`` / ``State.set()`` operate on
+    this session's isolated data, and persists the session on exit if it was
+    mutated. Use it to run per-session logic outside an HTTP request.
+
+    The yielded value is ``None`` when the session no longer exists (e.g. it
+    was evicted or the tab closed and the TTL elapsed); callers should treat
+    that as a signal to stop any loop bound to that session.
+
+    Example::
+
+        async with session_context(session_id) as session:
+            if session is None:
+                return
+            counter_state.set(counter_state.get() + 1)
+            ids = list(counter_state.listeners)
+        await push_update(session_id, *ids)
+
+    Note: ``push_update`` reloads the session from the backend before
+    rendering, so it must run *after* the context exits — the save performed
+    on exit is what makes the new state visible to the push. Listener IDs
+    must be captured *inside* the context, since ``State.listeners`` reads
+    the active session's registry.
+
+    Concurrent mutation of the same session (e.g. a background task and a
+    concurrent request handler) is last-save-wins; guard against it in your
+    app logic if needed.
+    """
+    # Deferred import: state.py imports from this module at load time.
+    from inguitive.state import _track_mutations
+
+    backend = get_session_backend()
+    session = await backend.get_session(session_id)
+    if session is None:
+        yield None
+        return
+
+    _hydrate_component_registry(session)
+    _set_current_session(session)
+    try:
+        with _track_mutations():
+            yield session
+    finally:
+        if session._dirty:
+            await backend.save_session(session)
+            session.clear_dirty()
+        _clear_current_session()
 
 
 # ---------------------------------------------------------------------------
