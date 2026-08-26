@@ -15,7 +15,7 @@ import asyncio
 
 import pytest
 
-from inguitive import State, create_app, push_update
+from inguitive import State, create_app, push_update, session_context
 from inguitive.session import (
     MemoryBackend,
     Session,
@@ -406,6 +406,97 @@ def test_push_update_multiple_components():
         html = await q.get()
         assert "mc-a" in html
         assert "mc-b" in html
+
+    asyncio.run(run())
+
+
+def test_push_update_inside_session_context_uses_listeners_form():
+    """push_update(sid, *state.listeners) inside session_context renders the
+    just-set value — the same form as update_components(*state.listeners)."""
+    from inguitive import Text
+
+    s = State(0, "_sse_ctx_listeners")
+
+    async def run():
+        session = Session(session_id="ctx-sess")
+        session.component_registry["ctx-txt"] = Text(lambda: str(s.get()), id="ctx-txt")
+        session.data_registry["_sse_ctx_listeners"] = 0
+        session.data_registry["__listeners___sse_ctx_listeners"] = {"ctx-txt"}
+        from inguitive.session import get_session_backend
+        await get_session_backend().save_session(session)
+
+        q = _register_sse_connection("ctx-sess")
+
+        async with session_context("ctx-sess"):
+            s.set(s.get() + 1)
+            await push_update("ctx-sess", *s.listeners)
+
+        assert not q.empty()
+        html = await q.get()
+        assert "ctx-txt" in html
+        assert ">1<" in html, f"expected rendered value 1, got: {html!r}"
+
+    asyncio.run(run())
+
+
+def test_push_update_inside_context_uses_in_memory_session_not_stale_reload():
+    """On a serialising backend, push_update inside session_context must see
+    the in-flight (not-yet-saved) value. Without the in-memory shortcut it
+    would reload a stale copy via from_dict and render the old value."""
+    from inguitive import Text
+    from inguitive.session import _cache_component_registry
+
+    s = State(0, "_sse_ctx_serial")
+
+    async def run():
+        backend = _SerializingBackend()
+        set_session_backend(backend)
+
+        session = Session(session_id="ctx-serial-sess")
+        session.component_registry["cs-txt"] = Text(lambda: str(s.get()), id="cs-txt")
+        session.data_registry["_sse_ctx_serial"] = 0
+        session.data_registry["__listeners___sse_ctx_serial"] = {"cs-txt"}
+        await backend.save_session(session)
+        _cache_component_registry(session)
+
+        q = _register_sse_connection("ctx-serial-sess")
+
+        async with session_context("ctx-serial-sess"):
+            s.set(7)  # not saved until context exit
+            await push_update("ctx-serial-sess", *s.listeners)
+
+        assert not q.empty()
+        html = await q.get()
+        assert ">7<" in html, (
+            f"push_update should render the in-memory value 7, got: {html!r}"
+        )
+
+    asyncio.run(run())
+
+
+def test_push_update_outside_context_still_reloads_from_backend():
+    """When no session is bound (or a different one is), push_update must still
+    load from the backend — the in-memory shortcut must not change behaviour
+    for the established outside-context usage."""
+    from inguitive import Text
+
+    s = State("v", "_sse_ctx_outside")
+
+    async def run():
+        session = Session(session_id="ctx-outside-sess")
+        session.component_registry["co-txt"] = Text(lambda: s.get(), id="co-txt")
+        session.data_registry["_sse_ctx_outside"] = "persisted"
+        from inguitive.session import get_session_backend
+        await get_session_backend().save_session(session)
+
+        q = _register_sse_connection("ctx-outside-sess")
+        # No session_context — no current session bound.
+        await push_update("ctx-outside-sess", "co-txt")
+
+        assert not q.empty()
+        html = await q.get()
+        assert "co-txt" in html
+        assert "persisted" in html
 
     asyncio.run(run())
 

@@ -57,10 +57,11 @@ async def _tick(session_id: str):
     """Increment the per-user counter once per second and push via SSE.
 
     session_context binds the session so State.set() writes to this user's
-    isolated data and the session is persisted on exit. Listener IDs are
-    captured inside the context (State.listeners reads the active session),
-    and push_update runs after the context exits so it sees the saved value.
-    The loop stops cleanly when the session no longer exists.
+    isolated data and the session is persisted on exit. push_update is called
+    inside the context with ``*counter_state.listeners`` — the same form used
+    by ``update_components`` in a trigger handler — and reuses the in-memory
+    session so it sees the just-set value without waiting for the save. The
+    loop stops cleanly when the session no longer exists.
     """
     while True:
         await asyncio.sleep(1)
@@ -68,7 +69,7 @@ async def _tick(session_id: str):
             if session is None:
                 return
             counter_state.set(counter_state.get() + 1)
-        await push_update(session_id, *counter_state.listeners)
+            await push_update(session_id, *counter_state.listeners)
 
 
 # --- Routes ---

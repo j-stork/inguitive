@@ -860,20 +860,35 @@ async def push_update(session_id: str, *component_ids: str) -> None:
         # Later, in a background task:
         async def notify():
             await push_update(current_session, "notification-banner")
+
+    When called from within a ``session_context`` block for the same session,
+    component IDs can be resolved the same way as ``update_components``::
+
+        async with session_context(session_id) as session:
+            if session is None:
+                return
+            counter_state.set(counter_state.get() + 1)
+            await push_update(session_id, *counter_state.listeners)
     """
     queues = _get_sse_queues(session_id)
     if not queues:
         return  # Session has no active SSE connections — nothing to do.
 
-    backend = get_session_backend()
-    session = await backend.get_session(session_id)
-    if session is None:
-        return
-
-    # Rendering requires a populated component_registry.  MemoryBackend
-    # returns the live session; for serialising backends (RedisBackend) the
-    # registry is restored from the worker's process-local component cache.
-    _hydrate_component_registry(session)
+    # If the target session is the one currently bound in this context (e.g.
+    # push_update called from within a session_context block), use it directly
+    # rather than reloading from the backend. This sees in-flight mutations
+    # that have not yet been persisted (the save happens at context exit) and
+    # avoids a stale-copy read on serialising backends such as RedisBackend.
+    session = _get_current_session_from_context()
+    if session is None or session.session_id != session_id:
+        backend = get_session_backend()
+        session = await backend.get_session(session_id)
+        if session is None:
+            return
+        # Rendering requires a populated component_registry.  MemoryBackend
+        # returns the live session; for serialising backends (RedisBackend) the
+        # registry is restored from the worker's process-local component cache.
+        _hydrate_component_registry(session)
 
     def _render(s=session, ids=component_ids) -> str:
         _set_current_session(s)
