@@ -54,7 +54,9 @@ def _render_docstring(docstring: str | None) -> str:
     return "```\n" + docstring.strip() + "\n```"
 
 
-def _top_level_definitions(tree: ast.Module) -> list[ast.AST]:
+def _top_level_definitions(
+    tree: ast.Module,
+) -> list[ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef]:
     """Return public top-level class and function definitions of ``tree``.
 
     "Public" means the name does not start with an underscore, matching the
@@ -78,7 +80,7 @@ def _top_level_definitions(tree: ast.Module) -> list[ast.AST]:
     ]
 
 
-def _kind_of(node: ast.AST) -> str:
+def _kind_of(node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) -> str:
     """Return the display kind for a definition node: 'class' or 'function'."""
     return "class" if isinstance(node, ast.ClassDef) else "function"
 
