@@ -108,7 +108,7 @@ def gather_package_documentation() -> str:
     for py_file in sorted(inguitive_src_path.glob("*.py")):
         output_lines.append("---\n")
         output_lines.append(f"## `{py_file.name}`\n")
-        output_lines.append(f"**Module Location:**\n\n`{py_file}`\n")
+        output_lines.append(f"**Location:**\n\n`{py_file}`\n")
 
         tree = ast.parse(py_file.read_text())
 
@@ -116,7 +116,7 @@ def gather_package_documentation() -> str:
         module_docstring = ast.get_docstring(tree)
         if module_docstring:
             rendered = _render_docstring(module_docstring)
-            output_lines.append(f"**Module Docstring:**\n\n{rendered}\n")
+            output_lines.append(f"**Description:**\n\n{rendered}\n")
 
         for node in _top_level_definitions(tree):
             name = f"`{node.name}` ({_kind_of(node)})"
@@ -127,7 +127,7 @@ def gather_package_documentation() -> str:
             docstring = ast.get_docstring(node)
             if docstring:
                 rendered = _render_docstring(docstring)
-                output_lines.append(f"**Docstring:**\n\n{rendered}\n")
+                output_lines.append(f"**Description:**\n\n{rendered}\n")
 
     # List template files if the package ships a templates directory.
     templates_path = inguitive_src_path / "templates"
