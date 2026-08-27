@@ -36,13 +36,17 @@ from inguitive import State, Text, Div, create_app
 
 app = create_app()
 
-clock_state = State("--:--", "clock")
+clock_state = State("--:--:--", "clock_state")
 
 
 @app.page("/")
 def home():
     return Div(
-        Text(lambda: clock_state.get(), id="clock-display", listen_to="clock"),
+        Text(
+            lambda: clock_state.get(), 
+            id="clock-display", 
+            listen_to="clock_state",
+        ),
         css="flex items-center justify-center min-h-screen text-6xl font-mono",
     )
 
@@ -62,13 +66,14 @@ async def _tick():
         await asyncio.sleep(1)
 ```
 
-!!! note "State isolation"
-    When `state.set()` is called from a background task, the value becomes the
-    **global broadcast value** — the same value is shown to all users. This is
-    correct for server metrics, system time, and similar global data.
-
-    Per-user state (e.g. a user-specific notification) should use
-    [`push_update()`](#explicit-per-session-push) instead.
+> **"State isolation"**
+> 
+> When `state.set()` is called from a background task, the value becomes the
+> **global broadcast value** — the same value is shown to all users. This is
+> correct for server metrics, system time, and similar global data.
+>
+> Per-user state (e.g. a user-specific notification) should use
+> [`push_update()`](#explicit-per-session-push) instead.
 
 ## Explicit per-session push
 
@@ -80,7 +85,7 @@ import asyncio
 from inguitive import State, Text, Div, Button, create_app, push_update, get_session_id
 
 app = create_app()
-notification_state = State("", "notification")
+notification_state = State("", "notification_state")
 
 # A dict mapping session_id → queue of pending messages (your app logic)
 pending: dict[str, list[str]] = {}
@@ -89,7 +94,10 @@ pending: dict[str, list[str]] = {}
 @app.page("/")
 def home():
     return Div(
-        Text(lambda: notification_state.get(), id="notification", listen_to="notification"),
+        Text(
+            lambda: notification_state.get(),
+            listen_to="notification_state",
+        ),
         Button("Request update", trigger="request_update"),
         css="flex flex-col gap-4 p-8",
     )
@@ -104,7 +112,7 @@ def request_update():
 
 async def _delayed_push(session_id: str):
     await asyncio.sleep(2)          # simulate background work
-    await push_update(session_id, "notification")
+    await push_update(session_id, *notification_state.listeners)
 ```
 
 `push_update` is a no-op when the session has no active SSE connection
@@ -129,9 +137,12 @@ from inguitive import State, get_session_id, push_update, session_context
 # 1. Per-worker task registry. The live asyncio.Task is not JSON-serialisable,
 #    so it stays in process memory (never in data_registry, which RedisBackend
 #    round-trips). Keyed by session_id so different users' loops never collide.
-_tasks: dict[str, asyncio.Task] = {}
+#    ONE DICT PER CONCURRENT WORKFLOW: A session running e.g. both a progress loop
+#    and a notification loop needs _progress_tasks and _notification_tasks,
+#    otherwise the guard would conflate the two and refuse the second.
+_progress_tasks: dict[str, asyncio.Task] = {}
 
-progress_state = State({"done": 0, "total": 0, "status": "idle"}, "progress")
+progress_state = State({"done": 0, "total": 0, "status": "idle"}, "progress_state")
 
 
 # 2. Trigger handler — starts the loop, idempotently. Must stay synchronous:
@@ -141,13 +152,13 @@ progress_state = State({"done": 0, "total": 0, "status": "idle"}, "progress")
 @app.trigger_handler
 def start_work():
     session_id = get_session_id()
-    existing = _tasks.get(session_id)
+    existing = _progress_tasks.get(session_id)
     if existing is not None and not existing.done():
         return  # already running — refuse the duplicate start
     progress_state.set({"done": 0, "total": 100, "status": "running"})
     task = asyncio.create_task(_work_loop(session_id))
-    _tasks[session_id] = task
-    task.add_done_callback(lambda t, sid=session_id: _tasks.pop(sid, None))
+    _progress_tasks[session_id] = task
+    task.add_done_callback(lambda t, sid=session_id: _progress_tasks.pop(sid, None))
 
 
 # 3. The loop. Work goes OUTSIDE session_context; State writes and pushes go
@@ -167,6 +178,15 @@ async def _work_loop(session_id: str):
             })
             await push_update(session_id, *progress_state.listeners)  # render + push
         # context exits → saves the session if dirty
+
+    # Final push: mark complete so the UI can swap in a "done" view. "done" is
+    # distinct from "idle" (never started / ready to start) — a restart flips
+    # "done" back to "running" by starting again.
+    async with session_context(session_id) as session:
+        if session is None:                  # session gone between last tick and here
+            return
+        progress_state.set({"done": total, "total": total, "status": "done"})
+        await push_update(session_id, *progress_state.listeners)
 ```
 
 ### What goes inside `session_context`, what stays outside
@@ -201,17 +221,17 @@ the push silently does nothing.
   per-session registry, no guard, and no `session_context` — call `State.set()`
   from a `@app.on_event("startup")` task and the framework auto-pushes to all
   tabs. See `examples/sse_global_app.py`.
-- **Async trigger handler.** If `start_work` ever becomes `async` and `await`s
-  between the check and the store, the guard's atomicity is lost — an
-  `asyncio.Lock` keyed by `session_id` is needed around that section. Keep the
-  handler synchronous if you can.
+- **Async trigger handler.** If `start_work` (see example above) ever becomes 
+  `async` and `await`s between the check and the store, the guard's atomicity 
+  is lost — an `asyncio.Lock` keyed by `session_id` is needed around that section. 
+  Keep the handler synchronous if you can.
 
 ### Multi-worker note
 
-`_tasks` is per-process. With multiple workers, worker B's guard sees no task
-for a session whose loop runs on worker A, and would start a second loop. The
-correct deployment is **sticky sessions** (the session, its SSE connection, and
-its loop all live on one worker) — see
+`_progress_tasks` (see example above) is per-process. With multiple workers, worker 
+B's guard sees no task for a session whose loop runs on worker A, and would start a
+second loop. The correct deployment is **sticky sessions** (the session, its SSE 
+connection, and its loop all live on one worker) — see
 [Multi-worker deployment](session-backends.md#multi-worker-deployment). If you
 cannot use sticky sessions, guard with a Redis `SET NX` lock instead of the
 in-process dict (recipe in the same section).
