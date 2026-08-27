@@ -1,148 +1,112 @@
 """
-Counter example application using inguitive framework.
+Reactive state + per-session isolation example using inguitive.
 
 Run with: uvicorn inguitive.examples.counter_app:app --reload
 
-Per-Session Isolation Demonstration
------------------------------------
-This example demonstrates inguitive's per-session state isolation.
-Each browser session maintains its own independent counter and theme state.
+Per-Session Counter
+--------------------
+This example demonstrates inguitive's core reactivity model: a ``State``
+container whose ``set()`` triggers an HTMX out-of-band re-render of every
+component that declared ``listen_to`` for that state name.
+
+Two things are worth noting here:
+
+1. **Per-session isolation.** ``State.get()`` and ``State.set()`` operate on
+   the *current session's* value. Two browser windows (regular + incognito)
+   each maintain their own independent counter — incrementing one never
+   touches the other. The session id is shown so you can see the boundary.
+
+2. **Dynamic attributes via callables.** The ``Text`` label's content and the
+   ``Div``'s ``css`` are both zero-argument callables. inguitive calls them
+   on every render, so the displayed count and its colour (red above 5) are
+   derived from live state with no manual DOM code.
+
+The handler returns ``update_components(*counter_state.listeners)`` — the
+explicit-response form. See ``auto_propagation_app.py`` for the no-return
+variant where the framework generates the OOB response for you.
 
 To test:
 1. Open this app in one regular browser window and one incognito/private window
 2. Note the unique Session ID displayed in each window
-3. Increment the counter in Window 1 - Window 2's counter remains unchanged
-4. Toggle theme in Window 1 - Window 2's theme remains unchanged
-
-This proves that State values are fully isolated per user session.
+3. Increment the counter in Window 1 — Window 2's counter stays unchanged
+4. Both counters turn red once they exceed 5
 """
 
-from inguitive import Button, Div, Icon, State, Text, create_app, get_session_id, update_components
+from inguitive import Button, Div, State, Text, create_app, get_session_id, update_components
 
-from .svg import MOON, SUN
+from .css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 
 # --- App Setup ---
-# template_dir defaults to "templates" which will use bundled templates from the package
 app = create_app()
 
 
 # --- State Instances ---
 counter_state = State(0, "counter_state")
-theme_state = State("light", "theme_state")
-
-
-# --- CSS ---
-COLOR_BASE = "slate"
-COLOR_100 = f"{COLOR_BASE}-100"
-COLOR_300 = f"{COLOR_BASE}-300"
-COLOR_400 = f"{COLOR_BASE}-400"
-COLOR_600 = f"{COLOR_BASE}-600"
-COLOR_900 = f"{COLOR_BASE}-900"
-COLOR_BRAND_1 = "blue-700"
-COLOR_BRAND_2 = "fuchsia-600"
-BUTTON_SHAPE = "p-3 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
-BUTTON_PRIMARY = (
-    f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100}"
-)
-BUTTON_SECONDARY = (
-    f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900}"
-)
 
 
 # --- Trigger Handlers ---
 @app.trigger_handler
 def increment():
+    """Add 1 to the counter and re-render its listeners explicitly."""
     counter_state.set(counter_state.get() + 1)
     return update_components(*counter_state.listeners)
 
 
 @app.trigger_handler
 def reset():
+    """Reset the counter to 0 and re-render its listeners explicitly."""
     counter_state.set(0)
     return update_components(*counter_state.listeners)
 
 
-@app.trigger_handler
-def toggle_theme():
-    """Toggle between light and dark theme."""
-    current: str = theme_state.get()
-    new_theme: str = "dark" if current == "light" else "light"
-    theme_state.set(new_theme)
-    return update_components(*theme_state.listeners)
-
-
-# --- Counter Component ---
+# --- Components ---
 def Counter() -> Div:  # noqa: N802
-    """Main counter component demonstrating inguitive features."""
+    """Counter card. All dynamic values are callables re-evaluated on render."""
 
-    def dynamic_icon() -> str:
-        """Dynamic icon based on theme state."""
-        return MOON if theme_state.get() == "light" else SUN
-
-    def dynamic_text() -> str:
-        """Dynamic text based on counter state."""
+    def count_text() -> str:
+        """Label text derived from the live counter value."""
         return f"Count: {counter_state.get()}"
 
-    def dynamic_text_css() -> str:
-        """Dynamic styling based on counter value."""
-        count = counter_state.get()
+    def count_css() -> str:
+        """Red + bold once the count exceeds 5, otherwise neutral."""
         base = "text-xl text-center"
-        if count > 5:
+        if counter_state.get() > 5:
             return f"{base} text-red-500 font-bold"
-        return f"{base} text-{COLOR_900}"
-
-    def dynamic_div_css() -> str:
-        """Dynamic styling based on theme state."""
-        bg = f"bg-{COLOR_100}" if theme_state.get() == "light" else f"bg-{COLOR_900}"
-        return f"{bg} w-full min-h-screen flex items-center justify-center"
+        return f"{base} text-slate-900"
 
     return Div(
-        Div(
-            Div(
-                Button(
-                    Icon(
-                        dynamic_icon,
-                        css="w-6 h-6",
-                    ),
-                    trigger="toggle_theme",
-                    id="theme-toggle",
-                    css=BUTTON_PRIMARY,
-                ),
-                css="w-full flex justify-end",
-            ),
-            Text(
-                text=dynamic_text,
-                id="counter-label",
-                css=dynamic_text_css,
-                listen_to="counter_state",
-            ),
-            Button(
-                "+1",
-                trigger="increment",
-                css=f"{BUTTON_PRIMARY} w-full",
-            ),
-            Button(
-                "Reset",
-                trigger="reset",
-                css=f"{BUTTON_SECONDARY} w-full",
-            ),
-            Text(
-                f"Session: {get_session_id()}",
-                css=f"text-sm text-center text-{COLOR_600}",
-            ),
-            id="counter-card",
-            css="overflow-hidden rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
+        Text(
+            count_text,
+            id="counter-label",
+            css=count_css,
+            listen_to="counter_state",
         ),
-        id="theme-container",
-        css=dynamic_div_css,
-        listen_to="theme_state",
+        Button(
+            "+1",
+            trigger="increment",
+            css=f"{BUTTON_PRIMARY_CSS} w-full",
+        ),
+        Button(
+            "Reset",
+            trigger="reset",
+            css=f"{BUTTON_SECONDARY_CSS} w-full",
+        ),
+        Text(
+            f"Session: {get_session_id()}",
+            css="text-sm text-center text-slate-600",
+        ),
+        id="counter-card",
+        css="rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
     )
 
 
 # --- Routes ---
 @app.page("/")
 def home():
-    return Counter()
+    return Div(
+        Counter(),
+        css="min-h-screen flex items-center justify-center bg-slate-100",
+    )
 
 
 # --- Start ---
