@@ -2,6 +2,8 @@
 
 from fastapi.testclient import TestClient
 
+from inguitive import Button, Div, State, Text, create_app, update_components
+
 # Import after setting up path
 from inguitive.examples.counter_app import app
 
@@ -59,9 +61,40 @@ class TestSessionIsolation:
         assert "Count: 1" in response1.text
 
     def test_independent_themes_across_sessions(self):
-        """Verify that two users have independent theme states."""
+        """Verify that two users have independent theme states.
+
+        Uses a small inline app with a light/dark theme toggle rather than
+        counter_app, which is scoped to reactive counter state (the theme
+        toggle was extracted during the one-app-per-feature refactor). This
+        still exercises session isolation of a *second* per-session State
+        distinct from the counter State tested above.
+        """
+        theme_app = create_app()
+        theme_state = State("light", "theme_state")
+
+        @theme_app.trigger_handler
+        def toggle_theme():
+            theme_state.set("dark" if theme_state.get() == "light" else "light")
+            return update_components(*theme_state.listeners)
+
+        @theme_app.page("/")
+        def home():
+            def bg() -> str:
+                return "bg-slate-900" if theme_state.get() == "dark" else "bg-slate-100"
+
+            return Div(
+                Text(
+                    lambda: theme_state.get(),
+                    listen_to="theme_state",
+                    id="theme-label",
+                ),
+                Button("Toggle", trigger="toggle_theme"),
+                id="theme-card",
+                css=lambda: f"min-h-screen flex items-center justify-center {bg()}",
+            )
+
         # User 1 with fresh client
-        client1 = get_client()
+        client1 = TestClient(theme_app)
         response1 = client1.get("/")
         cookies1 = response1.cookies
 
@@ -72,7 +105,7 @@ class TestSessionIsolation:
         assert "bg-slate-900" in response1.text
 
         # User 2 with fresh client should have light theme
-        client2 = get_client()
+        client2 = TestClient(theme_app)
         response2 = client2.get("/")
         cookies2 = response2.cookies
         assert "bg-slate-100" in response2.text
