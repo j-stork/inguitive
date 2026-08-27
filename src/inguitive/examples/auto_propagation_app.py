@@ -30,9 +30,9 @@ To test:
 2. Click "Reset" — the count returns to 0
 """
 
-from inguitive import Button, Div, State, Text, create_app
+from inguitive import Button, Div, Header, State, Text, create_app
 
-from .css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
+from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
 
 # --- App Setup ---
 app = create_app()
@@ -59,15 +59,21 @@ def reset():
 @app.page("/")
 def home():
     return Div(
+        Header(
+            "Auto-Propagation Example",
+            css=HEADER_CSS,
+        ),
         Text(
             lambda: f"Count: {counter_state.get()}",
-            id="counter-label",
-            css="text-xl text-center text-slate-900",
+            css="text-xl text-center text-white",
             listen_to="counter_state",
         ),
-        Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY_CSS} w-full"),
-        Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY_CSS} w-full"),
-        css="rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm mx-auto",
+        Div(
+            Button("+1", trigger="increment", css=BUTTON_PRIMARY_CSS),
+            Button("Reset", trigger="reset", css=BUTTON_SECONDARY_CSS),
+            css="grid grid-cols-2 gap-6 w-full max-w-md mx-auto",
+        ),
+        css=BASE_CONTAINER_CSS,
     )
 
 

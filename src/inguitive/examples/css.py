@@ -5,12 +5,33 @@ This module contains Tailwind CSS class string constants for common UI elements.
 Users can extend this file with their own styling constants.
 """
 
-# --- Styling constants ---
+# Colors
+BRAND_COLORS = {
+    "blue_400": "#3D6EF0",
+    "blue_500": "#1147E8",
+    "violet_600": "#CA00E0",
+    "navy_500": "#4977C1",
+    "navy_900": "#10182E",
+    "navy_950": "#090E1B",
+}
+
+# Wrap the color values in square brackets for Tailwind CSS compatibility
+for color_name, color_value in BRAND_COLORS.items():
+    if "#" in color_value:
+        BRAND_COLORS[color_name] = "[" + color_value.strip() + "]"
+
+
+# CSS class for the top-level container
+BASE_CONTAINER_CSS = f"flex flex-col justify-center align-center min-h-screen gap-6 p-6 bg-{BRAND_COLORS['navy_900']}"
+
+# Header text
+HEADER_CSS = "font-bold text-3xl text-center text-white mb-12"
+
 # Common base styling for all buttons
-BUTTON_BASE_CSS = "rounded-md p-2 text-sm font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-600 cursor-pointer"
+BUTTON_BASE_CSS = "rounded-md px-3 py-2 font-semibold shadow-xs cursor-pointer"
 
-# Primary button (indigo theme)
-BUTTON_PRIMARY_CSS = f"{BUTTON_BASE_CSS} bg-slate-600 text-white active:bg-slate-700"
+# Primary button
+BUTTON_PRIMARY_CSS = f"{BUTTON_BASE_CSS} bg-{BRAND_COLORS['blue_500']} text-white hover:bg-{BRAND_COLORS['blue_400']} active:bg-{BRAND_COLORS['blue_500']}"
 
-# Secondary button (white theme with gray ring)
-BUTTON_SECONDARY_CSS = f"{BUTTON_BASE_CSS} bg-slate-300 text-black active:bg-slate-400"
+# Secondary button
+BUTTON_SECONDARY_CSS = f"{BUTTON_BASE_CSS} bg-gray-300 text-black hover:bg-gray-200 active:bg-gray-300"
