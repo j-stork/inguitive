@@ -10,7 +10,9 @@ subclass declares typed, validated fields with ``field()``, and the
 ``@validate_form`` decorator intercepts the posted ``form_data`` before the
 handler runs, coercing values to their declared types and running validators.
 
-Two modes are worth knowing about:
+Two modes are worth knowing about (the parameter is named
+``handle_errors``, but it really controls *raising*: ``True`` raises,
+``False`` passes the errors dict to the handler):
 
 - ``handle_errors=True`` (the default): invalid input raises
   ``ValidationError`` and the handler never runs. Use this when you only
@@ -105,8 +107,8 @@ def register(form: RegistrationSchema, errors: dict) -> None:
     """
     if errors:
         result_state.set({"errors": errors})
-        return
-    result_state.set({"success": f"Registered: {form.username} (age {form.age})"})
+    else:
+        result_state.set({"success": f"Registered: {form.username} (age {form.age})"})
 
 
 # --- Components ---
@@ -123,19 +125,22 @@ def Field(label: str, control, hint: str = "") -> Div:  # noqa: N802
 def ResultPanel() -> Div:  # noqa: N802
     """Show either the per-field error list or the success line."""
 
-    def render() -> str:
+    def display_text() -> str:
         result = result_state.get()
         if result is None:
             return ""
         if "success" in result:
             return result["success"]
-        # errors dict: {field: [messages]}
-        lines = [f"{f}: {msg}" for f, msgs in result.get("errors", {}).items() for msg in msgs]
+        # errors dict: {field: [messages]} — flatten into one line per message
+        lines = []
+        for field_name, messages in result.get("errors", {}).items():
+            for message in messages:
+                lines.append(f"{field_name}: {message}")
         return "Fix these:\n" + "\n".join(lines)
 
     return Div(
         Text(
-            render,
+            display_text,
             id="result-panel",
             css="whitespace-pre-line text-slate-900",
             listen_to="result_state",
