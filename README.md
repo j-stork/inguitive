@@ -199,14 +199,23 @@ Button("Like", trigger="like_post", trigger_args={"id": "123"})
 │       ├── state.py         # Reactive state
 │       ├── htmx.py           # HTMX helpers
 │       ├── fastapi.py       # FastAPI integration
-│       └── svg.py           # SVG icon definitions
-├── examples/
-│   ├── counter_app.py        # Per-session counter with theme toggle
-│   ├── todo_app.py           # CRUD with filtering and real-time count
-│   ├── chat_app.py           # Real-time chat
-│   ├── navigation_demo.py    # Link vs trigger patterns
-│   ├── registration_form.py  # Form handling
-│   └── data_table_app.py     # DataTable with sorting and filtering
+│       └── examples/        # One app per feature (see docs/examples.md)
+│           ├── counter_app.py         # Reactive state + per-session isolation
+│           ├── trigger_args_app.py    # trigger_args + get_trigger_args
+│           ├── auto_propagation_app.py  # No-return handlers, auto OOB
+│           ├── form_app.py            # Form components + form_data
+│           ├── validation_app.py      # FormSchema / field / validate_form
+│           ├── data_table_app.py      # DataTable (callable data/columns, css dict)
+│           ├── icon_app.py            # Icon with Markup SVG, dynamic via callable
+│           ├── routing_app.py         # @app.page multi-page, redirect, Link
+│           ├── url_params_app.py      # <name:type> path parameters
+│           ├── sse_session_app.py     # SSE per-session push (push_update)
+│           ├── sse_global_app.py      # SSE global broadcast (startup task)
+│           ├── session_backend_app.py # MemoryBackend vs RedisBackend
+│           ├── nl2br_app.py           # nl2br newline-to-<br> utility
+│           ├── template_app.py        # TemplateComponent (Jinja2)
+│           ├── css.py                 # Shared CSS constants for the apps
+│           └── svg.py                 # SVG icon definitions
 ├── tests/
 │   └── test_*.py           # Test files
 ├── pyproject.toml           # Build configuration
@@ -296,7 +305,7 @@ app = create_app(
 
 ```bash
 # From the repository root
-uvicorn examples.counter_app:app --reload
+uvicorn inguitive.examples.counter_app:app --reload
 
 # Then open http://localhost:8000
 ```
