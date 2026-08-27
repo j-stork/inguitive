@@ -64,7 +64,7 @@ app = create_app()
 
 # --- State Instances ---
 # Holds either a success message or a dict of per-field error lists.
-result_state = State(None, "result_state")
+result_state: State[dict | None] = State(None, "result_state")
 
 
 # --- Schema ---
@@ -130,7 +130,7 @@ def ResultPanel() -> Div:  # noqa: N802
         if result is None:
             return ""
         if "success" in result:
-            return result["success"]
+            return str(result["success"])
         # errors dict: {field: [messages]} — flatten into one line per message
         lines = []
         for field_name, messages in result.get("errors", {}).items():

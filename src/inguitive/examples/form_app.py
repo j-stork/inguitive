@@ -62,7 +62,7 @@ app = create_app()
 
 # --- State Instances ---
 # Holds the last submitted form data as a dict. Display reads from this.
-form_state = State({}, "form_state")
+form_state: State[dict] = State({}, "form_state")
 
 
 # --- Trigger Handlers ---

@@ -53,11 +53,25 @@ _T = TypeVar("_T")
 # Type alias for head content (supports strings, Components, Markup, lists, or None)
 HeadContent = str | Component | markupsafe.Markup | list[str | Component | markupsafe.Markup] | None
 
-# Type aliases for decorator return types
-_TriggerDecorator = Callable[[Callable[_P, _T]], Callable[_P, _T]]
-_PageDecorator = Callable[
-    [str | None, str | None, str | None, HeadContent], Callable[[Callable[_P, _T]], Callable[_P, _T]]
-]
+# Protocols for the decorator surfaces bound onto an app in create_app().
+#
+# Modelled as Protocols (not Callable aliases) so _PageDecorator can expose its
+# keyword arguments with defaults: a plain Callable[[A, B, C, D], R] alias has
+# no way to express optional arguments, which mypy reports as "Too few
+# arguments" at every @app.page("/path") call site. A Protocol's __call__
+# signature carries the defaults just like a real function.
+class _TriggerDecorator(Protocol[_P, _T]):
+    def __call__(self, handler: Callable[_P, _T]) -> Callable[_P, _T]: ...
+
+
+class _PageDecorator(Protocol[_P, _T]):
+    def __call__(
+        self,
+        path: str | None = None,
+        title: str | None = None,
+        favicon: str | None = None,
+        head: HeadContent = None,
+    ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 
 
 # Supported path parameter types and their converters
@@ -175,6 +189,12 @@ class InguitiveApp(Protocol[_P, _T]):
     # Custom decorators
     trigger_handler: _TriggerDecorator[_P, _T]
     page: _PageDecorator[_P, _T]
+
+    # FastAPI event hook used by background-task patterns (e.g. the SSE
+    # startup task in sse_global_app.py). Declared here because the Protocol
+    # otherwise narrows FastAPI away to just the inguitive decorators; the
+    # real FastAPI instance provides this method.
+    def on_event(self, event_type: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
 
 
 def _register_page_route(
@@ -616,7 +636,7 @@ def create_app(
     session_cookie_httponly: bool = True,
     session_cleanup_interval: int = 100,
     dev_mode: bool = True,
-) -> InguitiveApp[_P, _T]:
+) -> InguitiveApp[Any, Any]:
     """Create and configure a FastAPI application for inguitive.
 
     Args:
