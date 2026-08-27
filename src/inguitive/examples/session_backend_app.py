@@ -53,7 +53,6 @@ from inguitive import (
     get_session_backend,
     get_session_id,
     set_session_backend,
-    update_components,
 )
 
 from .css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
@@ -66,6 +65,8 @@ _backend_name = os.getenv("SESSION_BACKEND", "memory").lower()
 if _backend_name == "redis":
     # RedisBackend lazily connects on first use; missing `redis` package or
     # an unreachable server only surfaces when a request touches the backend.
+    # Requires the redis package (pip install "inguitive[redis]") and a running
+    # Redis server reachable at REDIS_URL.
     set_session_backend(
         RedisBackend(redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"))
     )
@@ -85,13 +86,11 @@ counter_state = State(0, "counter_state")
 @app.trigger_handler
 def increment():
     counter_state.set(counter_state.get() + 1)
-    return update_components(*counter_state.listeners)
 
 
 @app.trigger_handler
 def reset():
     counter_state.set(0)
-    return update_components(*counter_state.listeners)
 
 
 # --- Components ---
@@ -104,7 +103,6 @@ def Counter() -> Div:  # noqa: N802
     return Div(
         Text(
             lambda: f"Count: {counter_state.get()}",
-            id="counter-label",
             css="text-xl text-center text-slate-900",
             listen_to="counter_state",
         ),
@@ -118,7 +116,6 @@ def Counter() -> Div:  # noqa: N802
             f"Backend: {backend_name()}",
             css="text-sm text-center text-slate-500",
         ),
-        id="counter-card",
         css="rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
     )
 
