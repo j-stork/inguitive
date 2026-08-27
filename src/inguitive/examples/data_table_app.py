@@ -1,398 +1,138 @@
 """
-Data Table Example using inguitive framework.
-
-Demonstrates:
-- Rendering tabular data with the DataTable component
-- Using list of dictionaries as the data structure
-- Dynamic column ordering via state management
-- Dynamic CSS styling with dictionary-based css parameter
-- Dynamic data rendering with state management
-- Table sorting with toggleable ascending/descending order
-- Auto-propagation of state updates (automatic OOB response generation)
-- Using get_trigger_args() to access trigger arguments
-- Free-text filtering with conditional reset button and status display
-- State-based UI controls (show/hide status text and reset button)
-- Dynamic layout controls with custom column order and styling
-
-Features:
-- Displays a table of employee data
-- Sort controls with buttons for each column
-- Click a button to sort ascending, click again to sort descending
-- Free-text filter across all fields with status display and conditional reset button
-- Status text shows "Filter is applied: <text>" when a filter is active
-- Reset button appears only when filter is active
-- Single interactive table with dynamic column order and custom CSS styling controlled via layout controls
-- Table automatically updates when data or layout state changes
-- Auto-generated OOB responses from state mutations
-- Trigger handlers access arguments via get_trigger_args() without form_data parameter
-- Form submission with form_data for dynamic input
+DataTable example using inguitive.
 
 Run with: uvicorn inguitive.examples.data_table_app:app --reload
+
+The DataTable Component
+-----------------------
+This example demonstrates the ``DataTable`` component, which renders a list
+of dictionaries as an HTML table. Three DataTable-specific capabilities are
+exercised here:
+
+1. **Data from a callable.** ``data`` accepts a zero-argument callable
+   returning a ``list[dict]`` (here ``people_state.get``), re-evaluated on
+   every render so the table reflects the current state.
+
+2. **Dynamic columns via a callable.** ``columns`` accepts a callable
+   returning a ``list[str]`` (or ``None`` to fall back to the first row's
+   keys). The "Reorder columns" button toggles between ``None`` (default
+   order) and a custom order that omits the ``id`` column.
+
+3. **Dictionary CSS for fine-grained styling.** ``css`` accepts a dict with
+   ``"table"``, ``"header"``, ``"row"``, and ``"cell"`` keys, each mapping to
+   CSS classes for that sub-element. The "Custom styling" button swaps
+   between the default styling and a dict that styles each part of the
+   table separately.
+
+4. **Multi-state ``listen_to``.** The single table declares
+   ``listen_to=["people_state", "columns_state", "style_state"]`` so it
+   re-renders when any of the three states changes — one component reacting
+   to multiple states.
+
+All handlers return nothing: auto-propagation (see
+``auto_propagation_app.py``) re-renders the table after each toggle.
+
+To test:
+1. The table shows three people with default column order and styling
+2. Click "Reorder columns" — the id column disappears, order changes
+3. Click "Custom styling" — header, rows, and cells get distinct colours
+4. Click "Reset" — both revert to defaults
 """
 
-from inguitive import Button, DataTable, Div, Form, Input, State, Text, create_app, get_trigger_args
+from inguitive import Button, DataTable, Div, State, Text, create_app
+
+from .css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
 
 # --- App Setup ---
-# template_dir defaults to "templates" which will use bundled templates from the package
 app = create_app()
 
 
-# --- CSS ---
-COLOR_BASE = "slate"
-COLOR_100 = f"{COLOR_BASE}-100"
-COLOR_200 = f"{COLOR_BASE}-200"
-COLOR_300 = f"{COLOR_BASE}-300"
-COLOR_400 = f"{COLOR_BASE}-400"
-COLOR_700 = f"{COLOR_BASE}-700"
-COLOR_900 = f"{COLOR_BASE}-900"
-COLOR_BRAND_1 = "blue-700"
-COLOR_BRAND_2 = "fuchsia-600"
-COLOR_BRAND_2_LIGHT = "fuchsia-500"
-BUTTON_SHAPE = "px-3 py-2 rounded-md font-semibold cursor-pointer shadow-lg active:shadow-none"
-BUTTON_PRIMARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_BRAND_1} to-{COLOR_BRAND_2} text-{COLOR_100} hover:to-{COLOR_BRAND_2_LIGHT} active:to-{COLOR_BRAND_2}"
-BUTTON_SECONDARY = f"{BUTTON_SHAPE} bg-linear-to-tr from-{COLOR_400} to-{COLOR_300} text-{COLOR_900} hover:to-{COLOR_200} active:to-{COLOR_300}"
-
-
 # --- Sample Data ---
-# Employee data as list of dictionaries
-EMPLOYEE_DATA = [
-    {
-        "id": 1,
-        "name": "Alice Johnson",
-        "department": "Engineering",
-        "salary": 75000,
-        "status": "Active",
-    },
-    {"id": 2, "name": "Charlie Brown", "department": "Sales", "salary": 65000, "status": "Active"},
-    {
-        "id": 3,
-        "name": "Bob Smith",
-        "department": "Engineering",
-        "salary": 80000,
-        "status": "Active",
-    },
-    {
-        "id": 4,
-        "name": "Diana Prince",
-        "department": "Marketing",
-        "salary": 68000,
-        "status": "On Leave",
-    },
-    {"id": 5, "name": "Frank Castle", "department": "HR", "salary": 72000, "status": "Active"},
-    {
-        "id": 6,
-        "name": "Eve Adams",
-        "department": "Engineering",
-        "salary": 85000,
-        "status": "Active",
-    },
+PEOPLE = [
+    {"id": 1, "name": "Alice", "role": "Engineer", "city": "Berlin"},
+    {"id": 2, "name": "Bob", "role": "Designer", "city": "Paris"},
+    {"id": 3, "name": "Cara", "role": "Manager", "city": "Rome"},
 ]
 
-# State to store table data (allows dynamic updates)
-employee_data_state = State(EMPLOYEE_DATA, "employee_data_state")
 
-# State to track sort configuration
-sort_config_state = State({"column": None, "direction": "asc"}, "sort_config_state")
-
-# State to track filter text (empty string = no filter)
-filter_text_state = State("", "filter_text_state")
-
-# State for custom column order
-column_order_state: State[list[str] | None] = State(None, "column_order_state")
-
-# State for custom styling (None = default, "custom" = custom CSS)
-styling_state: State[str | None] = State(None, "styling_state")
+# --- State Instances ---
+people_state = State(PEOPLE, "people_state")
+# None = default column order (keys from the first row); list = custom order.
+columns_state: State[list[str] | None] = State(None, "columns_state")
+# "default" = no css dict; "custom" = dict-based fine-grained styling.
+style_state: State[str] = State("default", "style_state")
 
 
 # --- Trigger Handlers ---
 @app.trigger_handler
-def sort_employees():
-    """Sort employee table by specified column. Toggles direction on repeated clicks.
-
-    Demonstrates auto-propagation and get_trigger_args() for accessing
-    trigger arguments without form_data parameter.
-    """
-    column = get_trigger_args().get("column")
-    if not column:
-        return ""
-
-    # Get current sort config
-    current_config = sort_config_state.get()
-    current_column = current_config.get("column")
-
-    # Determine new direction
-    if current_column == column:
-        # Same column: toggle direction
-        new_direction = "desc" if current_config.get("direction") == "asc" else "asc"
+def reorder_columns():
+    """Toggle between default column order and a custom order (no id)."""
+    current = columns_state.get()
+    if current is None:
+        columns_state.set(["name", "role", "city"])
     else:
-        # Different column: start with ascending
-        new_direction = "asc"
-
-    # Update sort config
-    sort_config_state.set({"column": column, "direction": new_direction})
-
-    # Sort the data (copy to avoid mutating original)
-    data = list(employee_data_state.get())
-    if column and column != "none":
-        # Handle None values and missing keys safely
-        data.sort(key=lambda x: str(x.get(column, "") or ""), reverse=(new_direction == "desc"))
-
-    # Update data state - auto-propagation will handle OOB response
-    employee_data_state.set(data)
-
-    # No explicit return - auto-propagation generates response automatically
+        columns_state.set(None)
 
 
 @app.trigger_handler
-def filter_employees(form_data: dict):
-    """Filter employees by text search across all fields.
-
-    Searches all string values in each employee dictionary for the
-    filter text (case-insensitive). Sets filter_text_state to the search
-    text when filter is applied, empty string when cleared.
-
-    Demonstrates:
-    - Form data access via form_data parameter
-    - Free-text search across multiple fields
-    - State management for UI feedback
-    """
-    search_text = form_data.get("filter-text", "").lower()
-
-    if search_text:
-        # Filter data: search across all fields
-        filtered = [
-            e for e in EMPLOYEE_DATA if any(search_text in str(v).lower() for v in e.values())
-        ]
-        filter_text_state.set(search_text)
-    else:
-        # Empty search = show all (clear filter)
-        filtered = list(EMPLOYEE_DATA)
-        filter_text_state.set("")
-
-    employee_data_state.set(filtered)
-
-    # Auto-propagation handles OOB response - no explicit return needed
+def toggle_style():
+    """Toggle between default and custom dict-based styling."""
+    current = style_state.get()
+    style_state.set("custom" if current == "default" else "default")
 
 
 @app.trigger_handler
-def clear_filter():
-    """Clear the current filter, showing all employees.
-
-    Resets employee data to full list and clears filter_text_state.
-    """
-    filter_text_state.set("")
-    employee_data_state.set(list(EMPLOYEE_DATA))
-
-    # Auto-propagation handles OOB response - no explicit return needed
-
-
-@app.trigger_handler
-def reset_layout():
-    """Reset table to original layout and default styling."""
-    column_order_state.set(None)
-    styling_state.set(None)
-
-
-@app.trigger_handler
-def set_custom_column_order():
-    """Set custom column order: name, department, salary, status (omitting id)."""
-    column_order_state.set(["department", "name", "status", "salary"])
-
-
-@app.trigger_handler
-def set_custom_styling():
-    """Set custom CSS styling for the table."""
-    styling_state.set("custom")
+def reset():
+    """Reset both columns and styling to defaults."""
+    columns_state.set(None)
+    style_state.set("default")
 
 
 # --- Components ---
-def DynamicEmployeeTable():  # noqa: N802
-    """Single table that responds to column_order_state and styling_state.
+def table_css():
+    """Return DataTable css: plain string for default, dict for custom.
 
-    Demonstrates:
-    - Dynamic column ordering via state
-    - Dynamic CSS styling via state
-    - Single component responding to multiple states
+    The dict form maps sub-element keys ("table", "header", "row", "cell")
+    to CSS classes — the DataTable-specific feature this example highlights.
     """
+    if style_state.get() == "custom":
+        return {
+            "table": "w-full border-2 border-slate-600",
+            "header": "px-3 py-2 bg-slate-600 text-white font-mono uppercase",
+            "row": "hover:bg-slate-200 transition-colors",
+            "cell": "px-3 py-2 border border-slate-400 font-mono",
+        }
+    return "w-full text-left"
 
-    def dynamic_columns():
-        return column_order_state.get()
 
-    def dynamic_css():
-        styling = styling_state.get()
-        if styling == "custom":
-            css_config = {
-                "table": f"w-full border-2 border-{COLOR_BRAND_1}",
-                "header": f"px-3 py-2 bg-{COLOR_BRAND_1} text-{COLOR_100} font-mono",
-                "cell": f"px-3 py-2 border border-{COLOR_700} text-{COLOR_100} font-mono",
-                "row": f"hover:bg-{COLOR_700} transition-colors",
-            }
-        else:
-            css_config = "w-full"
-        return css_config
-
+def PeopleTable() -> DataTable:  # noqa: N802
+    """Single table reacting to three states via multi-state listen_to."""
     return DataTable(
-        data=employee_data_state.get,
-        # Note that listen_to also accepts multiple state names.
-        listen_to=["employee_data_state", "column_order_state", "styling_state"],
-        columns=dynamic_columns,
-        css=dynamic_css,
+        id="people-table",
+        data=people_state.get,
+        columns=columns_state.get,
+        css=table_css,
+        listen_to=["people_state", "columns_state", "style_state"],
     )
 
 
-def SortButtons():  # noqa: N802
-    """Render sort buttons for each column in the employee table."""
-    # Column names and their display labels
-    columns = ["id", "name", "department", "salary", "status"]
-    column_labels = ["ID", "Name", "Department", "Salary", "Status"]
-
-    buttons = []
-    for col, label in zip(columns, column_labels):
-        buttons.append(
-            Button(
-                label,
-                trigger="sort_employees",
-                trigger_args={"column": col},
-                css=BUTTON_PRIMARY if col == "id" else BUTTON_SECONDARY,
-            )
-        )
-
+def Controls() -> Div:  # noqa: N802
     return Div(
-        Text(
-            "Sort tables by:",
-            css=f"font-medium text-{COLOR_300}",
-        ),
-        Div(*buttons, css="flex flex-wrap gap-3"),
-        css="space-y-3",
+        Button("Reorder columns", trigger="reorder_columns", css=BUTTON_PRIMARY_CSS),
+        Button("Custom styling", trigger="toggle_style", css=BUTTON_PRIMARY_CSS),
+        Button("Reset", trigger="reset", css=BUTTON_SECONDARY_CSS),
+        css="flex gap-3",
     )
 
 
-def FilterControls():  # noqa: N802
-    """Filter UI with input field, status text, and conditional reset button.
-
-    Demonstrates:
-    - Form component with Input and Button
-    - Conditional rendering based on state (status text and reset button)
-    - Trigger handlers for form submission
-    - Free-text search across all fields
-    - State-based conditional UI with text display
-    """
-
-    def dynamic_text():
-        """Return status text based on whether filter is applied."""
-        filter_text = filter_text_state.get()
-        if filter_text:
-            return f"Filter is applied: {filter_text}"
-        return ""
-
-    def dynamic_css():
-        """Return CSS for status div based on whether filter is applied."""
-        if filter_text_state.get():
-            return "flex items-center gap-3"
-        return "hidden"
-
-    return Div(
-        Text(
-            "Filter:",
-            css=f"font-medium text-{COLOR_300}",
-        ),
-        Form(
-            Input(
-                id="filter-text",
-                name="filter-text",
-                placeholder="Filter by any keyword...",
-                css=f"px-3 py-2 bg-{COLOR_300} rounded-md",
-            ),
-            Button(
-                "Filter",
-                type="submit",
-                css=BUTTON_PRIMARY,
-            ),
-            trigger="filter_employees",
-            css="flex items-center gap-3",
-        ),
-        Div(
-            Text(
-                dynamic_text,
-                css=f"text-{COLOR_300}",
-            ),
-            Button(
-                "Reset",
-                trigger="clear_filter",
-                listen_to="filter_text_state",
-                css=BUTTON_SECONDARY,
-            ),
-            listen_to="filter_text_state",
-            css=dynamic_css,
-        ),
-        css="space-y-3",
-    )
-
-
-def LayoutControls():  # noqa: N802
-    """Controls for toggling table column order and styling.
-
-    Demonstrates:
-    - Multiple buttons controlling different state aspects
-    - State-based layout customization
-    """
-    return Div(
-        Text(
-            "Customize table layout:",
-            css=f"font-medium text-{COLOR_300}",
-        ),
-        Div(
-            Button(
-                "Original Layout",
-                trigger="reset_layout",
-                css=BUTTON_PRIMARY,
-            ),
-            Button(
-                "Custom Column Order",
-                trigger="set_custom_column_order",
-                css=BUTTON_SECONDARY,
-            ),
-            Button(
-                "Custom Styling",
-                trigger="set_custom_styling",
-                css=BUTTON_SECONDARY,
-            ),
-            css="flex gap-3",
-        ),
-        css="space-y-3",
-    )
-
-
-# --- Pages ---
+# --- Routes ---
 @app.page("/")
-def index():
-    """Render the main data table example page."""
+def home():
     return Div(
-        Div(
-            Div(
-                Text(
-                    "Data Table Example",
-                    css=f"text-3xl font-bold text-{COLOR_100}",
-                ),
-                Text(
-                    "Demonstrates the DataTable component with list of dictionaries data structure.",
-                    css=f"text-lg text-{COLOR_300}",
-                ),
-            ),
-            Div(
-                # Sort controls
-                SortButtons(),
-                # Filter controls
-                FilterControls(),
-                # Layout controls
-                LayoutControls(),
-                css=f"border-2 border-{COLOR_700} rounded-xl p-6 space-y-6",
-            ),
-            # Dynamic table demonstrating column order and styling
-            DynamicEmployeeTable(),
-            css="w-full max-w-6xl mx-auto p-6 space-y-6",
-        ),
-        css=f"w-full bg-{COLOR_900} min-h-screen",
+        Text("Data Table Example", css="text-2xl font-bold text-slate-100"),
+        Controls(),
+        PeopleTable(),
+        css="w-full max-w-3xl mx-auto p-6 space-y-6 bg-slate-900 min-h-screen",
     )
 
 
