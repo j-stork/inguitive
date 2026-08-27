@@ -1,64 +1,88 @@
 """Tests for utility functions."""
 
+from markupsafe import Markup, escape
+
 from inguitive import nl2br
 
 
 def test_nl2br_basic():
     """Test basic newline to <br> conversion."""
-    assert nl2br("Line 1\nLine 2") == "Line 1<br>Line 2"
+    assert str(nl2br("Line 1\nLine 2")) == "Line 1<br>Line 2"
 
 
 def test_nl2br_multiple_newlines():
     """Test multiple consecutive newlines."""
-    assert nl2br("Line 1\n\n\nLine 2") == "Line 1<br><br><br>Line 2"
+    assert str(nl2br("Line 1\n\n\nLine 2")) == "Line 1<br><br><br>Line 2"
 
 
 def test_nl2br_empty_string():
     """Test empty string handling."""
-    assert nl2br("") == ""
+    assert str(nl2br("")) == ""
 
 
 def test_nl2br_no_newlines():
     """Test string without newlines remains unchanged."""
-    assert nl2br("Single line") == "Single line"
+    assert str(nl2br("Single line")) == "Single line"
 
 
 def test_nl2br_none_input():
-    """Test None input returns empty string."""
-    assert nl2br(None) == ""
+    """Test None input returns empty Markup."""
+    assert str(nl2br(None)) == ""
 
 
 def test_nl2br_mixed_content():
     """Test newlines mixed with other content."""
-    assert nl2br("Start\nMiddle\nEnd") == "Start<br>Middle<br>End"
+    assert str(nl2br("Start\nMiddle\nEnd")) == "Start<br>Middle<br>End"
 
 
 def test_nl2br_preserves_other_whitespace():
     """Test that spaces and tabs are preserved."""
-    assert nl2br("Line 1  \n\tLine 2") == "Line 1  <br>\tLine 2"
+    assert str(nl2br("Line 1  \n\tLine 2")) == "Line 1  <br>\tLine 2"
 
 
-def test_nl2br_html_safe():
-    """Test with existing HTML content."""
-    # Note: This doesn't escape existing HTML - user's responsibility
-    assert nl2br("<b>Bold\nNormal</b>") == "<b>Bold<br>Normal</b>"
+def test_nl2br_escapes_html():
+    """Test that HTML-special characters are escaped."""
+    assert str(nl2br("<b>Bold\nNormal</b>")) == "&lt;b&gt;Bold<br>Normal&lt;/b&gt;"
+
+
+def test_nl2br_escapes_script_tag():
+    """Test that <script> tags are neutralised (XSS prevention)."""
+    assert str(nl2br("<script>alert(1)</script>")) == "&lt;script&gt;alert(1)&lt;/script&gt;"
+
+
+def test_nl2br_script_with_newline():
+    """Test the documented example: <script>\nalert(1) → escaped + <br>."""
+    assert str(nl2br("<script>\nalert(1)")) == "&lt;script&gt;<br>alert(1)"
 
 
 def test_nl2br_windows_line_endings():
     """Test Windows CRLF line endings (\r\n) conversion."""
-    assert nl2br("Line 1\r\nLine 2") == "Line 1<br>Line 2"
+    assert str(nl2br("Line 1\r\nLine 2")) == "Line 1<br>Line 2"
 
 
 def test_nl2br_old_mac_line_endings():
     """Test old Mac CR line endings (\r) conversion."""
-    assert nl2br("Line 1\rLine 2") == "Line 1<br>Line 2"
+    assert str(nl2br("Line 1\rLine 2")) == "Line 1<br>Line 2"
 
 
 def test_nl2br_mixed_line_endings():
     """Test mixed line endings in the same string."""
-    assert nl2br("Line 1\r\nLine 2\nLine 3\rLine 4") == "Line 1<br>Line 2<br>Line 3<br>Line 4"
+    assert str(nl2br("Line 1\r\nLine 2\nLine 3\rLine 4")) == "Line 1<br>Line 2<br>Line 3<br>Line 4"
 
 
 def test_nl2br_crlf_only():
     """Explicit test for CRLF only."""
-    assert nl2br("Hello\r\nWorld") == "Hello<br>World"
+    assert str(nl2br("Hello\r\nWorld")) == "Hello<br>World"
+
+
+def test_nl2br_returns_markup():
+    """Test that nl2br returns a markupsafe.Markup, not a plain str."""
+    assert isinstance(nl2br("text\nmore"), Markup)
+
+
+def test_nl2br_markup_not_re_escaped():
+    """Test that the returned Markup's <br> is not re-escaped on output."""
+    # markupsafe.escape on a Markup object should leave <br> intact.
+    result = nl2br("a\nb")
+    assert str(escape(result)) == "a<br>b"
+

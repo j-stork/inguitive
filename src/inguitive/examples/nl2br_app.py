@@ -3,31 +3,21 @@ nl2br utility example using inguitive.
 
 Run with: uvicorn inguitive.examples.nl2br_app:app --reload
 
-Newline-to-<br> Conversion
--------------------------
+Newline-to-<br> Conversion (safe by default)
+--------------------------------------------
 This example demonstrates the ``nl2br`` helper, which converts newline
 characters (``\n``, ``\r\n``, ``\r``) in a string to ``<br>`` tags so that
 multiline text entered in a ``<textarea>`` renders with line breaks in HTML.
 
-The subtlety it highlights is the interaction with HTML escaping. ``nl2br``
-only converts newlines — it does not strip or escape ``<script>`` or other
-HTML tags. To use it safely on user input, escape the text **first**, then
-convert newlines, then wrap the result in ``markupsafe.Markup`` so the
-framework's escaping does not re-escape the ``<br>`` tags it just produced:
-
-    Markup(nl2br(str(markupsafe.escape(content))))
-
-The order matters: escaping first turns ``<`` and ``>`` into ``&lt;`` and
-``&gt;`` (neutralising any HTML the user typed), then ``nl2br`` turns the
-newlines into ``<br>`` tags, then ``Markup`` tells the framework the
-resulting string is safe to emit as HTML. The ``str()`` around ``escape``
-is needed because ``markupsafe.escape`` returns a ``Markup`` object whose
-``.replace()`` (used inside ``nl2br``) would otherwise re-escape the
-inserted ``<br>``. Reversing the escape/nl2br order would let user-supplied
-``<script>`` tags through verbatim — an XSS hole.
+``nl2br`` is safe to call on untrusted user input: it escapes HTML-special
+characters (``<``, ``>``, ``&``, ``"``, ``'``) via ``markupsafe.escape``
+before converting newlines, and returns a ``markupsafe.Markup`` so the
+framework emits the result as HTML without re-escaping the ``<br>`` tags.
+Callers no longer need to wrap the input in
+``Markup(nl2br(str(escape(content))))`` — ``nl2br(content)`` is enough.
 
 Here the handler stores the submitted text in ``text_state``; the display
-panel applies the safe sequence above. Submitting
+panel calls ``nl2br(content)`` directly. Submitting
 
     <script>
         Some pseudo code
@@ -52,8 +42,6 @@ To test:
    escaped (``&lt;script&gt;``) and only the newlines become ``<br>``,
    which is the safe pattern shown here.
 """
-
-from markupsafe import Markup, escape
 
 from inguitive import Button, Div, Form, State, Text, Textarea, create_app, nl2br
 
@@ -80,21 +68,14 @@ def submit(form_data: dict):
 def display_text() -> str:
     """Render the stored text with newlines converted to <br> tags.
 
-    The safe sequence is escape → nl2br → Markup: escaping first neutralises
-    any HTML the user typed, then ``nl2br`` turns newlines into ``<br>``
-    tags, then ``Markup`` tells the framework the result is safe to emit
-    (so the ``<br>`` tags are not re-escaped).
-
-    The ``str()`` around ``escape()`` is deliberate: ``markupsafe.escape``
-    returns a ``Markup`` object, and ``Markup.replace`` (used inside
-    ``nl2br``) re-escapes the inserted ``<br>`` string — yielding
-    ``&lt;br&gt;`` instead of ``<br>``. Converting to a plain ``str`` first
-    keeps ``nl2br``'s replacement literal.
+    ``nl2br`` escapes HTML-special characters and returns a ``Markup``, so
+    this is safe on untrusted input — no manual ``escape``/``str``/``Markup``
+    chain is needed.
     """
     content = text_state.get()
     if not content:
         return ""
-    return Markup(nl2br(str(escape(content))))
+    return nl2br(content)
 
 
 def Display() -> Div:  # noqa: N802

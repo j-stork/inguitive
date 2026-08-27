@@ -184,8 +184,8 @@ SESSION_BACKEND=redis REDIS_URL=redis://localhost:6379 \
 The `nl2br` utility. Demonstrates:
 
 - Converting `\n` / `\r\n` / `\r` in a string to `<br>` tags for HTML line breaks
-- The safe call chain `Markup(nl2br(str(escape(content))))` for user input
-- The ordering gotcha: escape first, then convert newlines, then wrap in `Markup`
+- Safe-by-default: HTML-special characters are escaped internally, so `nl2br(content)` is safe on untrusted input
+- Returning `markupsafe.Markup` so the framework emits the result as HTML without re-escaping the `<br>` tags
 
 ```bash
 uvicorn inguitive.examples.nl2br_app:app --reload
