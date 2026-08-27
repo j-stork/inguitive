@@ -16,7 +16,7 @@ exercised here:
 2. **Dynamic columns via a callable.** ``columns`` accepts a callable
    returning a ``list[str]`` (or ``None`` to fall back to the first row's
    keys). The "Reorder columns" button toggles between ``None`` (default
-   order) and a custom order that omits the ``id`` column.
+   order) and a reversed order that omits the ``id`` column.
 
 3. **Dictionary CSS for fine-grained styling.** ``css`` accepts a dict with
    ``"table"``, ``"header"``, ``"row"``, and ``"cell"`` keys, each mapping to
@@ -66,10 +66,11 @@ style_state: State[str] = State("default", "style_state")
 # --- Trigger Handlers ---
 @app.trigger_handler
 def reorder_columns():
-    """Toggle between default column order and a custom order (no id)."""
+    """Toggle between default column order and a reversed order (no id)."""
     current = columns_state.get()
     if current is None:
-        columns_state.set(["name", "role", "city"])
+        # Reverse the order and drop id so the change is visually obvious.
+        columns_state.set(["city", "role", "name"])
     else:
         columns_state.set(None)
 
@@ -108,9 +109,8 @@ def table_css():
 def PeopleTable() -> DataTable:  # noqa: N802
     """Single table reacting to three states via multi-state listen_to."""
     return DataTable(
-        id="people-table",
-        data=people_state.get,
-        columns=columns_state.get,
+        data=lambda: people_state.get(),
+        columns=lambda: columns_state.get(),
         css=table_css,
         listen_to=["people_state", "columns_state", "style_state"],
     )
