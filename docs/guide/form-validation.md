@@ -130,11 +130,11 @@ async def register(form: RegistrationSchema) -> str:
 ```
 
 When validation fails, `validate_form` raises `ValidationError` by default.
-To handle errors in the handler instead, pass `handle_errors=False`:
+To handle errors in the handler instead, pass `raise_on_invalid=False`:
 
 ```python
 @app.trigger_handler
-@validate_form(RegistrationSchema, handle_errors=False)
+@validate_form(RegistrationSchema, raise_on_invalid=False)
 async def register(form: RegistrationSchema, errors: dict) -> str:
     if errors:
         error_state.set(errors)

@@ -687,7 +687,7 @@ class FormSchema(metaclass=FormSchemaMeta):
 def _validate_and_call_sync(
     handler: Callable[..., Any],
     schema_class: type[FormSchema],
-    handle_errors: bool,
+    raise_on_invalid: bool,
     form_data_param: str,
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
@@ -720,11 +720,11 @@ def _validate_and_call_sync(
     # Instantiate and validate schema
     schema = schema_class(form_data)
 
-    if handle_errors and not schema.is_valid:
+    if raise_on_invalid and not schema.is_valid:
         raise ValidationError(schema.errors)
 
-    # If handle_errors=False, inject errors dict
-    if not handle_errors:
+    # If raise_on_invalid=False, inject errors dict
+    if not raise_on_invalid:
         kwargs["errors"] = schema.errors
 
     # Determine the parameter name to use for the schema instance
@@ -759,7 +759,7 @@ def _validate_and_call_sync(
 async def _validate_and_call_async(
     handler: Callable[..., Awaitable[Any]],
     schema_class: type[FormSchema],
-    handle_errors: bool,
+    raise_on_invalid: bool,
     form_data_param: str,
     args: tuple[Any, ...],
     kwargs: dict[str, Any],
@@ -792,11 +792,11 @@ async def _validate_and_call_async(
     # Instantiate and validate schema
     schema = schema_class(form_data)
 
-    if handle_errors and not schema.is_valid:
+    if raise_on_invalid and not schema.is_valid:
         raise ValidationError(schema.errors)
 
-    # If handle_errors=False, inject errors dict
-    if not handle_errors:
+    # If raise_on_invalid=False, inject errors dict
+    if not raise_on_invalid:
         kwargs["errors"] = schema.errors
 
     # Determine the parameter name to use for the schema instance
@@ -836,7 +836,7 @@ async def _validate_and_call_async(
 
 def validate_form(
     schema_class: type[FormSchema],
-    handle_errors: bool = True,
+    raise_on_invalid: bool = True,
     form_data_param: str = "form_data",
 ):
     """Decorator to validate form data against a schema.
@@ -847,28 +847,29 @@ def validate_form(
 
     Args:
         schema_class: The FormSchema subclass to use for validation.
-        handle_errors: If True, raises ValidationError on validation failure.
-                      If False, injects errors dict as additional parameter.
+        raise_on_invalid: If True (the default), raises ValidationError on
+                      validation failure. If False, the handler still runs
+                      and receives an extra ``errors`` dict parameter.
         form_data_param: Name of the parameter containing form data (default: "form_data").
 
     Usage:
-        # With error handling (raises ValidationError on failure):
+        # Raise on invalid (default):
         @app.trigger_handler
         @validate_form(MySchema)
         async def handler(form: MySchema) -> str:
             # form is validated schema instance
             return f"Received: {form.title}"
 
-        # Without error handling (errors passed to handler):
+        # Pass errors to the handler instead:
         @app.trigger_handler
-        @validate_form(MySchema, handle_errors=False)
+        @validate_form(MySchema, raise_on_invalid=False)
         async def handler(form: MySchema, errors: dict) -> str:
             if errors:
                 return show_errors(errors)
             # Process valid form...
 
     Raises:
-        ValidationError: If handle_errors=True and validation fails.
+        ValidationError: If raise_on_invalid=True and validation fails.
     """
 
     def decorator(handler: Callable[_P, _T]) -> Callable[..., _T]:
@@ -901,7 +902,7 @@ def validate_form(
             async def async_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
                 return cast(_T, await _validate_and_call_async(
                     cast(Callable[..., Awaitable[Any]], handler),
-                    schema_class, handle_errors, form_data_param, args, kwargs,
+                    schema_class, raise_on_invalid, form_data_param, args, kwargs,
                 ))
 
             wrapped: Callable[..., _T] = cast(Callable[..., _T], async_wrapper)
@@ -911,7 +912,7 @@ def validate_form(
             def sync_wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _T:
                 return cast(_T, _validate_and_call_sync(
                     cast(Callable[..., Any], handler),
-                    schema_class, handle_errors, form_data_param, args, kwargs,
+                    schema_class, raise_on_invalid, form_data_param, args, kwargs,
                 ))
 
             wrapped = cast(Callable[..., _T], sync_wrapper)

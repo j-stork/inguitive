@@ -10,14 +10,14 @@ subclass declares typed, validated fields with ``field()``, and the
 ``@validate_form`` decorator intercepts the posted ``form_data`` before the
 handler runs, coercing values to their declared types and running validators.
 
-Two modes are worth knowing about (the parameter is named
-``handle_errors``, but it really controls *raising*: ``True`` raises,
+Two modes are worth knowing about (the parameter is
+``raise_on_invalid``, which controls *raising*: ``True`` raises,
 ``False`` passes the errors dict to the handler):
 
-- ``handle_errors=True`` (the default): invalid input raises
+- ``raise_on_invalid=True`` (the default): invalid input raises
   ``ValidationError`` and the handler never runs. Use this when you only
   care about the happy path.
-- ``handle_errors=False``: the handler still runs and receives an extra
+- ``raise_on_invalid=False``: the handler still runs and receives an extra
   ``errors`` dict (``{field_name: [messages]}``) alongside the typed schema
   instance. Use this when you want to show per-field error messages in the
   UI, as this example does.
@@ -95,11 +95,11 @@ class RegistrationSchema(FormSchema):
 
 # --- Trigger Handlers ---
 @app.trigger_handler
-@validate_form(RegistrationSchema, handle_errors=False)
+@validate_form(RegistrationSchema, raise_on_invalid=False)
 def register(form: RegistrationSchema, errors: dict) -> None:
     """Validate and store the result of the registration attempt.
 
-    With ``handle_errors=False``, this runs whether or not the form is
+    With ``raise_on_invalid=False``, this runs whether or not the form is
     valid. ``errors`` is ``{field_name: [messages]}`` (empty when valid) and
     ``form`` holds the coerced values. We store either the success line or
     the error dict in ``result_state`` and let auto-propagation re-render

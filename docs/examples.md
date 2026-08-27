@@ -70,7 +70,7 @@ Declarative form validation. Demonstrates:
 
 - `FormSchema` with typed, validated `field` declarations
 - The `@validate_form` decorator and built-in validators
-- `ValidationError` and the `handle_errors` flag controlling raise-vs-pass-errors
+- `ValidationError` and the `raise_on_invalid` flag controlling raise-vs-pass-errors
 
 ```bash
 uvicorn inguitive.examples.validation_app:app --reload

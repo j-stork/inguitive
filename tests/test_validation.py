@@ -766,8 +766,8 @@ class TestDecoratorIntegration:
         with pytest.raises(ValidationError):
             client.post("/_trigger/handle_form", data={})
 
-    def test_decorator_with_handle_errors_false(self):
-        """@validate_form with handle_errors=False injects errors dict."""
+    def test_decorator_with_raise_on_invalid_false(self):
+        """@validate_form with raise_on_invalid=False injects errors dict."""
 
         class TestSchema(FormSchema):
             title = field(str, required=True)
@@ -776,7 +776,7 @@ class TestDecoratorIntegration:
         received_errors = None
 
         @app.trigger_handler
-        @validate_form(TestSchema, handle_errors=False)
+        @validate_form(TestSchema, raise_on_invalid=False)
         def handle_form(form: TestSchema, errors: dict) -> str:
             nonlocal received_errors
             received_errors = errors
