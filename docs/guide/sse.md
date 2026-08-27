@@ -110,6 +110,112 @@ async def _delayed_push(session_id: str):
 `push_update` is a no-op when the session has no active SSE connection
 (e.g. the user closed the tab), so it is always safe to call.
 
+## Recipe: session-scoped background task
+
+The per-session-push example above pushes once. Real work — a live progress
+bar, an external feed watcher, a bounded timer — runs a *loop* that updates a
+per-user `State` over time. This is the canonical recipe for that, and the
+template the `examples/sse_session_app.py` example is built on.
+
+Two pieces, both in your module: a **per-worker task registry** (module-level
+dict) and a **loop** that does its work outside `session_context` and enters it
+briefly to write `State` and push.
+
+```python
+import asyncio
+
+from inguitive import State, get_session_id, push_update, session_context
+
+# 1. Per-worker task registry. The live asyncio.Task is not JSON-serialisable,
+#    so it stays in process memory (never in data_registry, which RedisBackend
+#    round-trips). Keyed by session_id so different users' loops never collide.
+_tasks: dict[str, asyncio.Task] = {}
+
+progress_state = State({"done": 0, "total": 0, "status": "idle"}, "progress")
+
+
+# 2. Trigger handler — starts the loop, idempotently. Must stay synchronous:
+#    the guard is an atomic check-then-act with no `await` between the read
+#    and the store. (See "When to deviate" below for the restart-vs-refuse
+#    choice and the async-handler caveat.)
+@app.trigger_handler
+def start_work():
+    session_id = get_session_id()
+    existing = _tasks.get(session_id)
+    if existing is not None and not existing.done():
+        return  # already running — refuse the duplicate start
+    progress_state.set({"done": 0, "total": 100, "status": "running"})
+    task = asyncio.create_task(_work_loop(session_id))
+    _tasks[session_id] = task
+    task.add_done_callback(lambda t, sid=session_id: _tasks.pop(sid, None))
+
+
+# 3. The loop. Work goes OUTSIDE session_context; State writes and pushes go
+#    INSIDE. Each iteration's State change is saved when the context exits, so
+#    a crash after step 1420 has persisted progress to 1420.
+async def _work_loop(session_id: str):
+    total = 100
+    for done in range(1, total + 1):
+        await asyncio.sleep(1)               # OUTSIDE — sleeping is not State work
+        result = do_expensive_step(done)     # OUTSIDE — pure computation / I/O
+
+        async with session_context(session_id) as session:   # INSIDE begins
+            if session is None:                              # session evicted — stop
+                return
+            progress_state.set({                               # write per-user State
+                "done": done, "total": total, "status": "running",
+            })
+            await push_update(session_id, *progress_state.listeners)  # render + push
+        # context exits → saves the session if dirty
+```
+
+### What goes inside `session_context`, what stays outside
+
+One rule: **inside goes anything that reads or writes session-scoped `State`;
+outside goes everything else.**
+
+| Inside the context | Outside the context |
+|---|---|
+| `state.set(...)`, `state.get()`, `state.listeners` | Computation, API calls, file I/O |
+| `await push_update(session_id, *state.listeners)` | `await asyncio.sleep(...)` |
+| `if session is None: return` (the eviction check) | Appending to a local list / accumulator |
+
+Why: `session_context` exists to bind the session so `State` operates on *this
+user's* data. Computation and I/O don't need the session, and keeping them out
+keeps the commit window tight and the save prompt. Two silent mistakes to
+avoid: sleeping *inside* the context delays the save until after the sleep, and
+reading `.listeners` *outside* the context returns an empty set (no error) so
+the push silently does nothing.
+
+### When to deviate from the template
+
+- **Restart vs. refuse.** The guard above *refuses* a second start while
+  running. To *restart* instead (the `examples/sse_session_app.py` counter does
+  this), cancel the existing task and reset the state before spawning:
+  ```python
+  if existing is not None and not existing.done():
+      existing.cancel()
+  progress_state.set({"done": 0, ...})   # reset
+  ```
+- **No start button (startup task).** A globally-broadcast counter needs no
+  per-session registry, no guard, and no `session_context` — call `State.set()`
+  from a `@app.on_event("startup")` task and the framework auto-pushes to all
+  tabs. See `examples/sse_global_app.py`.
+- **Async trigger handler.** If `start_work` ever becomes `async` and `await`s
+  between the check and the store, the guard's atomicity is lost — an
+  `asyncio.Lock` keyed by `session_id` is needed around that section. Keep the
+  handler synchronous if you can.
+
+### Multi-worker note
+
+`_tasks` is per-process. With multiple workers, worker B's guard sees no task
+for a session whose loop runs on worker A, and would start a second loop. The
+correct deployment is **sticky sessions** (the session, its SSE connection, and
+its loop all live on one worker) — see
+[Multi-worker deployment](session-backends.md#multi-worker-deployment). If you
+cannot use sticky sessions, guard with a Redis `SET NX` lock instead of the
+in-process dict (recipe in the same section).
+
 ## API reference
 
 ::: inguitive.fastapi.push_update
