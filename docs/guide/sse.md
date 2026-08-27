@@ -123,7 +123,7 @@ async def _delayed_push(session_id: str):
 The per-session-push example above pushes once. Real work — a live progress
 bar, an external feed watcher, a bounded timer — runs a *loop* that updates a
 per-user `State` over time. This is the canonical recipe for that, and the
-template the `examples/sse_session_app.py` example is built on.
+template the `src/inguitive/examples/sse_session_app.py` example is built on.
 
 Two pieces, both in your module: a **per-worker task registry** (module-level
 dict) and a **loop** that does its work outside `session_context` and enters it
@@ -210,7 +210,7 @@ the push silently does nothing.
 ### When to deviate from the template
 
 - **Restart vs. refuse.** The guard above *refuses* a second start while
-  running. To *restart* instead (the `examples/sse_session_app.py` counter does
+  running. To *restart* instead (the `src/inguitive/examples/sse_session_app.py` counter does
   this), cancel the existing task and reset the state before spawning:
   ```python
   if existing is not None and not existing.done():
@@ -220,7 +220,7 @@ the push silently does nothing.
 - **No start button (startup task).** A globally-broadcast counter needs no
   per-session registry, no guard, and no `session_context` — call `State.set()`
   from a `@app.on_event("startup")` task and the framework auto-pushes to all
-  tabs. See `examples/sse_global_app.py`.
+  tabs. See `src/inguitive/examples/sse_global_app.py`.
 - **Async trigger handler.** If `start_work` (see example above) ever becomes 
   `async` and `await`s between the check and the store, the guard's atomicity 
   is lost — an `asyncio.Lock` keyed by `session_id` is needed around that section. 

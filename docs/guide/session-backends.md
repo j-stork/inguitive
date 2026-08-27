@@ -172,7 +172,7 @@ async def publish_push(redis_url: str, session_id: str, *component_ids: str):
 ```
 
 For cross-worker idempotency of background tasks (e.g. the counter loop in
-`examples/sse_session_app.py`), use a Redis lock instead of the per-worker dict:
+`src/inguitive/examples/sse_session_app.py`), use a Redis lock instead of the per-worker dict:
 
 ```python
 async def acquire_task_lock(redis_url: str, session_id: str, ttl: int = 30) -> bool:
