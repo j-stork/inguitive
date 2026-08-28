@@ -43,9 +43,9 @@ To test:
    which is the safe pattern shown here.
 """
 
-from inguitive import Button, Div, Form, State, Text, Textarea, create_app, nl2br
+from inguitive import Button, Div, Form, Header, State, Text, Textarea, create_app, nl2br
 
-from .css import BUTTON_PRIMARY_CSS
+from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, CARD_CONTAINER_CSS, HEADER_CSS, INPUT_CSS
 
 # --- App Setup ---
 app = create_app()
@@ -65,36 +65,43 @@ def submit(form_data: dict):
 
 
 # --- Components ---
-def display_text() -> str:
-    """Render the stored text with newlines converted to <br> tags.
-
-    ``nl2br`` escapes HTML-special characters and returns a ``Markup``, so
-    this is safe on untrusted input — no manual ``escape``/``str``/``Markup``
-    chain is needed.
-    """
-    content = text_state.get()
-    if not content:
-        return ""
-    return nl2br(content)
-
-
-def Display() -> Div:  # noqa: N802
-    return Div(
-        Text(display_text, listen_to="text_state", css="whitespace-pre-wrap text-slate-900"),
-        css="max-w-md mx-auto mt-6 p-4 bg-slate-100 rounded-lg min-h-24",
-    )
-
-
 def TextForm() -> Div:  # noqa: N802
+    def dynamic_text() -> str:
+        """Render the stored text with newlines converted to <br> tags.
+
+        ``nl2br`` escapes HTML-special characters and returns a ``Markup``, so
+        this is safe on untrusted input — no manual ``escape``/``str``/``Markup``
+        chain is needed.
+        """
+        content = text_state.get()
+        if not content:
+            return ""
+        return nl2br(content)
+
     return Div(
+        Header("Newline-to-<br> Conversion Example", css=HEADER_CSS),
         Form(
-            Textarea(id="content", placeholder="Type multiple lines…\nuse Enter for line breaks", rows=4),
-            Button("Submit", type="submit", css=f"{BUTTON_PRIMARY_CSS} w-full"),
+            Textarea(
+                id="content",
+                placeholder="Type multiple lines,\nuse Enter for line breaks",
+                rows=4,
+                css=INPUT_CSS,
+            ),
+            Button(
+                "Submit",
+                type="submit",
+                css=f"{BUTTON_PRIMARY_CSS} w-full",
+            ),
             trigger="submit",
-            css="space-y-3 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md",
+            css=CARD_CONTAINER_CSS,
         ),
-        Display(),
-        css="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50",
+        Text("Converted text:", css="text-lg text-center text-white"),
+        Text(
+            dynamic_text,
+            listen_to="text_state",
+            css="text-center text-white",
+        ),
+        css=BASE_CONTAINER_CSS,
     )
 
 
