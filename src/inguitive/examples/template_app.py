@@ -37,9 +37,14 @@ To test:
 3. Click "Reset" — the template re-renders with 0
 """
 
-from inguitive import Button, Div, State, TemplateComponent, create_app
+from inguitive import Button, Div, Header, State, TemplateComponent, create_app
 
-from .css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
+from .css import (
+    BASE_CONTAINER_CSS,
+    BUTTON_PRIMARY_CSS,
+    BUTTON_SECONDARY_CSS,
+    HEADER_CSS,
+)
 
 # --- App Setup ---
 app = create_app()
@@ -68,9 +73,9 @@ def reset():
 # render), so the template reflects the live state. Autoescaping applies to
 # the interpolated value.
 COUNTER_TEMPLATE = """
-<div class="rounded-xl bg-white shadow-lg p-6 space-y-3 w-sm">
-  <p class="text-xl text-center text-slate-900">Count: {{ value }}</p>
-  <p class="text-xs text-center text-slate-400">Rendered via TemplateComponent</p>
+<div class="w-sm p-6 space-y-6 rounded-xl bg-gray-100 shadow-lg">
+  <p class="text-xl text-center">Count: {{ value }}</p>
+  <p class="text-center text-gray-500">Rendered via TemplateComponent</p>
 </div>
 """
 
@@ -78,7 +83,7 @@ COUNTER_TEMPLATE = """
 def CounterCard() -> TemplateComponent:  # noqa: N802
     return TemplateComponent(
         COUNTER_TEMPLATE,
-        value=counter_state.get,  # callable → resolved on each render
+        value=lambda: counter_state.get(),  # callable → resolved on each render
         listen_to="counter_state",  # re-render when the state changes
     )
 
@@ -87,13 +92,22 @@ def CounterCard() -> TemplateComponent:  # noqa: N802
 @app.page("/")
 def home():
     return Div(
+        Header("TemplateComponent Example", css=HEADER_CSS),
         CounterCard(),
         Div(
-            Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY_CSS} w-full"),
-            Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY_CSS} w-full"),
-            css="flex gap-3 w-sm",
+            Button(
+                "+1",
+                trigger="increment",
+                css=f"{BUTTON_PRIMARY_CSS} w-full"
+            ),
+            Button(
+                "Reset",
+                trigger="reset",
+                css=f"{BUTTON_SECONDARY_CSS} w-full"
+            ),
+            css="flex w-sm gap-6",
         ),
-        css="min-h-screen flex flex-col items-center justify-center gap-6 p-6 bg-slate-100",
+        css=BASE_CONTAINER_CSS,
     )
 
 
