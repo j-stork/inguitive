@@ -45,6 +45,7 @@ import os
 from inguitive import (
     Button,
     Div,
+    Header,
     MemoryBackend,
     RedisBackend,
     State,
@@ -55,7 +56,7 @@ from inguitive import (
     set_session_backend,
 )
 
-from .css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
+from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
 
 # --- Backend Selection ---
 # Choose the session backend at startup from the SESSION_BACKEND env var.
@@ -99,34 +100,63 @@ def backend_name() -> str:
     return type(get_session_backend()).__name__
 
 
+# --- Components ---
 def Counter() -> Div:  # noqa: N802
+    # TODO: Rewrite the docstring.
+    """Counter card. All dynamic values are callables re-evaluated on render."""
+
+    def count_text() -> str:
+        """Label text derived from the live counter value."""
+        return f"Count: {counter_state.get()}"
+
+    def count_css() -> str:
+        """Red + bold once the count exceeds 5, otherwise neutral."""
+        base = "text-xl text-center"
+        if counter_state.get() > 5:
+            return f"{base} text-red-400"
+        return f"{base} text-white"
+
+    backend_name = type(get_session_backend()).__name__
+
     return Div(
+        Header(
+            "Session Backends Example",
+            css=HEADER_CSS,
+        ),
         Text(
-            lambda: f"Count: {counter_state.get()}",
-            css="text-xl text-center text-slate-900",
+            count_text,
+            css=count_css,
             listen_to="counter_state",
         ),
-        Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY_CSS} w-full"),
-        Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY_CSS} w-full"),
-        Text(
-            lambda: f"Session: {get_session_id()}",
-            css="text-sm text-center text-slate-600",
+        Div(
+            Button(
+                "+1",
+                trigger="increment",
+                css=BUTTON_PRIMARY_CSS,
+            ),
+            Button(
+                "Reset",
+                trigger="reset",
+                css=BUTTON_SECONDARY_CSS,
+            ),
+            css="grid grid-cols-2 gap-6 w-full max-w-md mx-auto",
         ),
         Text(
-            f"Backend: {backend_name()}",
-            css="text-sm text-center text-slate-500",
+            f"Session ID: {get_session_id()}",
+            css="text-center text-white/30",
         ),
-        css="rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
+        Text(
+            f"Backend: {backend_name}",
+            css="text-center font-semibold text-white/30",
+        ),
+        css=BASE_CONTAINER_CSS,
     )
 
 
 # --- Routes ---
 @app.page("/")
 def home():
-    return Div(
-        Counter(),
-        css="min-h-screen flex items-center justify-center bg-slate-100",
-    )
+    return Counter()
 
 
 # --- Start ---
