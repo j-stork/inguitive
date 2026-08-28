@@ -46,6 +46,7 @@ from inguitive import (
     Checkbox,
     Div,
     Form,
+    Header,
     Input,
     Label,
     Radio,
@@ -55,6 +56,8 @@ from inguitive import (
     Textarea,
     create_app,
 )
+
+from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, CARD_CONTAINER_CSS, HEADER_CSS, INPUT_CSS
 
 # --- App Setup ---
 app = create_app()
@@ -82,20 +85,15 @@ def submit(form_data: dict):
 
 
 # --- Components ---
-def Field(label: str, control) -> Div:  # noqa: N802
-    """A labelled form field: label on top, control below."""
-    return Div(
-        Label(label, css="font-medium text-slate-700"),
-        control,
-        css="space-y-1",
-    )
-
-
 def GenderOption(value: str, label: str) -> Div:  # noqa: N802
     """A radio option with its label, for the shared ``gender`` group."""
     radio_id = f"gender-{value}"
     return Div(
-        Radio(id=radio_id, name="gender", value=value),
+        Radio(
+            id=radio_id,
+            name="gender",
+            value=value
+        ),
         Label(label, for_=radio_id),
         css="flex items-center gap-2",
     )
@@ -104,62 +102,81 @@ def GenderOption(value: str, label: str) -> Div:  # noqa: N802
 def RegistrationForm() -> Div:  # noqa: N802
     """One form containing one of every form component."""
     return Div(
+        Header("Form Example", css=HEADER_CSS),
         Form(
-            Field("Name", Input(id="name", placeholder="Enter your name")),
-            Field("Email", Input(id="email", type="email", placeholder="you@example.com")),
-            Field("Bio", Textarea(id="bio", placeholder="Tell us about yourself", rows=3)),
-            Field(
-                "Country",
+            # Name input
+            Div(
+                Label("Name", css="font-medium"),
+                Input(
+                    id="name",
+                    placeholder="Enter your name",
+                    css=INPUT_CSS,
+                ),
+            ),
+            # Email input
+            Div(
+                Label("Email", css="font-medium"),
+                Input(
+                    id="email",
+                    type="email",
+                    placeholder="you@example.com",
+                    css=INPUT_CSS,
+                ),
+            ),
+            # Bio textarea
+            Div(
+                Label("Bio", css="font-medium"),
+                Textarea(
+                    id="bio",
+                    placeholder="Tell us about yourself",
+                    rows=3,
+                    css=INPUT_CSS,
+                ),
+            ),
+            # Country select
+            Div(
+                Label("Country", css="font-medium"),
                 Select(
                     id="country",
                     options=[("de", "Germany"), ("fr", "France"), ("us", "United States")],
+                    css=INPUT_CSS,
                 ),
             ),
+            # Gender radio group
             Div(
-                Checkbox(id="terms"),
-                Label("I agree to the terms", for_="terms"),
-                css="flex items-center gap-2",
-            ),
-            Div(
-                Text("Gender", css="font-medium text-slate-700"),
+                Label("Gender", css="font-medium"),
                 Div(
                     GenderOption("male", "Male"),
                     GenderOption("female", "Female"),
                     GenderOption("other", "Other"),
                     css="flex gap-6",
                 ),
-                css="space-y-1",
             ),
-            Button("Submit", type="submit", css="w-full bg-slate-600 text-white rounded-md p-2 font-semibold cursor-pointer"),
+            # Terms checkbox
+            Div(
+                Checkbox(id="terms"),
+                Label("I agree to the terms", for_="terms"),
+                css="flex items-center gap-2",
+            ),
+            Button(
+                "Submit",
+                type="submit",
+                css=f"w-full {BUTTON_PRIMARY_CSS}",
+            ),
             trigger="submit",
-            css="space-y-4 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md",
+            css=CARD_CONTAINER_CSS,
         ),
-        Div(
-            Text(
-                lambda: _render_summary(form_state.get()),
-                id="form_display",
-                css="text-slate-900 whitespace-pre-line",
-                listen_to="form_state",
-            ),
-            css="max-w-md mx-auto mt-6 p-4 bg-slate-100 rounded-lg",
+        Text(
+            "You submitted:",
+            css="text-lg text-center text-white"
         ),
-        css="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50",
+        Text(
+            lambda: f"{form_state.get()}",
+            css="font-mono text-center text-white",
+            listen_to="form_state",
+        ),
+        css=BASE_CONTAINER_CSS,
     )
-
-
-def _render_summary(data: dict) -> str:
-    """Render the submitted data as a readable summary block."""
-    if not data:
-        return "You submitted: (nothing yet)"
-    lines = [
-        f"Name: {data.get('name', '')}",
-        f"Email: {data.get('email', '')}",
-        f"Bio: {data.get('bio', '')}",
-        f"Country: {data.get('country', '')}",
-        f"Terms accepted: {'Yes' if data.get('terms') else 'No'}",
-        f"Gender: {data.get('gender', '')}",
-    ]
-    return "You submitted:\n" + "\n".join(lines)
 
 
 # --- Routes ---
