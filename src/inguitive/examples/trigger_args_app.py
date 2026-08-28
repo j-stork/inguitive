@@ -32,9 +32,18 @@ To test:
 2. The displayed count updates immediately after each click
 """
 
-from inguitive import Button, Div, State, Text, create_app, get_trigger_args, update_components
+from inguitive import (
+    Button,
+    Div,
+    Header,
+    State,
+    Text,
+    create_app,
+    get_trigger_args,
+    update_components,
+)
 
-from .css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
+from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
 
 # --- App Setup ---
 app = create_app()
@@ -55,7 +64,7 @@ def add():
     trigger_args are attacker-controllable query params, never trust them
     blindly.
     """
-    raw = get_trigger_args().get("step", "0")
+    raw = get_trigger_args().get("step", 0)
     try:
         step = int(raw)
     except (TypeError, ValueError):
@@ -71,29 +80,41 @@ def reset():
     return update_components(*counter_state.listeners)
 
 
+# --- Components ---
+def AddButton(step: int) -> Button:  # noqa: N802
+    """Reusable Button component to increment the counter by ``step``."""
+    return Button(
+        f"+{step}",
+        trigger="add",
+        trigger_args={"step": step},
+        css=BUTTON_PRIMARY_CSS,
+    )
+
+
 # --- Routes ---
 @app.page("/")
 def home():
     return Div(
+        Header("Trigger Args Example", css=HEADER_CSS),
         Text(
             lambda: f"Count: {counter_state.get()}",
-            id="counter-label",
-            css="text-xl text-center text-slate-900",
+            css="text-xl text-center text-white",
             listen_to="counter_state",
         ),
         Div(
             # All three buttons share one handler; only trigger_args differs.
-            Button("+1", trigger="add", trigger_args={"step": "1"}, css=BUTTON_PRIMARY_CSS),
-            Button("+5", trigger="add", trigger_args={"step": "5"}, css=BUTTON_PRIMARY_CSS),
-            Button("+10", trigger="add", trigger_args={"step": "10"}, css=BUTTON_PRIMARY_CSS),
-            css="flex gap-3 justify-center",
+            AddButton(step=1),
+            AddButton(step=5),
+            AddButton(step=10),
+            Button(
+                "Reset",
+                trigger="reset",
+                css=f"{BUTTON_SECONDARY_CSS} w-full",
+            ),
+            css="grid grid-cols-4 gap-6 w-full max-w-md mx-auto",
         ),
-        Button(
-            "Reset",
-            trigger="reset",
-            css=f"{BUTTON_SECONDARY_CSS} w-full",
-        ),
-        css="rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm mx-auto",
+
+        css=BASE_CONTAINER_CSS,
     )
 
 
