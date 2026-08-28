@@ -488,11 +488,17 @@ class Icon(Component):
             raw_svg if isinstance(raw_svg, markupsafe.Markup) else markupsafe.Markup(raw_svg)
         )
 
+        # Set the id (and class) on the root <svg> so HTMX out-of-band swaps
+        # emitted by update() can match this element by id. Without an id here
+        # the OOB response has no target in the DOM and the swap is a no-op.
+        attrs: dict[str, str] = {}
+        if self.id:
+            attrs["id"] = self.id
         if self.css:
-            # Get the raw CSS value (don't resolve/escape it here - ET will handle
-            # XML escaping for attribute values in _replace_class)
             css_value = self.css() if callable(self.css) else self.css
-            resolved_svg = markupsafe.Markup(self._replace_class(resolved_svg, css_value))
+            attrs["class"] = css_value
+        if attrs:
+            resolved_svg = markupsafe.Markup(self._set_svg_attrs(resolved_svg, attrs))
 
         return resolved_svg
 
