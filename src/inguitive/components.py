@@ -1011,7 +1011,8 @@ class TemplateComponent(Component):
         for key, value in self.context.items():
             resolved_context[key] = self._resolve(value) if callable(value) else value  # type: ignore
 
-        # Add component attributes to context
+        # Add component attributes to context (templates may reference {{ id }}
+        # or {{ css }} directly).
         resolved_context["id"] = self.id
         if self.css:
             resolved_context["css"] = self._resolve(self.css)
@@ -1021,7 +1022,14 @@ class TemplateComponent(Component):
             loader=jinja2.BaseLoader(), autoescape=jinja2.select_autoescape(["html", "xml"])
         )
         template = env.from_string(self.template_str)
-        return template.render(**resolved_context)
+        content = template.render(**resolved_context)
+
+        # Wrap in a div carrying the component id (and css) so HTMX
+        # out-of-band swaps emitted by update() can target this element by id.
+        # Without an id on the initial render the OOB response has no target in
+        # the DOM and the swap is a silent no-op. Matches update()'s wrapper.
+        attrs = self._get_attrs_str()
+        return f"<div {attrs}>{content}</div>"
 
     def update(self) -> str:
         """Render with hx-swap-oob for HTMX out-of-band updates."""
