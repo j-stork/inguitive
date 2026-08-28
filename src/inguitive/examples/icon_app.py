@@ -21,6 +21,8 @@ inside the page. Two things are worth noting:
    ``mode_state``, so a single ``Icon`` component swaps its glyph when the
    state changes.
 
+3. Also note that an ``Icon`` component can easily be used as a button label.
+
 The button toggles ``mode_state``; the icon re-renders via auto-propagation
 (see ``auto_propagation_app.py``). Contrast with ``counter_app.py``, where
 dynamic attributes are shown on ``Text`` and ``Div`` rather than on ``Icon``.
@@ -34,7 +36,7 @@ To test:
 from inguitive import Button, Div, Header, Icon, State, create_app
 
 from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, HEADER_CSS
-from .svg import MOON, SUN
+from .svg import ARROWS_UP_DOWN, MOON, SUN
 
 # --- App Setup ---
 app = create_app()
@@ -56,17 +58,25 @@ def toggle_mode():
 
 # --- Components ---
 def IconDemo() -> Div:  # noqa: N802
+    def dynamic_css() -> str:
+        """Return a CSS string based on the current mode."""
+        base = "w-12 h-12"
+        if mode_state.get() == "moon":
+            return f"{base} text-gray-300"
+        return f"{base} text-yellow-500"
+
     return Div(
         Header("Icon Example", css=HEADER_CSS),
         Icon(
             lambda: MOON if mode_state.get() == "moon" else SUN,  # callable → re-evaluated on every render
-            css="w-12 h-12 text-slate-700",
+            css=dynamic_css,  # callable → re-evaluated on every render
             listen_to="mode_state",  # re-render this icon when the mode changes
         ),
         Button(
+            Icon(ARROWS_UP_DOWN, css="w-6 h-6 mr-2"),
             "Toggle",
             trigger="toggle_mode",
-            css=BUTTON_PRIMARY_CSS,
+            css=f"inline-flex {BUTTON_PRIMARY_CSS}",
         ),
         css=BASE_CONTAINER_CSS,
     )
