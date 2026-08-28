@@ -9,77 +9,80 @@ This example demonstrates three pieces of inguitive's routing layer:
 
 1. **Multiple pages via ``@app.page``.** Each ``@app.page("/path")``
    decorator registers a GET route that returns a full page component. Here
-   ``/home`` and ``/about`` are two distinct pages with their own URLs.
+   ``/page1`` and ``/page2`` are two distinct pages with their own URLs.
 
 2. **``redirect`` for URL-level navigation.** The root path ``/`` returns
-   ``redirect("/home")``, which issues an HTTP 302 so the browser's address
+   ``redirect("/page1")``, which issues an HTTP 302 so the browser's address
    bar updates to the target URL. This is the "URL changes" model — a real
    page transition, not an in-place content swap.
 
 3. **``Link`` for anchor navigation.** ``Link`` renders an ``<a>`` tag whose
    ``href`` points at another route. Clicking it triggers a normal browser
    navigation, so the URL changes and the matching ``@app.page`` handler
-   renders. Links can wrap other components (here, a styled ``Button``).
+   renders.
 
 Contrast with ``counter_app.py`` and the trigger-handler apps, where
 interactions stay on a single page and update content via HTMX OOB swaps
 without a URL change.
 
 To test:
-1. Visit ``/`` — the browser redirects to ``/home`` (address bar updates)
-2. Click "Go to About" — the URL changes to ``/about``
-3. Click "Back to Home" — the URL changes back to ``/home``
+1. Visit ``/`` — the browser redirects to ``/page1`` (address bar updates)
+2. Click "Go to Page 2" — the URL changes to ``/page2``
+3. Click "Back to Page 1" — the URL changes back to ``/page1``
 """
 
-from inguitive import Button, Div, Link, Text, create_app, redirect
+from inguitive import Div, Header, Link, Text, create_app, redirect
 
-from .css import BUTTON_PRIMARY_CSS
+from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
 
 # --- App Setup ---
 app = create_app()
 
 
-# --- Shared Components ---
-def PageCard(title: str, *content) -> Div:  # noqa: N802
-    """A simple page shell with a heading and the given content."""
+# --- Components ---
+def PageContainer(page_title: str, page_text: str, link_label: str, href: str) -> Div:  # noqa: N802
+    """A simple and reusable page shell."""
+    if href == "/page1":
+        link_css = BUTTON_SECONDARY_CSS
+    else:
+        link_css = BUTTON_PRIMARY_CSS
+
     return Div(
-        Text(title, css="text-2xl font-bold text-slate-900"),
-        *content,
-        css="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg space-y-6",
+        Header("Routing Example", css=HEADER_CSS),
+        Text(page_title, css="text-2xl font-bold text-white"),
+        Text(page_text, css="text-white"),
+        Link(
+            link_label,
+            href=href,
+            css=link_css,
+        ),
+        css=BASE_CONTAINER_CSS,
     )
-
-
-def NavButton(label: str, href: str) -> Link:  # noqa: N802
-    """A Link wrapping a styled Button — clicking navigates to ``href``."""
-    return Link(
-        Button(label, css=f"{BUTTON_PRIMARY_CSS} w-full"),
-        href=href,
-        css="block",
-    )
-
 
 # --- Routes ---
 @app.page("/")
 def root():
-    """Redirect the bare root path to /home."""
-    return redirect("/home")
+    """Redirect the bare root path to /page1."""
+    return redirect("/page1")
 
 
-@app.page("/home")
+@app.page("/page1")
 def home():
-    return PageCard(
-        "Home",
-        Text("This is the home page. The URL is /home.", css="text-slate-600"),
-        NavButton("Go to About", href="/about"),
+    return PageContainer(
+        page_title="Page 1",
+        page_text="This is page 1. The URL is /page1.",
+        link_label="Go to Page 2",
+        href="/page2",
     )
 
 
-@app.page("/about")
+@app.page("/page2")
 def about():
-    return PageCard(
-        "About",
-        Text("This is the about page. The URL is /about.", css="text-slate-600"),
-        NavButton("Back to Home", href="/home"),
+    return PageContainer(
+        page_title="Page 2",
+        page_text="This is page 2. The URL is /page2.",
+        link_label="Back to Page 1",
+        href="/page1",
     )
 
 
