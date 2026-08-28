@@ -17,7 +17,7 @@ inside the page. Two things are worth noting:
 
 2. **Dynamic icon via a callable.** ``Icon``'s first argument can be a
    zero-argument callable returning the SVG string, re-evaluated on every
-   render. Here ``icon_svg`` switches between ``MOON`` and ``SUN`` based on
+   render. Here it switches between ``MOON`` and ``SUN`` based on
    ``mode_state``, so a single ``Icon`` component swaps its glyph when the
    state changes.
 
@@ -31,11 +31,9 @@ To test:
 3. Click again — it swaps back to a moon
 """
 
-from markupsafe import Markup
+from inguitive import Button, Div, Header, Icon, State, create_app
 
-from inguitive import Button, Div, Icon, State, create_app
-
-from .css import BUTTON_PRIMARY_CSS
+from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, HEADER_CSS
 from .svg import MOON, SUN
 
 # --- App Setup ---
@@ -57,30 +55,27 @@ def toggle_mode():
 
 
 # --- Components ---
-def icon_svg() -> Markup:
-    """Return the SVG markup for the current mode."""
-    return MOON if mode_state.get() == "moon" else SUN
-
-
 def IconDemo() -> Div:  # noqa: N802
     return Div(
+        Header("Icon Example", css=HEADER_CSS),
         Icon(
-            icon_svg,  # callable → re-evaluated on every render
+            lambda: MOON if mode_state.get() == "moon" else SUN,  # callable → re-evaluated on every render
             css="w-12 h-12 text-slate-700",
             listen_to="mode_state",  # re-render this icon when the mode changes
         ),
-        Button("Toggle", trigger="toggle_mode", css=BUTTON_PRIMARY_CSS),
-        css="flex flex-col items-center gap-6 p-6",
+        Button(
+            "Toggle",
+            trigger="toggle_mode",
+            css=BUTTON_PRIMARY_CSS,
+        ),
+        css=BASE_CONTAINER_CSS,
     )
 
 
 # --- Routes ---
 @app.page("/")
 def home():
-    return Div(
-        IconDemo(),
-        css="min-h-screen flex items-center justify-center bg-slate-100",
-    )
+    return IconDemo()
 
 
 # --- Start ---

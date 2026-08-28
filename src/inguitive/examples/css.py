@@ -22,7 +22,7 @@ for color_name, color_value in BRAND_COLORS.items():
 
 
 # CSS class for the top-level container
-BASE_CONTAINER_CSS = f"flex flex-col justify-center align-center min-h-screen gap-6 p-6 bg-{BRAND_COLORS['navy_900']}"
+BASE_CONTAINER_CSS = f"flex flex-col justify-center items-center min-h-screen gap-6 p-6 bg-{BRAND_COLORS['navy_900']}"
 
 # Common base styling for all buttons
 BUTTON_BASE_CSS = "rounded-md px-3 py-2 font-semibold shadow-xs cursor-pointer"
