@@ -34,9 +34,12 @@ renders as
 The angle brackets are escaped (no script executes) and only the newlines
 become ``<br>`` tags.
 
-A second "Raw converted markup" panel shows the literal HTML string that
-``nl2br`` produced (``&lt;script&gt;<br>...``), so the escaping is visible
-without viewing page source.
+Three panels show the difference side by side: the "Text as entered"
+panel renders the submitted text with no conversion (newlines collapse to
+spaces), the "Converted text" panel applies ``nl2br`` (newlines become
+``<br>``), and the "Raw converted markup" panel shows the literal HTML
+string ``nl2br`` produced (``&lt;script&gt;<br>...``), so the escaping is
+visible without viewing page source.
 
 To test:
 1. Type multiline text into the box (use Enter for line breaks)
@@ -69,8 +72,39 @@ def submit(form_data: dict):
 
 
 # --- Components ---
+def TextDisplay(header_text: str, dynamic_text_func: callable) -> Div:  # noqa: N802
+    """Return a Div that displays the text from the given callable."""
+    return Div(
+        Text(header_text, css="text-lg text-center text-white"),
+        Text(
+            dynamic_text_func,
+            listen_to="text_state",
+            css="text-center text-white",
+        ),
+        css="space-y-6",
+    )
+
+def HorizontalRule() -> Div:  # noqa: N802
+    """Return a horizontal rule for visual separation."""
+    return Div(
+        css="w-full max-w-md border-t border-white/30"
+    )
+
 def TextForm() -> Div:  # noqa: N802
-    def dynamic_text() -> str:
+    def dynamic_plain_text() -> str:
+        """Return the submitted text unchanged, for the 'before' panel.
+
+        The plain string is escaped by ``Text._resolve`` (safe on untrusted
+        input), and the browser collapses the newlines to spaces because no
+        ``<br>`` tags are present — showing what the text looks like before
+        ``nl2br`` is applied.
+        """
+        content = text_state.get()
+        if not content:
+            return ""
+        return content
+
+    def dynamic_nl2br_text() -> str:
         """Render the stored text with newlines converted to <br> tags.
 
         ``nl2br`` escapes HTML-special characters and returns a ``Markup``, so
@@ -113,18 +147,11 @@ def TextForm() -> Div:  # noqa: N802
             trigger="submit",
             css=CARD_CONTAINER_CSS,
         ),
-        Text("Converted text:", css="text-lg text-center text-white"),
-        Text(
-            dynamic_text,
-            listen_to="text_state",
-            css="text-center text-white",
-        ),
-        Text("Raw converted markup:", css="text-lg text-center text-white mt-6"),
-        Text(
-            dynamic_raw_text,
-            listen_to="text_state",
-            css="text-center text-white font-mono text-sm break-all",
-        ),
+        TextDisplay("Text as entered (no conversion):", dynamic_plain_text),
+        HorizontalRule(),
+        TextDisplay("Converted text:", dynamic_nl2br_text),
+        HorizontalRule(),
+        TextDisplay("Raw converted markup:", dynamic_raw_text),
         css=BASE_CONTAINER_CSS,
     )
 
