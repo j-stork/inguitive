@@ -34,6 +34,10 @@ renders as
 The angle brackets are escaped (no script executes) and only the newlines
 become ``<br>`` tags.
 
+A second "Raw converted markup" panel shows the literal HTML string that
+``nl2br`` produced (``&lt;script&gt;<br>...``), so the escaping is visible
+without viewing page source.
+
 To test:
 1. Type multiline text into the box (use Enter for line breaks)
 2. Submit — the panel below shows the text with real line breaks
@@ -78,6 +82,20 @@ def TextForm() -> Div:  # noqa: N802
             return ""
         return nl2br(content)
 
+    def dynamic_raw_text() -> str:
+        """Return the nl2br output as a plain str for literal display.
+
+        ``nl2br`` returns a ``markupsafe.Markup``. Wrapping it in ``str()``
+        strips the Markup type so ``Text._resolve`` escapes it again, and the
+        browser displays the literal ``&lt;script&gt;<br>...`` characters
+        instead of rendering them — making the escaping ``nl2br`` applied
+        visible without viewing page source.
+        """
+        content = text_state.get()
+        if not content:
+            return ""
+        return str(nl2br(content))
+
     return Div(
         Header("Newline-to-<br> Conversion Example", css=HEADER_CSS),
         Form(
@@ -100,6 +118,12 @@ def TextForm() -> Div:  # noqa: N802
             dynamic_text,
             listen_to="text_state",
             css="text-center text-white",
+        ),
+        Text("Raw converted markup:", css="text-lg text-center text-white mt-6"),
+        Text(
+            dynamic_raw_text,
+            listen_to="text_state",
+            css="text-center text-white font-mono text-sm break-all",
         ),
         css=BASE_CONTAINER_CSS,
     )
