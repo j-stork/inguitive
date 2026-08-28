@@ -39,9 +39,9 @@ To test:
 4. Click "Reset" — both revert to defaults
 """
 
-from inguitive import Button, DataTable, Div, State, Text, create_app
+from inguitive import Button, DataTable, Div, Header, State, create_app
 
-from .css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
+from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
 
 # --- App Setup ---
 app = create_app()
@@ -98,12 +98,12 @@ def table_css():
     """
     if style_state.get() == "custom":
         return {
-            "table": "w-full border-2 border-slate-600",
-            "header": "px-3 py-2 bg-slate-600 text-white font-mono uppercase",
-            "row": "hover:bg-slate-200 transition-colors",
-            "cell": "px-3 py-2 border border-slate-400 font-mono",
+            "table": "w-full max-w-4xl mx-auto border border-yellow-500",
+            "header": "px-3 py-2 bg-yellow-500 font-mono uppercase",
+            "row": "hover:bg-white/20 transition-colors",
+            "cell": "px-3 py-2 border border-yellow-500 text-white font-mono",
         }
-    return "w-full text-left"
+    return "w-full max-w-4xl mx-auto text-left"
 
 
 def PeopleTable() -> DataTable:  # noqa: N802
@@ -121,7 +121,7 @@ def Controls() -> Div:  # noqa: N802
         Button("Reorder columns", trigger="reorder_columns", css=BUTTON_PRIMARY_CSS),
         Button("Custom styling", trigger="toggle_style", css=BUTTON_PRIMARY_CSS),
         Button("Reset", trigger="reset", css=BUTTON_SECONDARY_CSS),
-        css="flex gap-3",
+        css="flex gap-6 w-full max-w-4xl mx-auto",
     )
 
 
@@ -129,10 +129,10 @@ def Controls() -> Div:  # noqa: N802
 @app.page("/")
 def home():
     return Div(
-        Text("Data Table Example", css="text-2xl font-bold text-slate-100"),
+        Header("Data Table Example", css=HEADER_CSS),
         Controls(),
         PeopleTable(),
-        css="w-full max-w-3xl mx-auto p-6 space-y-6 bg-slate-900 min-h-screen",
+        css=BASE_CONTAINER_CSS,
     )
 
 
