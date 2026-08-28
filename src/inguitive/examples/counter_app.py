@@ -32,9 +32,18 @@ To test:
 4. Both counters turn red once they exceed 5
 """
 
-from inguitive import Button, Div, State, Text, create_app, get_session_id, update_components
+from inguitive import (
+    Button,
+    Div,
+    Header,
+    State,
+    Text,
+    create_app,
+    get_session_id,
+    update_components,
+)
 
-from .css import BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS
+from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
 
 # --- App Setup ---
 app = create_app()
@@ -71,42 +80,44 @@ def Counter() -> Div:  # noqa: N802
         """Red + bold once the count exceeds 5, otherwise neutral."""
         base = "text-xl text-center"
         if counter_state.get() > 5:
-            return f"{base} text-red-500 font-bold"
-        return f"{base} text-slate-900"
+            return f"{base} text-red-400"
+        return f"{base} text-white"
 
     return Div(
+        Header(
+            "Counter Example",
+            css=HEADER_CSS,
+        ),
         Text(
             count_text,
-            id="counter-label",
             css=count_css,
             listen_to="counter_state",
         ),
-        Button(
-            "+1",
-            trigger="increment",
-            css=f"{BUTTON_PRIMARY_CSS} w-full",
-        ),
-        Button(
-            "Reset",
-            trigger="reset",
-            css=f"{BUTTON_SECONDARY_CSS} w-full",
+        Div(
+            Button(
+                "+1",
+                trigger="increment",
+                css=BUTTON_PRIMARY_CSS,
+            ),
+            Button(
+                "Reset",
+                trigger="reset",
+                css=BUTTON_SECONDARY_CSS,
+            ),
+            css="grid grid-cols-2 gap-6 w-full max-w-md mx-auto",
         ),
         Text(
-            f"Session: {get_session_id()}",
-            css="text-sm text-center text-slate-600",
+            f"Session ID: {get_session_id()}",
+            css="text-center text-white/30",
         ),
-        id="counter-card",
-        css="rounded-xl bg-white shadow-lg p-6 space-y-6 w-sm",
+        css=BASE_CONTAINER_CSS,
     )
 
 
 # --- Routes ---
 @app.page("/")
 def home():
-    return Div(
-        Counter(),
-        css="min-h-screen flex items-center justify-center bg-slate-100",
-    )
+    return Counter()
 
 
 # --- Start ---
