@@ -35,17 +35,25 @@ To test:
 5. Manually visit ``/item/abc`` — returns 400 (invalid int)
 """
 
-from inguitive import Div, Link, Text, create_app
+from inguitive import Div, Header, Link, Text, create_app
+
+from .css import HEADER_CSS
 
 # --- App Setup ---
 app = create_app()
+
+
+# --- Components ---
+def PageHeader() -> Header:  # noqa: N802
+    """a reusable Header component for all pages."""
+    return Header("URL Path Parameters Example", css=HEADER_CSS)
 
 
 # --- Routes ---
 @app.page("/")
 def index():
     return Div(
-        Text("URL Path Parameters", css="text-2xl font-bold text-slate-900"),
+        PageHeader(),
         Link("Item 42", href="/item/42", css="block text-blue-600 underline"),
         Link("User ada", href="/user/ada", css="block text-blue-600 underline"),
         Link("Files a/b/c.txt", href="/files/a/b/c.txt", css="block text-blue-600 underline"),
@@ -61,6 +69,7 @@ def index():
 def item(item_id: int):
     """``int`` segment — coerced and validated; bad input returns 400."""
     return Div(
+        PageHeader(),
         Text(f"Item ID: {item_id}", css="text-xl text-slate-900"),
         Text(f"Parsed type: {type(item_id).__name__}", css="text-sm text-slate-500"),
         Link("Back", href="/", css="block text-blue-600 underline"),
@@ -72,6 +81,7 @@ def item(item_id: int):
 def user_profile(username: str):
     """No type given — defaults to ``str``."""
     return Div(
+        PageHeader(),
         Text(f"Username: {username}", css="text-xl text-slate-900"),
         Text(f"Parsed type: {type(username).__name__}", css="text-sm text-slate-500"),
         Link("Back", href="/", css="block text-blue-600 underline"),
@@ -83,6 +93,7 @@ def user_profile(username: str):
 def files(subpath: str):
     """``path`` segment — captures the rest of the URL including slashes."""
     return Div(
+        PageHeader(),
         Text(f"File path: {subpath}", css="text-xl text-slate-900"),
         Text(f"Parsed type: {type(subpath).__name__}", css="text-sm text-slate-500"),
         Link("Back", href="/", css="block text-blue-600 underline"),
