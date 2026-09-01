@@ -37,7 +37,7 @@ To test:
 
 from inguitive import Div, Header, Link, Text, create_app
 
-from .css import HEADER_CSS
+from .css import BASE_CONTAINER_CSS, HEADER_CSS, LINK_CSS
 
 # --- App Setup ---
 app = create_app()
@@ -45,8 +45,23 @@ app = create_app()
 
 # --- Components ---
 def PageHeader() -> Header:  # noqa: N802
-    """a reusable Header component for all pages."""
+    """A reusable Header component for all pages."""
     return Header("URL Path Parameters Example", css=HEADER_CSS)
+
+
+def PageContent(label: str, value: object) -> Div:  # noqa: N802
+    """A reusable page that reflects a parsed path parameter back to the visitor.
+
+    The three parameter routes below differ only in the label they print and the
+    value they receive, so they all delegate here for the markup.
+    """
+    return Div(
+        PageHeader(),
+        Text(f"{label}: {value}", css="text-xl text-white"),
+        Text(f"Parsed type: {type(value).__name__}", css="text-white/30"),
+        Link("Back", href="/", css=LINK_CSS),
+        css=BASE_CONTAINER_CSS,
+    )
 
 
 # --- Routes ---
@@ -54,51 +69,33 @@ def PageHeader() -> Header:  # noqa: N802
 def index():
     return Div(
         PageHeader(),
-        Link("Item 42", href="/item/42", css="block text-blue-600 underline"),
-        Link("User ada", href="/user/ada", css="block text-blue-600 underline"),
-        Link("Files a/b/c.txt", href="/files/a/b/c.txt", css="block text-blue-600 underline"),
+        Link("Item 42", href="/item/42", css=LINK_CSS),
+        Link("User ada", href="/user/ada", css=LINK_CSS),
+        Link("Files a/b/c.txt", href="/files/a/b/c.txt", css=LINK_CSS),
         Text(
             "Try /item/abc to see the 400 from a failed int parse.",
-            css="text-sm text-slate-500",
+            css="text-white/30",
         ),
-        css="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg space-y-3",
+        css=BASE_CONTAINER_CSS,
     )
 
 
 @app.page("/item/<item_id:int>")
 def item(item_id: int):
     """``int`` segment — coerced and validated; bad input returns 400."""
-    return Div(
-        PageHeader(),
-        Text(f"Item ID: {item_id}", css="text-xl text-slate-900"),
-        Text(f"Parsed type: {type(item_id).__name__}", css="text-sm text-slate-500"),
-        Link("Back", href="/", css="block text-blue-600 underline"),
-        css="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg space-y-2",
-    )
+    return PageContent("Item ID", item_id)
 
 
 @app.page("/user/<username>")
 def user_profile(username: str):
     """No type given — defaults to ``str``."""
-    return Div(
-        PageHeader(),
-        Text(f"Username: {username}", css="text-xl text-slate-900"),
-        Text(f"Parsed type: {type(username).__name__}", css="text-sm text-slate-500"),
-        Link("Back", href="/", css="block text-blue-600 underline"),
-        css="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg space-y-2",
-    )
+    return PageContent("Username", username)
 
 
 @app.page("/files/<subpath:path>")
 def files(subpath: str):
     """``path`` segment — captures the rest of the URL including slashes."""
-    return Div(
-        PageHeader(),
-        Text(f"File path: {subpath}", css="text-xl text-slate-900"),
-        Text(f"Parsed type: {type(subpath).__name__}", css="text-sm text-slate-500"),
-        Link("Back", href="/", css="block text-blue-600 underline"),
-        css="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-lg space-y-2",
-    )
+    return PageContent("File path", subpath)
 
 
 # --- Start ---

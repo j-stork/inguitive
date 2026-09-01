@@ -41,3 +41,6 @@ HEADER_CSS = "font-bold text-3xl text-center text-white mb-12"
 
 # Input and textarea fields
 INPUT_CSS = "w-full p-2 border rounded-md"
+
+# Link styling
+LINK_CSS = "font-semibold text-blue-600 underline hover:text-blue-500 active:text-blue-600"
