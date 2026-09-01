@@ -39,6 +39,9 @@ CARD_CONTAINER_CSS = "w-full max-w-md p-6 space-y-6 mx-auto bg-gray-100 rounded-
 # Header text
 HEADER_CSS = "font-bold text-3xl text-center text-white mb-12"
 
+# Helper text
+HELP_TEXT_CSS = "text-sm mt-1 text-gray-500"
+
 # Input and textarea fields
 INPUT_CSS = "w-full p-2 border rounded-md"
 

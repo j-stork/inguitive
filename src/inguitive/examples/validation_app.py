@@ -49,13 +49,24 @@ from inguitive import (
     Div,
     Form,
     FormSchema,
+    Header,
     Input,
     Label,
     State,
     Text,
     create_app,
     field,
+    nl2br,
     validate_form,
+)
+
+from .css import (
+    BASE_CONTAINER_CSS,
+    BUTTON_PRIMARY_CSS,
+    CARD_CONTAINER_CSS,
+    HEADER_CSS,
+    HELP_TEXT_CSS,
+    INPUT_CSS,
 )
 
 # --- App Setup ---
@@ -112,23 +123,13 @@ def register(form: RegistrationSchema, errors: dict) -> None:
 
 
 # --- Components ---
-def Field(label: str, control, hint: str = "") -> Div:  # noqa: N802
-    """A labelled field with an optional hint below."""
-    return Div(
-        Label(label, css="font-medium text-slate-700"),
-        control,
-        Text(hint, css="text-xs text-slate-500") if hint else None,
-        css="space-y-1",
-    )
-
-
 def ResultPanel() -> Div:  # noqa: N802
     """Show either the per-field error list or the success line."""
 
-    def display_text() -> str:
+    def dynamic_text() -> str:
         result = result_state.get()
         if result is None:
-            return ""
+            return "Nothing submitted yet."
         if "success" in result:
             return str(result["success"])
         # errors dict: {field: [messages]} — flatten into one line per message
@@ -136,37 +137,74 @@ def ResultPanel() -> Div:  # noqa: N802
         for field_name, messages in result.get("errors", {}).items():
             for message in messages:
                 lines.append(f"{field_name}: {message}")
-        return "Fix these:\n" + "\n".join(lines)
+        return nl2br("Fix these:\n" + "\n".join(lines))
 
     return Div(
         Text(
-            display_text,
-            id="result-panel",
-            css="whitespace-pre-line text-slate-900",
+            dynamic_text,
             listen_to="result_state",
         ),
-        css="max-w-md mx-auto mt-6 p-4 bg-slate-100 rounded-lg",
+        css=CARD_CONTAINER_CSS,
     )
 
 
 def ValidationForm() -> Div:  # noqa: N802
     """The registration form with one input per schema field."""
     return Div(
+        Header("Validation Example", css=HEADER_CSS),
         Form(
-            Field("Username", Input(id="username", placeholder="3-20 characters"), "Required, 3-20 chars"),
-            Field("Email", Input(id="email", type="email", placeholder="you@example.com"), "Required, must be a valid email"),
-            Field("Age", Input(id="age", type="number", placeholder="0-150"), "Coerced to int, 0-150"),
-            Field("Code", Input(id="code", placeholder="ING-XXXX"), "Must start with ING-"),
+            # Username input
+            Div(
+                Label("Username", css="font-medium"),
+                Input(
+                    id="username",
+                    placeholder="3-20 characters",
+                    css=INPUT_CSS,
+                ),
+                Text("Required, 3-20 chars", css=HELP_TEXT_CSS),
+            ),
+            # Email input
+            Div(
+                Label("Email", css="font-medium"),
+                Input(
+                    id="email",
+                    type="email",
+                    placeholder="you@example.com",
+                    css=INPUT_CSS,
+                ),
+                Text("Required, must be a valid email", css=HELP_TEXT_CSS),
+            ),
+            # Age input
+            Div(
+                Label("Age", css="font-medium"),
+                Input(
+                    id="age",
+                    type="number",
+                    placeholder="0-150",
+                    css=INPUT_CSS,
+                ),
+                Text("Coerced to int, 0-150", css=HELP_TEXT_CSS),
+            ),
+            # Code input
+            Div(
+                Label("Code", css="font-medium"),
+                Input(
+                    id="code",
+                    placeholder="ING-XXXX",
+                    css=INPUT_CSS,
+                ),
+                Text("Must start with ING-", css=HELP_TEXT_CSS),
+            ),
             Button(
                 "Register",
                 type="submit",
-                css="w-full bg-slate-600 text-white rounded-md p-2 font-semibold cursor-pointer",
+                css=f"{BUTTON_PRIMARY_CSS} w-full",
             ),
             trigger="register",
-            css="space-y-4 max-w-md mx-auto p-6 bg-white rounded-xl shadow-md",
+            css=CARD_CONTAINER_CSS,
         ),
         ResultPanel(),
-        css="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-50",
+        css=BASE_CONTAINER_CSS,
     )
 
 
