@@ -49,7 +49,6 @@ from inguitive import (
     Div,
     Form,
     FormSchema,
-    Header,
     Input,
     Label,
     State,
@@ -61,13 +60,14 @@ from inguitive import (
 )
 
 from .css import (
-    BASE_CONTAINER_CSS,
-    BUTTON_PRIMARY_CSS,
-    CARD_CONTAINER_CSS,
-    HEADER_CSS,
+    BRAND_COLORS,
+    BUTTON_PRIMARY_GREEN_CSS,
     HELP_TEXT_CSS,
     INPUT_CSS,
+    LABEL_CSS,
+    TEXT_CSS,
 )
+from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
@@ -139,72 +139,80 @@ def ResultPanel() -> Div:  # noqa: N802
                 lines.append(f"{field_name}: {message}")
         return nl2br("Fix these:\n" + "\n".join(lines))
 
-    return Div(
+    def dynamic_css() -> str:
+        result = result_state.get()
+        if result and "errors" in result:
+            return f"text-{BRAND_COLORS['red']}"
+        return TEXT_CSS
+
+    return Card(
         Text(
             dynamic_text,
             listen_to="result_state",
+            css=dynamic_css,
         ),
-        css=CARD_CONTAINER_CSS,
     )
 
 
 def ValidationForm() -> Div:  # noqa: N802
     """The registration form with one input per schema field."""
-    return Div(
-        Header("Validation Example", css=HEADER_CSS),
-        Form(
-            # Username input
-            Div(
-                Label("Username", css="font-medium"),
-                Input(
-                    id="username",
-                    placeholder="3-20 characters",
-                    css=INPUT_CSS,
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("Validation Example"),
+        Card(
+            Form(
+                # Username input
+                Div(
+                    Label("Username", css=LABEL_CSS),
+                    Input(
+                        id="username",
+                        placeholder="3-20 characters",
+                        css=INPUT_CSS,
+                    ),
+                    Text("Required, 3-20 chars", css=HELP_TEXT_CSS),
                 ),
-                Text("Required, 3-20 chars", css=HELP_TEXT_CSS),
-            ),
-            # Email input
-            Div(
-                Label("Email", css="font-medium"),
-                Input(
-                    id="email",
-                    type="email",
-                    placeholder="you@example.com",
-                    css=INPUT_CSS,
+                # Email input
+                Div(
+                    Label("Email", css=LABEL_CSS),
+                    Input(
+                        id="email",
+                        type="email",
+                        placeholder="you@example.com",
+                        css=INPUT_CSS,
+                    ),
+                    Text("Required, must be a valid email", css=HELP_TEXT_CSS),
                 ),
-                Text("Required, must be a valid email", css=HELP_TEXT_CSS),
-            ),
-            # Age input
-            Div(
-                Label("Age", css="font-medium"),
-                Input(
-                    id="age",
-                    type="number",
-                    placeholder="0-150",
-                    css=INPUT_CSS,
+                # Age input
+                Div(
+                    Label("Age", css=LABEL_CSS),
+                    Input(
+                        id="age",
+                        type="number",
+                        placeholder="0-150",
+                        css=INPUT_CSS,
+                    ),
+                    Text("Coerced to int, 0-150", css=HELP_TEXT_CSS),
                 ),
-                Text("Coerced to int, 0-150", css=HELP_TEXT_CSS),
-            ),
-            # Code input
-            Div(
-                Label("Code", css="font-medium"),
-                Input(
-                    id="code",
-                    placeholder="ING-XXXX",
-                    css=INPUT_CSS,
+                # Code input
+                Div(
+                    Label("Code", css=LABEL_CSS),
+                    Input(
+                        id="code",
+                        placeholder="ING-XXXX",
+                        css=INPUT_CSS,
+                    ),
+                    Text("Must start with ING-", css=HELP_TEXT_CSS),
                 ),
-                Text("Must start with ING-", css=HELP_TEXT_CSS),
+                Button(
+                    "Register",
+                    type="submit",
+                    css=f"{BUTTON_PRIMARY_GREEN_CSS} w-full",
+                ),
+                trigger="register",
+                css="space-y-6",
             ),
-            Button(
-                "Register",
-                type="submit",
-                css=f"{BUTTON_PRIMARY_CSS} w-full",
-            ),
-            trigger="register",
-            css=CARD_CONTAINER_CSS,
         ),
         ResultPanel(),
-        css=BASE_CONTAINER_CSS,
     )
 
 
