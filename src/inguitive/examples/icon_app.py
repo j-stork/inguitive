@@ -33,9 +33,10 @@ To test:
 3. Click again — it swaps back to a moon
 """
 
-from inguitive import Button, Div, Header, Icon, State, create_app
+from inguitive import Button, Div, Icon, State, create_app
 
-from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, HEADER_CSS
+from .css import BUTTON_PRIMARY_YELLOW_CSS
+from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 from .svg import ARROWS_UP_DOWN, MOON, SUN
 
 # --- App Setup ---
@@ -60,25 +61,30 @@ def toggle_mode():
 def IconDemo() -> Div:  # noqa: N802
     def dynamic_css() -> str:
         """Return a CSS string based on the current mode."""
-        base = "w-12 h-12"
+        base = "w-12 h-12 mx-auto"
         if mode_state.get() == "moon":
             return f"{base} text-gray-300"
         return f"{base} text-yellow-500"
 
-    return Div(
-        Header("Icon Example", css=HEADER_CSS),
-        Icon(
-            lambda: MOON if mode_state.get() == "moon" else SUN,  # callable → re-evaluated on every render
-            css=dynamic_css,  # callable → re-evaluated on every render
-            listen_to="mode_state",  # re-render this icon when the mode changes
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("Icon Example"),
+        Card(
+            Icon(
+                lambda: MOON if mode_state.get() == "moon" else SUN,  # callable → re-evaluated on every render
+                css=dynamic_css,  # callable → re-evaluated on every render
+                listen_to="mode_state",  # re-render this icon when the mode changes
+            ),
+            Div(
+                Button(
+                    Icon(ARROWS_UP_DOWN, css="w-6 h-6 mr-2"),
+                    "Toggle",
+                    trigger="toggle_mode",
+                    css=f"inline-flex {BUTTON_PRIMARY_YELLOW_CSS}",
+                ),
+                css="flex justify-end w-full",
+            ),
         ),
-        Button(
-            Icon(ARROWS_UP_DOWN, css="w-6 h-6 mr-2"),
-            "Toggle",
-            trigger="toggle_mode",
-            css=f"inline-flex {BUTTON_PRIMARY_CSS}",
-        ),
-        css=BASE_CONTAINER_CSS,
     )
 
 
