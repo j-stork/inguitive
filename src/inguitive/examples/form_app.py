@@ -46,7 +46,6 @@ from inguitive import (
     Checkbox,
     Div,
     Form,
-    Header,
     Input,
     Label,
     Radio,
@@ -57,7 +56,14 @@ from inguitive import (
     create_app,
 )
 
-from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, CARD_CONTAINER_CSS, HEADER_CSS, INPUT_CSS
+from .css import (
+    BRAND_COLORS,
+    BUTTON_PRIMARY_GREEN_CSS,
+    INPUT_CSS,
+    LABEL_CSS,
+    TEXT_CSS,
+)
+from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
@@ -89,93 +95,88 @@ def GenderOption(value: str, label: str) -> Div:  # noqa: N802
     """A radio option with its label, for the shared ``gender`` group."""
     radio_id = f"gender-{value}"
     return Div(
-        Radio(
-            id=radio_id,
-            name="gender",
-            value=value
-        ),
-        Label(label, for_=radio_id),
+        Radio(id=radio_id, name="gender", value=value),
+        Label(label, for_=radio_id, css=TEXT_CSS),
         css="flex items-center gap-2",
     )
 
 
 def RegistrationForm() -> Div:  # noqa: N802
     """One form containing one of every form component."""
-    return Div(
-        Header("Form Example", css=HEADER_CSS),
-        Form(
-            # Name input
-            Div(
-                Label("Name", css="font-medium"),
-                Input(
-                    id="name",
-                    placeholder="Enter your name",
-                    css=INPUT_CSS,
-                ),
-            ),
-            # Email input
-            Div(
-                Label("Email", css="font-medium"),
-                Input(
-                    id="email",
-                    type="email",
-                    placeholder="you@example.com",
-                    css=INPUT_CSS,
-                ),
-            ),
-            # Bio textarea
-            Div(
-                Label("Bio", css="font-medium"),
-                Textarea(
-                    id="bio",
-                    placeholder="Tell us about yourself",
-                    rows=3,
-                    css=INPUT_CSS,
-                ),
-            ),
-            # Country select
-            Div(
-                Label("Country", css="font-medium"),
-                Select(
-                    id="country",
-                    options=[("de", "Germany"), ("fr", "France"), ("us", "United States")],
-                    css=INPUT_CSS,
-                ),
-            ),
-            # Gender radio group
-            Div(
-                Label("Gender", css="font-medium"),
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("Form Example"),
+        Card(
+            Form(
+                # Name input
                 Div(
-                    GenderOption("male", "Male"),
-                    GenderOption("female", "Female"),
-                    GenderOption("other", "Other"),
-                    css="flex gap-6",
+                    Label("Name", css=LABEL_CSS),
+                    Input(
+                        id="name",
+                        placeholder="Enter your name",
+                        css=INPUT_CSS,
+                    ),
                 ),
+                # Email input
+                Div(
+                    Label("Email", css=LABEL_CSS),
+                    Input(
+                        id="email",
+                        type="email",
+                        placeholder="you@example.com",
+                        css=INPUT_CSS,
+                    ),
+                ),
+                # Bio textarea
+                Div(
+                    Label("Bio", css=LABEL_CSS),
+                    Textarea(
+                        id="bio",
+                        placeholder="Tell us about yourself",
+                        rows=3,
+                        css=INPUT_CSS,
+                    ),
+                ),
+                # Country select
+                Div(
+                    Label("Country", css=LABEL_CSS),
+                    Select(
+                        id="country",
+                        options=[("de", "Germany"), ("fr", "France"), ("us", "United States")],
+                        css=INPUT_CSS,
+                    ),
+                ),
+                # Gender radio group
+                Div(
+                    Label("Gender", css=LABEL_CSS),
+                    Div(
+                        GenderOption("male", "Male"),
+                        GenderOption("female", "Female"),
+                        GenderOption("other", "Other"),
+                        css="flex gap-6",
+                    ),
+                ),
+                # Terms checkbox
+                Div(
+                    Checkbox(id="terms"),
+                    Label("I agree to the terms", for_="terms", css=TEXT_CSS),
+                    css="flex items-center gap-2",
+                ),
+                Button(
+                    "Submit",
+                    type="submit",
+                    css=f"w-full {BUTTON_PRIMARY_GREEN_CSS}",
+                ),
+                trigger="submit",
+                css="space-y-6",
             ),
-            # Terms checkbox
-            Div(
-                Checkbox(id="terms"),
-                Label("I agree to the terms", for_="terms"),
-                css="flex items-center gap-2",
-            ),
-            Button(
-                "Submit",
-                type="submit",
-                css=f"w-full {BUTTON_PRIMARY_CSS}",
-            ),
-            trigger="submit",
-            css=CARD_CONTAINER_CSS,
         ),
-        Text(
-            "You submitted:",
-            css="text-lg text-center text-white"
-        ),
+        Title("You submitted", level=2),
         Text(
             lambda: f"{form_state.get()}",
-            css="font-mono text-center text-white",
+            css=f"font-mono text-center text-{BRAND_COLORS['yellow']}",
             listen_to="form_state",
         ),
-        css=BASE_CONTAINER_CSS,
     )
 
 
