@@ -65,7 +65,7 @@ def home():
         Card(
             Text(
                 lambda: f"Count: {counter_state.get()}",
-                css=f"text-xl text-center text-{BRAND_COLORS['text_1']}",
+                css=f"text-xl text-center text-{BRAND_COLORS['text_0']}",
                 listen_to="counter_state",
             ),
             Div(
