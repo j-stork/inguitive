@@ -43,7 +43,8 @@ from inguitive import (
     session_context,
 )
 
-from .css import BUTTON_PRIMARY_CSS
+from .css import BRAND_COLORS, BUTTON_PRIMARY_GREEN_CSS
+from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
@@ -107,22 +108,54 @@ async def _tick(session_id: str):
                 return
 
 
+# --- Components ---
+def CounterDisplay() -> Div:  # noqa: N802
+    """Display the per-user counter, updating live via SSE.
+
+    The counter text and its color are derived from the live per-session
+    ``counter_state`` value via callables re-evaluated on every render. The
+    color cycles through the brand palette based on the value's divisibility
+    (by 5, 4, 3, 2, in that order), defaulting to neutral text otherwise.
+    A button starts (or restarts) the per-user counter loop.
+    """
+    def dynamic_css() -> str:
+        """Return a CSS class based on the current counter value."""
+        value = counter_state.get()
+        base_css = "text-6xl font-mono text-center"
+        if value % 5 == 0:
+            return f"{base_css} text-{BRAND_COLORS['blue']}"
+        elif value % 4 == 0:
+            return f"{base_css} text-{BRAND_COLORS['green']}"
+        elif value % 3 == 0:
+            return f"{base_css} text-{BRAND_COLORS['yellow']}"
+        elif value % 2 == 0:
+            return f"{base_css} text-{BRAND_COLORS['red']}"
+        return f"{base_css} text-{BRAND_COLORS['text_0']}"
+
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("SSE Events Example"),
+        Title("Per-User Counter via push_update", level=2),
+        Card(
+            Text(
+                lambda: str(counter_state.get()),
+                id="counter-display",
+                listen_to="counter_state",
+                css=dynamic_css,
+            ),
+            Button(
+                "Start my counter",
+                trigger="start_counter",
+                css=f"w-full {BUTTON_PRIMARY_GREEN_CSS}",
+            ),
+        ),
+    )
+
+
 # --- Routes ---
 @app.page("/")
 def home():
-    return Div(
-        Text(
-            lambda: str(counter_state.get()),
-            id="counter-display",
-            listen_to="counter_state",
-        ),
-        Button(
-            "Start my counter",
-            trigger="start_counter",
-            css=BUTTON_PRIMARY_CSS,
-        ),
-        css="flex flex-col justify-center items-center gap-6 p-6",
-    )
+    return CounterDisplay()
 
 
 # --- Start ---
