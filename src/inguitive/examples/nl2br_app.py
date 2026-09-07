@@ -50,9 +50,10 @@ To test:
    which is the safe pattern shown here.
 """
 
-from inguitive import Button, Div, Form, Header, State, Text, Textarea, create_app, nl2br
+from inguitive import Button, Div, Form, State, Text, Textarea, create_app, nl2br
 
-from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, CARD_CONTAINER_CSS, HEADER_CSS, INPUT_CSS
+from .css import BUTTON_PRIMARY_GREEN_CSS, INPUT_CSS, TEXT_CSS
+from .custom_components import BaseContainer, Card, HorizontalRule, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
@@ -75,20 +76,15 @@ def submit(form_data: dict):
 def TextDisplay(header_text: str, dynamic_text_func: callable) -> Div:  # noqa: N802
     """Return a Div that displays the text from the given callable."""
     return Div(
-        Text(header_text, css="text-lg text-center text-white"),
+        Title(header_text, level=2),
         Text(
             dynamic_text_func,
             listen_to="text_state",
-            css="text-center text-white",
+            css=f"text-center {TEXT_CSS}",
         ),
         css="space-y-6",
     )
 
-def HorizontalRule() -> Div:  # noqa: N802
-    """Return a horizontal rule for visual separation."""
-    return Div(
-        css="w-full max-w-md border-t border-white/30"
-    )
 
 def TextForm() -> Div:  # noqa: N802
     def dynamic_plain_text() -> str:
@@ -130,29 +126,31 @@ def TextForm() -> Div:  # noqa: N802
             return ""
         return str(nl2br(content))
 
-    return Div(
-        Header("Newline-to-<br> Conversion Example", css=HEADER_CSS),
-        Form(
-            Textarea(
-                id="content",
-                placeholder="Type multiple lines,\nuse Enter for line breaks",
-                rows=4,
-                css=INPUT_CSS,
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("Newline-to-<br> Conversion Example"),
+        Card(
+            Form(
+                Textarea(
+                    id="content",
+                    placeholder="Type multiple lines,\nuse Enter for line breaks",
+                    rows=4,
+                    css=INPUT_CSS,
+                ),
+                Button(
+                    "Submit",
+                    type="submit",
+                    css=f"{BUTTON_PRIMARY_GREEN_CSS} w-full",
+                ),
+                trigger="submit",
+                css="space-y-6",
             ),
-            Button(
-                "Submit",
-                type="submit",
-                css=f"{BUTTON_PRIMARY_CSS} w-full",
-            ),
-            trigger="submit",
-            css=CARD_CONTAINER_CSS,
         ),
         TextDisplay("Text as entered (no conversion):", dynamic_plain_text),
         HorizontalRule(),
         TextDisplay("Converted text:", dynamic_nl2br_text),
         HorizontalRule(),
         TextDisplay("Raw converted markup:", dynamic_raw_text),
-        css=BASE_CONTAINER_CSS,
     )
 
 

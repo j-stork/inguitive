@@ -77,3 +77,10 @@ def Card(*content) -> Div:  # noqa: N802
         ),
         css=CARD_SHADOW_DIV_CSS,
     )
+
+
+def HorizontalRule() -> Div:  # noqa: N802
+    """Return a horizontal rule for visual separation."""
+    return Div(
+        css=f"w-full border-t border-{BRAND_COLORS['text_0']}"
+    )
