@@ -35,18 +35,23 @@ To test:
 5. Manually visit ``/item/abc`` — returns 400 (invalid int)
 """
 
-from inguitive import Div, Header, Link, Text, create_app
+from inguitive import Div, Link, Text, create_app
 
-from .css import BASE_CONTAINER_CSS, HEADER_CSS, LINK_CSS
+from .css import BRAND_COLORS, LINK_CSS
+from .custom_components import BaseContainer, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
 
 
 # --- Components ---
-def PageHeader() -> Header:  # noqa: N802
-    """A reusable Header component for all pages."""
-    return Header("URL Path Parameters Example", css=HEADER_CSS)
+def PageContainer(*content) -> Div:  # noqa: N802
+    """A reusable page component for all pages."""
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("URL Path Parameters Example"),
+        *content,
+    )
 
 
 def PageContent(label: str, value: object) -> Div:  # noqa: N802
@@ -55,28 +60,24 @@ def PageContent(label: str, value: object) -> Div:  # noqa: N802
     The three parameter routes below differ only in the label they print and the
     value they receive, so they all delegate here for the markup.
     """
-    return Div(
-        PageHeader(),
-        Text(f"{label}: {value}", css="text-xl text-white"),
-        Text(f"Parsed type: {type(value).__name__}", css="text-white/30"),
+    return PageContainer(
+        Text(f"{label}: {value}", css=f"text-{BRAND_COLORS['green']}"),
+        Text(f"Parsed type: {type(value).__name__}", css=f"text-{BRAND_COLORS['yellow']}"),
         Link("Back", href="/", css=LINK_CSS),
-        css=BASE_CONTAINER_CSS,
     )
 
 
 # --- Routes ---
 @app.page("/")
 def index():
-    return Div(
-        PageHeader(),
+    return PageContainer(
         Link("Item 42", href="/item/42", css=LINK_CSS),
         Link("User ada", href="/user/ada", css=LINK_CSS),
         Link("Files a/b/c.txt", href="/files/a/b/c.txt", css=LINK_CSS),
         Text(
             "Try /item/abc to see the 400 from a failed int parse.",
-            css="text-white/30",
+            css=f"text-{BRAND_COLORS['red']}",
         ),
-        css=BASE_CONTAINER_CSS,
     )
 
 
