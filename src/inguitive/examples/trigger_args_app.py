@@ -17,11 +17,11 @@ plain ``Button`` with no enclosing ``Form``. Inside the handler,
 view regardless of whether the value came from ``trigger_args`` or a real
 query string.
 
-Here three buttons ("+1", "+5", "+10") all point to the same ``add`` handler
+Here four buttons ("+1", "+5", "+10", "-1") all point to the same ``add`` handler
 and differ only in their ``trigger_args``. The handler reads ``step``, coerces
-it to ``int``, and adds it to the counter. This is the pattern to reach for
-whenever the data is a fixed constant known at render time — a row id, a sort
-column, a tab name.
+it to ``int``, and adds it to the counter — so a negative ``step`` subtracts.
+This is the pattern to reach for whenever the data is a fixed constant known at
+render time — a row id, a sort column, a tab name.
 
 Contrast with ``form_app.py``, where user-typed data flows through
 ``form_data`` instead, and with ``auto_propagation_app.py``, which shows the
@@ -29,13 +29,13 @@ no-return response style used here.
 
 To test:
 1. Click "+1", "+5", "+10" — the counter jumps by the matching amount
-2. The displayed count updates immediately after each click
+2. Click "-1" — the counter decreases by 1
+3. The displayed count updates immediately after each click
 """
 
 from inguitive import (
     Button,
     Div,
-    Header,
     State,
     Text,
     create_app,
@@ -43,7 +43,15 @@ from inguitive import (
     update_components,
 )
 
-from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
+from .css import (
+    BUTTON_PRIMARY_BLUE_CSS,
+    BUTTON_PRIMARY_GREEN_CSS,
+    BUTTON_PRIMARY_RED_CSS,
+    BUTTON_PRIMARY_YELLOW_CSS,
+    BUTTON_SECONDARY_CSS,
+    TEXT_CSS,
+)
+from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
@@ -81,40 +89,51 @@ def reset():
 
 
 # --- Components ---
-def AddButton(step: int) -> Button:  # noqa: N802
+def AddButton(step: int, color: str) -> Button:  # noqa: N802
     """Reusable Button component to increment the counter by ``step``."""
+    if color == "green":
+        css = BUTTON_PRIMARY_GREEN_CSS
+    elif color == "yellow":
+        css = BUTTON_PRIMARY_YELLOW_CSS
+    elif color == "red":
+        css = BUTTON_PRIMARY_RED_CSS
+    else:
+        css = BUTTON_PRIMARY_BLUE_CSS
+
     return Button(
-        f"+{step}",
+        f"+{step}" if step > 0 else f"{step}",
         trigger="add",
         trigger_args={"step": step},
-        css=BUTTON_PRIMARY_CSS,
+        css=css,
     )
 
 
 # --- Routes ---
 @app.page("/")
 def home():
-    return Div(
-        Header("Trigger Args Example", css=HEADER_CSS),
-        Text(
-            lambda: f"Count: {counter_state.get()}",
-            css="text-xl text-center text-white",
-            listen_to="counter_state",
-        ),
-        Div(
-            # All three buttons share one handler; only trigger_args differs.
-            AddButton(step=1),
-            AddButton(step=5),
-            AddButton(step=10),
-            Button(
-                "Reset",
-                trigger="reset",
-                css=f"{BUTTON_SECONDARY_CSS} w-full",
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("Trigger Args Example"),
+        Card(
+            Text(
+                lambda: f"Count: {counter_state.get()}",
+                css=f"{TEXT_CSS} text-xl text-center",
+                listen_to="counter_state",
             ),
-            css="grid grid-cols-4 gap-6 w-full max-w-md mx-auto",
+            Div(
+                # All 4 buttons share one handler; only trigger_args differs.
+                AddButton(step=1, color="blue"),
+                AddButton(step=5, color="green"),
+                AddButton(step=10, color="yellow"),
+                AddButton(step=-1, color="red"),
+                Button(
+                    "Reset",
+                    trigger="reset",
+                    css=f"{BUTTON_SECONDARY_CSS}",
+                ),
+                css="grid grid-cols-5 gap-6 w-full",
+            ),
         ),
-
-        css=BASE_CONTAINER_CSS,
     )
 
 
