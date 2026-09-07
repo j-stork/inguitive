@@ -1,5 +1,5 @@
 """
-#TODO: Add a description of this file and its purpose.
+This file contains custom components for the inguitive application, including a base container, logo, title, and card components.
 """
 
 from inguitive import Div, Header, Image
@@ -14,7 +14,15 @@ from .css import (
 
 
 def BaseContainer(*content, width: str = "2xl") -> Div:  # noqa: N802
-    # TODO: Add a docstring here.
+    """A base container component with a specified width.
+
+    Args:
+        *content: The content to be displayed inside the container.
+        width: The width of the container. Defaults to "2xl".
+
+    Returns:
+        Div: The base container component.
+    """
     base_css = BASE_CONTAINER_CSS
     if width:
         base_css += f" max-w-{width}"
@@ -28,7 +36,11 @@ def BaseContainer(*content, width: str = "2xl") -> Div:  # noqa: N802
 
 
 def InguitiveLogo() -> Div:  # noqa: N802
-    # TODO: Add a docstring here.
+    """A component displaying the inguitive logo.
+
+    Returns:
+        Div: The logo component.
+    """
     return Div(
         Image(src="/static/inguitive_logo.svg", alt="inguitive logo", css="h-10 w-auto mt-0.5"),
         Image(src="/static/inguitive_text.svg", alt="inguitive text", css="h-10 w-auto"),
@@ -37,7 +49,14 @@ def InguitiveLogo() -> Div:  # noqa: N802
 
 
 def Title(text: str) -> Header:  # noqa: N802
-    # TODO: Add a docstring here.
+    """A title component.
+
+    Args:
+        text: The text to be displayed as the title.
+
+    Returns:
+        Header: The title component.
+    """
     return Header(text, css=HEADER_CSS)
 
 
