@@ -39,9 +39,15 @@ To test:
 4. Click "Reset" — both revert to defaults
 """
 
-from inguitive import Button, DataTable, Div, Header, State, create_app
+from inguitive import Button, DataTable, Div, State, create_app
 
-from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
+from .css import (
+    BRAND_COLORS,
+    BUTTON_PRIMARY_BLUE_CSS,
+    BUTTON_PRIMARY_YELLOW_CSS,
+    BUTTON_SECONDARY_CSS,
+)
+from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
@@ -90,49 +96,51 @@ def reset():
 
 
 # --- Components ---
-def table_css():
-    """Return DataTable css: plain string for default, dict for custom.
-
-    The dict form maps sub-element keys ("table", "header", "row", "cell")
-    to CSS classes — the DataTable-specific feature this example highlights.
-    """
-    if style_state.get() == "custom":
-        return {
-            "table": "w-full max-w-4xl mx-auto border border-yellow-500",
-            "header": "px-3 py-2 bg-yellow-500 font-mono uppercase",
-            "row": "hover:bg-white/20 transition-colors",
-            "cell": "px-3 py-2 border border-yellow-500 text-white font-mono",
-        }
-    return "w-full max-w-4xl mx-auto text-left"
-
-
 def PeopleTable() -> DataTable:  # noqa: N802
     """Single table reacting to three states via multi-state listen_to."""
+
+    def dynamic_css():
+        """Return DataTable css: plain string for default, dict for custom.
+
+        The dict form maps sub-element keys ("table", "header", "row", "cell")
+        to CSS classes — the DataTable-specific feature this example highlights.
+        """
+        if style_state.get() == "custom":
+            return {
+                "table": f"w-full border border-{BRAND_COLORS['yellow']}",
+                "header": f"px-3 py-2 font-mono uppercase bg-{BRAND_COLORS['yellow']} text-black/80",
+                "row": f"hover:bg-{BRAND_COLORS['background_2']} transition-colors",
+                "cell": f"px-3 py-2 font-mono border border-{BRAND_COLORS['yellow']} text-{BRAND_COLORS['text_0']}",
+            }
+        return "w-full"
+
     return DataTable(
         data=lambda: people_state.get(),
         columns=lambda: columns_state.get(),
-        css=table_css,
+        css=dynamic_css,
         listen_to=["people_state", "columns_state", "style_state"],
     )
 
 
 def Controls() -> Div:  # noqa: N802
     return Div(
-        Button("Reorder columns", trigger="reorder_columns", css=BUTTON_PRIMARY_CSS),
-        Button("Custom styling", trigger="toggle_style", css=BUTTON_PRIMARY_CSS),
+        Button("Reorder columns", trigger="reorder_columns", css=BUTTON_PRIMARY_BLUE_CSS),
+        Button("Custom styling", trigger="toggle_style", css=BUTTON_PRIMARY_YELLOW_CSS),
         Button("Reset", trigger="reset", css=BUTTON_SECONDARY_CSS),
-        css="flex gap-6 w-full max-w-4xl mx-auto",
+        css="grid grid-cols-3 gap-6 w-full",
     )
 
 
 # --- Routes ---
 @app.page("/")
 def home():
-    return Div(
-        Header("Data Table Example", css=HEADER_CSS),
-        Controls(),
-        PeopleTable(),
-        css=BASE_CONTAINER_CSS,
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("Data Table Example"),
+        Card(
+            Controls(),
+            PeopleTable(),
+        ),
     )
 
 
