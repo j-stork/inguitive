@@ -45,7 +45,6 @@ import os
 from inguitive import (
     Button,
     Div,
-    Header,
     MemoryBackend,
     RedisBackend,
     State,
@@ -56,7 +55,8 @@ from inguitive import (
     set_session_backend,
 )
 
-from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
+from .css import BRAND_COLORS, BUTTON_PRIMARY_BLUE_CSS, BUTTON_SECONDARY_CSS
+from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- Backend Selection ---
 # Choose the session backend at startup from the SESSION_BACKEND env var.
@@ -68,9 +68,7 @@ if _backend_name == "redis":
     # an unreachable server only surfaces when a request touches the backend.
     # Requires the redis package (pip install "inguitive[redis]") and a running
     # Redis server reachable at REDIS_URL.
-    set_session_backend(
-        RedisBackend(redis_url=os.getenv("REDIS_URL", "redis://localhost:6379"))
-    )
+    set_session_backend(RedisBackend(redis_url=os.getenv("REDIS_URL", "redis://localhost:6379")))
 else:
     set_session_backend(MemoryBackend())
 
@@ -100,56 +98,59 @@ def backend_name() -> str:
     return type(get_session_backend()).__name__
 
 
-# --- Components ---
 def Counter() -> Div:  # noqa: N802
-    # TODO: Rewrite the docstring.
     """Counter card. All dynamic values are callables re-evaluated on render."""
 
-    def count_text() -> str:
+    def dynamic_counter_text() -> str:
         """Label text derived from the live counter value."""
         return f"Count: {counter_state.get()}"
 
-    def count_css() -> str:
+    def dynamic_css() -> str:
         """Red + bold once the count exceeds 5, otherwise neutral."""
         base = "text-xl text-center"
         if counter_state.get() > 5:
-            return f"{base} text-red-400"
-        return f"{base} text-white"
+            return f"{base} font-bold text-{BRAND_COLORS['red']}"
+        return f"{base} text-{BRAND_COLORS['text_0']}"
 
-    backend_name = type(get_session_backend()).__name__
+    def dynamic_session_text() -> str:
+        """Display the current session ID."""
+        return f"Session ID: {get_session_id()}"
 
-    return Div(
-        Header(
-            "Session Backends Example",
-            css=HEADER_CSS,
-        ),
-        Text(
-            count_text,
-            css=count_css,
-            listen_to="counter_state",
-        ),
-        Div(
-            Button(
-                "+1",
-                trigger="increment",
-                css=BUTTON_PRIMARY_CSS,
+    def dynamic_backend_text() -> str:
+        """Display the name of the active session backend."""
+        return f"Backend: {backend_name()}"
+
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("Session Backends Example"),
+        Card(
+            Text(
+                dynamic_counter_text,
+                css=dynamic_css,
+                listen_to="counter_state",
             ),
-            Button(
-                "Reset",
-                trigger="reset",
-                css=BUTTON_SECONDARY_CSS,
+            Div(
+                Button(
+                    "+1",
+                    trigger="increment",
+                    css=BUTTON_PRIMARY_BLUE_CSS,
+                ),
+                Button(
+                    "Reset",
+                    trigger="reset",
+                    css=BUTTON_SECONDARY_CSS,
+                ),
+                css="grid grid-cols-2 gap-6 w-full",
             ),
-            css="grid grid-cols-2 gap-6 w-full max-w-md mx-auto",
+            Text(
+                dynamic_session_text,
+                css=f"text-center text-{BRAND_COLORS['yellow']}",
+            ),
+            Text(
+                dynamic_backend_text,
+                css=f"text-center text-{BRAND_COLORS['green']}",
+            ),
         ),
-        Text(
-            f"Session ID: {get_session_id()}",
-            css="text-center text-white/30",
-        ),
-        Text(
-            f"Backend: {backend_name}",
-            css="text-center font-semibold text-white/30",
-        ),
-        css=BASE_CONTAINER_CSS,
     )
 
 
