@@ -7,13 +7,22 @@ Users can extend this file with their own styling constants.
 
 # Colors
 BRAND_COLORS = {
-    "blue_400": "#3D6EF0",
-    "blue_500": "#1147E8",
-    "violet_600": "#CA00E0",
-    "navy_500": "#4977C1",
-    "navy_900": "#10182E",
-    "navy_950": "#090E1B",
+    "blue": "#155dff",
+    "blue_light": "#3c7dff",
+    "green": "#00df72",
+    "green_light": "#40fa8c",
+    "yellow": "#ffba00",
+    "yellow_light": "#ffd96e",
+    "red": "#ff6367",
+    "red_light": "#ff8c8b",
+    "background_0": "#0b1628",
+    "background_1": "#273347",
+    "background_2": "#465369",
+    "text_0": "#c2ccd8",
+    "text_1": "#dce6f2",
+    "text_2": "#ffffff"
 }
+
 
 # Wrap the color values in square brackets for Tailwind CSS compatibility
 for color_name, color_value in BRAND_COLORS.items():
@@ -22,28 +31,32 @@ for color_name, color_value in BRAND_COLORS.items():
 
 
 # CSS class for the top-level container
-BASE_CONTAINER_CSS = f"flex flex-col justify-center items-center min-h-screen gap-6 p-6 bg-{BRAND_COLORS['navy_900']}"
+BASE_CONTAINER_CSS = f"flex flex-col justify-center items-center w-full min-h-screen gap-9 p-6 mx-auto bg-{BRAND_COLORS['background_0']}"
 
 # Common base styling for all buttons
-BUTTON_BASE_CSS = "rounded-md px-3 py-2 font-semibold shadow-xs cursor-pointer"
+BUTTON_BASE_CSS = "px-3 py-2 font-semibold border-2 border-black cursor-pointer text-black/80"
 
-# Primary button
-BUTTON_PRIMARY_CSS = f"{BUTTON_BASE_CSS} bg-{BRAND_COLORS['blue_500']} text-white hover:bg-{BRAND_COLORS['blue_400']} active:bg-{BRAND_COLORS['blue_500']}"
+# Primary buttons
+BUTTON_PRIMARY_BLUE_CSS = f"{BUTTON_BASE_CSS} bg-{BRAND_COLORS['blue']} hover:bg-{BRAND_COLORS['blue_light']} active:bg-{BRAND_COLORS['blue']}"
+BUTTON_PRIMARY_GREEN_CSS = f"{BUTTON_BASE_CSS} bg-{BRAND_COLORS['green']} hover:bg-{BRAND_COLORS['green_light']} active:bg-{BRAND_COLORS['green']}"
+BUTTON_PRIMARY_YELLOW_CSS = f"{BUTTON_BASE_CSS} bg-{BRAND_COLORS['yellow']} hover:bg-{BRAND_COLORS['yellow_light']} active:bg-{BRAND_COLORS['yellow']}"
+BUTTON_PRIMARY_RED_CSS = f"{BUTTON_BASE_CSS} bg-{BRAND_COLORS['red']} hover:bg-{BRAND_COLORS['red_light']} active:bg-{BRAND_COLORS['red']}"
 
 # Secondary button
-BUTTON_SECONDARY_CSS = f"{BUTTON_BASE_CSS} bg-gray-300 text-black hover:bg-gray-200 active:bg-gray-300"
+BUTTON_SECONDARY_CSS = f"{BUTTON_BASE_CSS} bg-{BRAND_COLORS['text_0']} hover:bg-{BRAND_COLORS['text_1']} active:bg-{BRAND_COLORS['text_0']}"
 
 # Card container styling
-CARD_CONTAINER_CSS = "w-full max-w-md p-6 space-y-6 mx-auto bg-gray-100 rounded-xl shadow-md"
+CARD_SHADOW_DIV_CSS = "w-full translate-2 bg-black"
+CARD_CONTENT_DIV_CSS = f"w-full p-6 space-y-6 border-2 border-black bg-{BRAND_COLORS['background_1']} -translate-2"
 
 # Header text
-HEADER_CSS = "font-bold text-3xl text-center text-white mb-12"
+HEADER_CSS = f"text-4xl font-bold text-{BRAND_COLORS['text_2']}"
 
 # Helper text
-HELP_TEXT_CSS = "text-sm mt-1 text-gray-500"
+HELP_TEXT_CSS = f"text-sm mt-1 text-{BRAND_COLORS['text_1']}"
 
 # Input and textarea fields
-INPUT_CSS = "w-full p-2 border rounded-md"
+INPUT_CSS = f"w-full p-2 border-2 border-black rounded-none bg-{BRAND_COLORS['background_2']} text-{BRAND_COLORS['text_1']} placeholder:text-{BRAND_COLORS['text_1']}"
 
 # Link styling
-LINK_CSS = "font-semibold text-blue-600 underline hover:text-blue-500 active:text-blue-600"
+LINK_CSS = f"font-semibold text-{BRAND_COLORS['blue']} underline hover:text-{BRAND_COLORS['blue_light']} active:text-{BRAND_COLORS['blue']}"

@@ -30,9 +30,10 @@ To test:
 2. Click "Reset" — the count returns to 0
 """
 
-from inguitive import Button, Div, Header, State, Text, create_app
+from inguitive import Button, Div, State, Text, create_app
 
-from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
+from .css import BRAND_COLORS, BUTTON_PRIMARY_BLUE_CSS, BUTTON_SECONDARY_CSS
+from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
@@ -58,22 +59,21 @@ def reset():
 # --- Routes ---
 @app.page("/")
 def home():
-    return Div(
-        Header(
-            "Auto-Propagation Example",
-            css=HEADER_CSS,
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("Auto-Propagation Example"),
+        Card(
+            Text(
+                lambda: f"Count: {counter_state.get()}",
+                css=f"text-xl text-center text-{BRAND_COLORS['text_1']}",
+                listen_to="counter_state",
+            ),
+            Div(
+                Button("+1", trigger="increment", css=BUTTON_PRIMARY_BLUE_CSS),
+                Button("Reset", trigger="reset", css=BUTTON_SECONDARY_CSS),
+                css="grid grid-cols-2 gap-6 w-full",
+            ),
         ),
-        Text(
-            lambda: f"Count: {counter_state.get()}",
-            css="text-xl text-center text-white",
-            listen_to="counter_state",
-        ),
-        Div(
-            Button("+1", trigger="increment", css=BUTTON_PRIMARY_CSS),
-            Button("Reset", trigger="reset", css=BUTTON_SECONDARY_CSS),
-            css="grid grid-cols-2 gap-6 w-full max-w-md mx-auto",
-        ),
-        css=BASE_CONTAINER_CSS,
     )
 
 
