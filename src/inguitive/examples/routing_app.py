@@ -31,9 +31,10 @@ To test:
 3. Click "Back to Page 1" — the URL changes back to ``/page1``
 """
 
-from inguitive import Div, Header, Link, Text, create_app, redirect
+from inguitive import Div, Link, Text, create_app, redirect
 
-from .css import BASE_CONTAINER_CSS, BUTTON_PRIMARY_CSS, BUTTON_SECONDARY_CSS, HEADER_CSS
+from .css import BUTTON_PRIMARY_BLUE_CSS, BUTTON_PRIMARY_YELLOW_CSS, TEXT_CSS
+from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
@@ -43,21 +44,24 @@ app = create_app()
 def PageContainer(page_title: str, page_text: str, link_label: str, href: str) -> Div:  # noqa: N802
     """A simple and reusable page shell."""
     if href == "/page1":
-        link_css = BUTTON_SECONDARY_CSS
+        link_css = BUTTON_PRIMARY_YELLOW_CSS
     else:
-        link_css = BUTTON_PRIMARY_CSS
+        link_css = BUTTON_PRIMARY_BLUE_CSS
 
-    return Div(
-        Header("Routing Example", css=HEADER_CSS),
-        Text(page_title, css="text-2xl font-bold text-white"),
-        Text(page_text, css="text-white"),
-        Link(
-            link_label,
-            href=href,
-            css=link_css,
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("Routing Example"),
+        Card(
+            Title(page_title, level=2),
+            Text(page_text, css=TEXT_CSS),
+            Link(
+                link_label,
+                href=href,
+                css=link_css,
+            ),
         ),
-        css=BASE_CONTAINER_CSS,
     )
+
 
 # --- Routes ---
 @app.page("/")
