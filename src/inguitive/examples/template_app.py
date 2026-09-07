@@ -37,14 +37,13 @@ To test:
 3. Click "Reset" — the template re-renders with 0
 """
 
-from inguitive import Button, Div, Header, State, TemplateComponent, create_app
+from inguitive import Button, Div, State, TemplateComponent, create_app
 
 from .css import (
-    BASE_CONTAINER_CSS,
-    BUTTON_PRIMARY_CSS,
+    BUTTON_PRIMARY_BLUE_CSS,
     BUTTON_SECONDARY_CSS,
-    HEADER_CSS,
 )
+from .custom_components import BaseContainer, InguitiveLogo, Title
 
 # --- App Setup ---
 app = create_app()
@@ -73,9 +72,12 @@ def reset():
 # render), so the template reflects the live state. Autoescaping applies to
 # the interpolated value.
 COUNTER_TEMPLATE = """
-<div class="w-sm p-6 space-y-6 rounded-xl bg-gray-100 shadow-lg">
+<div class="relative w-sm p-6 space-y-6 rounded-xl bg-orange-400 border-4 border-orange-600 shadow-lg">
+  <div class="absolute px-2 -top-4 left-2 rounded-full bg-teal-400 border-2 border-teal-600 shadow-md">
+    This component ...
+  </div>
+  <p class="text-center">... is rendered via TemplateComponent</p>
   <p class="text-xl text-center">Count: {{ value }}</p>
-  <p class="text-center text-gray-500">Rendered via TemplateComponent</p>
 </div>
 """
 
@@ -91,23 +93,15 @@ def CounterCard() -> TemplateComponent:  # noqa: N802
 # --- Routes ---
 @app.page("/")
 def home():
-    return Div(
-        Header("TemplateComponent Example", css=HEADER_CSS),
+    return BaseContainer(
+        InguitiveLogo(),
+        Title("TemplateComponent Example"),
         CounterCard(),
         Div(
-            Button(
-                "+1",
-                trigger="increment",
-                css=f"{BUTTON_PRIMARY_CSS} w-full"
-            ),
-            Button(
-                "Reset",
-                trigger="reset",
-                css=f"{BUTTON_SECONDARY_CSS} w-full"
-            ),
+            Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY_BLUE_CSS} w-full"),
+            Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY_CSS} w-full"),
             css="flex w-sm gap-6",
         ),
-        css=BASE_CONTAINER_CSS,
     )
 
 
