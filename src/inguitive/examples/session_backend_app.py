@@ -114,7 +114,7 @@ def Counter() -> Div:  # noqa: N802
 
     def dynamic_session_text() -> str:
         """Display the current session ID."""
-        return f"Session ID: {get_session_id()}"
+        return f"Session: {get_session_id()}"
 
     def dynamic_backend_text() -> str:
         """Display the name of the active session backend."""

@@ -85,7 +85,7 @@ def Counter() -> Div:  # noqa: N802
 
     def dynamic_session_text() -> str:
         """Display the current session ID."""
-        return f"Session ID: {get_session_id()}"
+        return f"Session: {get_session_id()}"
 
     return BaseContainer(
         InguitiveLogo(),
