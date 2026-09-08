@@ -50,6 +50,8 @@ To test:
    which is the safe pattern shown here.
 """
 
+from collections.abc import Callable
+
 from inguitive import Button, Div, Form, State, Text, Textarea, create_app, nl2br
 
 from .css import BUTTON_PRIMARY_GREEN_CSS, INPUT_CSS, TEXT_CSS
@@ -73,7 +75,7 @@ def submit(form_data: dict):
 
 
 # --- Components ---
-def TextDisplay(header_text: str, dynamic_text_func: callable) -> Div:  # noqa: N802
+def TextDisplay(header_text: str, dynamic_text_func: Callable[[], str]) -> Div:  # noqa: N802
     """Return a Div that displays the text from the given callable."""
     return Div(
         Title(header_text, level=2),
