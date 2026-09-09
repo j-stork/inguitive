@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/inguitive/static/inguitive_logo.svg" alt="inguitive" width="200">
+  <img src="src/inguitive/static/inguitive_logo_600.png" alt="inguitive" width="200">
 </p>
 
 # inguitive
