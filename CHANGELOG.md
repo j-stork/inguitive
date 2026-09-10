@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0] - 2026-09-10
+
+### Changed (breaking)
+
+- **`nl2br()` is now safe-by-default**: escapes HTML internally and returns `markupsafe.Markup` instead of `str`. HTML in the input is escaped rather than preserved. Callers no longer need to wrap with `Markup(nl2br(str(escape(content))))`; pre-escaped content can be wrapped in `Markup` by the caller.
+- **`validate_form` parameter renamed**: `handle_errors` → `raise_on_invalid`. Semantics unchanged — `True` (default) raises `ValidationError`, `False` injects the errors dict into the handler.
+
+### Added
+
+- **`session_context`**: async context manager for per-session background tasks. Binds a session outside an HTTP request so `State.set()` writes to that session's isolated data instead of broadcasting globally. Exported from `inguitive.__init__`.
+- **`push_update` in-context session reuse**: when called inside a `session_context` targeting the bound session, `push_update` reuses the in-context session instead of reloading from the backend (avoids stale reads on serializing backends).
+- **Custom static file serving**: `create_app()` now checks `CWD/static/` first, then package `static/`, so users can serve their own files (SVG, PNG, etc.).
+- **`inguitive init` updated**: scaffolded `app.py`/`css.py`/`svg.py` content revised; now prompts to create `llms-inguitive.md` for LLM indexing.
+
+### Fixed
+
+- **`Icon.render()` dropped the component id**: broke HTMX OOB swaps (silent no-op because the DOM had no matching element). Id is now set on the root `<svg>`.
+- **`TemplateComponent.render()` dropped the component id**: same OOB breakage. Rendered template is now wrapped in `<div {attrs}>` to match `update()`.
+- **`static_files_app` didn't transmit responses**: Starlette `Response` objects were returned but never awaited; also fixed wrong path resolution under `Mount` (doubled `/static` segment).
+
+### Internal
+
+- **Decorators hoisted to module level**: `@app.page` and `@app.trigger_handler` extracted from nested closures to module-level functions (bound via `functools.partial`); user code unchanged. Makes them visible to `gather_package_documentation()` for `llms-inguitive.md`.
+- **`gather_package_documentation()` refactored**: now uses AST instead of line scanning; improved docstring extraction and output formatting.
+- **mypy fixes**: `Traversable` type errors in `fastapi.py`, AST return type narrowing in `_top_level_definitions`.
+
+### Documentation
+
+- SSE guide expanded with multi-worker deployment recipes (sticky sessions, broker pattern) and a session-scoped background task recipe using `session_context`.
+- 14 focused example apps added/rewritten; obsolete example apps deleted.
+- README shortened and restructured with logo, 3-step quick start, and lean features list.
+
+---
+
 ## [0.9.0] - 2026-08-25
 
 ### Added
