@@ -111,4 +111,4 @@ __all__ = [
     "validate_form",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"

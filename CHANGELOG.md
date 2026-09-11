@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-09-11
+
+### Fixed
+
+- **SSE generator leaked orphaned tasks on client disconnect**: the `_event_generator` in the `/_sse` route cancelled the disconnect and queue tasks but never awaited them, leaving them pending. Python then destroyed them mid-flight and logged "Task was destroyed but it is pending". Both tasks are now cancelled and awaited in the `finally` block so their cancellations settle before the generator returns.
+- **SSE connections exhausted browser connection limit during rapid navigation**: every page opened a `/_sse` connection via `base.html`, but the connection was never closed on navigation — the server only detected disconnects via a 0.5s poll. Zombie SSE connections accumulated and exhausted the browser's 6-connection HTTP/1.1 limit, blocking page loads from the 6th transition onward. Added a `pagehide` handler that triggers the SSE extension's own `htmx:beforeCleanupElement` event on `#hx-target`, closing the `EventSource` immediately when the browser navigates away.
+
+---
+
 ## [1.0.0] - 2026-09-10
 
 ### Changed (breaking)
