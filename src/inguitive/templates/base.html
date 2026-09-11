@@ -29,5 +29,25 @@
              sse-connect="/_sse"
              sse-swap="message"
              style="display: none;"></div>
+        <!-- Close the SSE EventSource when the page is unloaded so the
+             server detects the disconnect immediately and frees the
+             connection slot.  Without this, the browser holds the
+             connection open until the server's 0.5s disconnect poll fires,
+             which exhausts the browser's per-origin connection limit
+             (6 for HTTP/1.1) during rapid page navigation and blocks
+             subsequent page loads.
+
+             We trigger the SSE extension's own cleanup event
+             (htmx:beforeCleanupElement) rather than calling
+             htmx.getInternalData directly, because getInternalData is an
+             internal API not exposed on the public htmx object. -->
+        <script>
+            window.addEventListener("pagehide", function () {
+                var elt = document.getElementById("hx-target");
+                if (elt && typeof htmx !== "undefined") {
+                    htmx.trigger(elt, "htmx:beforeCleanupElement");
+                }
+            });
+        </script>
     </body>
 </html>
