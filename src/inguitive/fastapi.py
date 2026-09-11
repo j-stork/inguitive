@@ -809,6 +809,11 @@ def create_app(
                     await asyncio.sleep(0.5)
 
             disconnect_task = loop.create_task(_disconnect_future())
+            # Track the queue_task across loop iterations so the finally
+            # block can cancel and await it even if a CancelledError fires
+            # mid-iteration (otherwise it leaks as an orphaned pending task
+            # and Python logs "Task was destroyed but it is pending").
+            queue_task: asyncio.Task | None = None
 
             try:
                 while True:
@@ -821,9 +826,13 @@ def create_app(
 
                     if disconnect_task in done or not done:
                         # Client disconnected or heartbeat timeout elapsed.
-                        queue_task.cancel()
                         if not done:
-                            # Timeout — send keep-alive and loop.
+                            # Timeout — send keep-alive and loop.  The
+                            # queue_task is still pending; cancel and await
+                            # it so it does not leak before the next iteration
+                            # overwrites queue_task.
+                            queue_task.cancel()
+                            await asyncio.wait({queue_task})
                             yield ": heartbeat\n\n"
                             continue
                         break
@@ -837,7 +846,19 @@ def create_app(
             except asyncio.CancelledError:
                 pass
             finally:
-                disconnect_task.cancel()
+                # Cancel and await both tasks so their cancellations settle
+                # before the generator returns.  A bare cancel() without
+                # awaiting leaves the task pending; Python then destroys it
+                # mid-flight and logs "Task was destroyed but it is pending".
+                # Awaiting guarantees the task body has unwound, which also
+                # frees the SSE stream promptly when the client navigates away.
+                for task in (disconnect_task, queue_task):
+                    if task is not None and not task.done():
+                        task.cancel()
+                        try:
+                            await asyncio.wait({task})
+                        except (asyncio.CancelledError, Exception):
+                            pass
                 # Remove only this tab's queue; other tabs are unaffected.
                 _unregister_sse_connection(session_id, queue)
 
