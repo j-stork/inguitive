@@ -195,6 +195,7 @@ def _register_page_route(
     # Path is passed directly to FastAPI, which handles {param} syntax natively.
     @app.get(path, response_class=HTMLResponse)
     async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon, ph=page_head):
+        _require_session_context()
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
         needs_form_data = "form_data" in sig.parameters
@@ -262,6 +263,7 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
 
     @app.post(f"/_trigger/{trigger_name.lstrip('/')}", response_class=HTMLResponse)
     async def route_wrapper(request: Request, h=handler, tn=trigger_name):
+        _require_session_context()
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
         needs_form_data = "form_data" in sig.parameters
@@ -406,6 +408,33 @@ def trigger_handler_decorator(app, trigger_name: str | None | Callable = None):
         return decorator
 
 
+_SESSION_MIDDLEWARE_MISSING_MSG = (
+    "inguitive's SessionMiddleware is not configured on this app. "
+    "SessionState, SSE, and OOB component re-rendering all require a "
+    "bound session. Either pass configure_session_middleware=True (the "
+    "default) to UI(...), or add it yourself:\n"
+    "\n"
+    "    from inguitive import SessionMiddleware\n"
+    "    app.add_middleware(SessionMiddleware)\n"
+    "\n"
+    "If you set configure_session_middleware=False on UI(...), you must "
+    "add this line yourself."
+)
+
+
+def _require_session_context() -> None:
+    """Raise a loud, actionable error if no session is bound to the context.
+
+    Fires when SessionMiddleware has not run for this request — i.e. the user
+    set ``configure_session_middleware=False`` on ``UI(...)`` and forgot to
+    ``app.add_middleware(SessionMiddleware)`` themselves.  Without a bound
+    session, SessionState, SSE, and OOB re-rendering silently degrade; this
+    turns that silent failure into an immediate, explained error.
+    """
+    if _get_current_session_from_context() is None:
+        raise RuntimeError(_SESSION_MIDDLEWARE_MISSING_MSG)
+
+
 class SessionMiddleware:
     """FastAPI/Starlette ASGI middleware for session management."""
 
@@ -530,16 +559,26 @@ class UI:
         title: str = "inguitive",
         favicon: str | None = None,
         head: HeadContent = None,
+        configure_session_middleware: bool = True,
+        session_backend: SessionBackend | None = None,
+        session_cookie_name: str = "inguitive_session_id",
+        session_cookie_max_age: int = 3600,
+        session_cookie_secure: bool = False,
+        session_cookie_httponly: bool = True,
+        session_cleanup_interval: int = 100,
         dev_mode: bool = True,
     ):
         """Attach inguitive's UI layer to *app*.
 
-        ``UI`` wires up only what is strictly UI: page-rendering defaults,
-        the ``/_sse`` endpoint, and the ``/static`` mount.  Session identity
-        and the inguitive ``Session`` binding are the user's responsibility
-        — they add ``SessionMiddleware`` (see :class:`SessionMiddleware`)
-        themselves via ``app.add_middleware(SessionMiddleware, ...)`` so they
-        own the middleware stack.
+        ``UI`` wires up page-rendering defaults, the ``/_sse`` endpoint, and
+        the ``/static`` mount.  By default it also adds
+        :class:`SessionMiddleware` to *app*, because SessionState, SSE, and
+        OOB re-rendering all require a bound session.  Set
+        ``configure_session_middleware=False`` to opt out and add
+        ``SessionMiddleware`` yourself (e.g. to control middleware ordering
+        or swap the session source).  When opted out, inguitive raises a
+        loud, actionable error on the first request if the middleware is
+        missing — see :func:`_require_session_context`.
 
         Args:
             app: The user's FastAPI application instance.
@@ -549,6 +588,16 @@ class UI:
                 ``/static/inguitive_favicon.svg``.
             head: Default head content (components and/or raw HTML strings)
                 appended to every page's ``<head>``.
+            configure_session_middleware: When True (default), add
+                :class:`SessionMiddleware` to *app* automatically.  When
+                False, the user must add it themselves.
+            session_backend: Session backend (defaults to ``MemoryBackend``).
+                Only used when ``configure_session_middleware`` is True.
+            session_cookie_name: Name of the session cookie.
+            session_cookie_max_age: Cookie max age in seconds.
+            session_cookie_secure: Whether cookie is secure (HTTPS only).
+            session_cookie_httponly: Whether cookie is HTTP-only.
+            session_cleanup_interval: Call ``cleanup_expired()`` every N requests.
             dev_mode: Enable development mode warnings (default True).
         """
         self.app = app
@@ -571,6 +620,19 @@ class UI:
             from inguitive.state import disable_dev_mode_warnings
 
             disable_dev_mode_warnings()
+
+        # Session middleware — added by default, opt-out via flag.
+        if configure_session_middleware:
+            if session_backend is not None:
+                set_session_backend(session_backend)
+            app.add_middleware(
+                SessionMiddleware,
+                session_cookie_name=session_cookie_name,
+                session_cookie_max_age=session_cookie_max_age,
+                session_cookie_secure=session_cookie_secure,
+                session_cookie_httponly=session_cookie_httponly,
+                cleanup_interval=session_cleanup_interval,
+            )
 
         # Static files mount
         self._mount_static(app)
@@ -624,9 +686,9 @@ class UI:
 
         @app.get("/_sse")
         async def _sse_route(request: Request):  # type: ignore[return-value]
+            _require_session_context()
             session = _get_current_session_from_context()
-            if session is None:
-                return HTMLResponse("No active session", status_code=401)
+            assert session is not None  # _require_session_context guarantees this
 
             session_id = session.session_id
             queue = _register_sse_connection(session_id)
