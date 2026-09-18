@@ -587,7 +587,7 @@ class Input(Component):
         type: str = "text",
         value: str | Callable[[], str] | None = None,
         placeholder: str = "",
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         **attrs: Any,
     ):
         """Initialize an Input component.
@@ -598,7 +598,7 @@ class Input(Component):
             type: Input type (text, email, password, number, etc.)
             value: Initial value (string or callable)
             placeholder: Placeholder text
-            listen_to: State name to listen for changes
+            listen_to: State/SessionState object (or list) to listen for changes
             **attrs: Additional HTML attributes (name, required, etc.)
         """
         # Set default value
@@ -641,7 +641,7 @@ class Textarea(Component):
         value: str | Callable[[], str] | None = None,
         placeholder: str = "",
         rows: int = 3,
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         **attrs: Any,
     ):
         """Initialize a Textarea component.
@@ -652,7 +652,7 @@ class Textarea(Component):
             value: Initial value (string or callable)
             placeholder: Placeholder text
             rows: Number of visible rows
-            listen_to: State name to listen for changes
+            listen_to: State/SessionState object (or list) to listen for changes
             **attrs: Additional HTML attributes (name, required, etc.)
         """
         if placeholder:
@@ -696,7 +696,7 @@ class Select(Component):
         css: str | Callable[[], str] | None = None,
         options: list[tuple[str, str]] | Callable[[], list[tuple[str, str]]] | None = None,
         value: str | Callable[[], str] | None = None,
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         **attrs: Any,
     ):
         """Initialize a Select component.
@@ -706,7 +706,7 @@ class Select(Component):
             css: Tailwind CSS classes
             options: List of (value, display_text) tuples, or callable returning such list
             value: Selected value (string or callable)
-            listen_to: State name to listen for changes
+            listen_to: State/SessionState object (or list) to listen for changes
             **attrs: Additional HTML attributes (name, required, disabled, etc.)
         """
         # Auto-set name to id if not provided
@@ -769,7 +769,7 @@ class Checkbox(Component):
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
         checked: bool | Callable[[], bool] = False,
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         **attrs: Any,
     ):
         """Initialize a Checkbox component.
@@ -778,7 +778,7 @@ class Checkbox(Component):
             id: HTML id attribute
             css: Tailwind CSS classes
             checked: Checked state (boolean or callable)
-            listen_to: State name to listen for changes
+            listen_to: State/SessionState object (or list) to listen for changes
             **attrs: Additional HTML attributes (name, required, disabled, etc.)
         """
         # Set type to checkbox
@@ -831,7 +831,7 @@ class Radio(Component):
         css: str | Callable[[], str] | None = None,
         value: str = "",
         checked: bool | Callable[[], bool] = False,
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         **attrs: Any,
     ):
         """Initialize a Radio component.
@@ -841,7 +841,7 @@ class Radio(Component):
             css: Tailwind CSS classes
             value: Value for this radio option
             checked: Checked state (boolean or callable)
-            listen_to: State name to listen for changes
+            listen_to: State/SessionState object (or list) to listen for changes
             **attrs: Additional HTML attributes (name, required, disabled, etc.)
         """
         # Set type to radio
@@ -897,7 +897,7 @@ class Form(Component):
         css: str | Callable[[], str] | None = None,
         action: str = "",
         method: str = "post",
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         **attrs: Any,
     ):
         """Initialize a Form component.
@@ -908,7 +908,7 @@ class Form(Component):
             css: Tailwind CSS classes
             action: Form action URL
             method: HTTP method (get, post, etc.)
-            listen_to: State name to listen for changes
+            listen_to: State/SessionState object (or list) to listen for changes
             **attrs: Additional HTML attributes (hx-post, hx-target, etc.)
         """
         if action:
@@ -964,7 +964,7 @@ class TemplateComponent(Component):
         template: str,
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         **context: Any,
     ):
         """Initialize a TemplateComponent.
@@ -973,7 +973,7 @@ class TemplateComponent(Component):
             template: Jinja2 template string with placeholders
             id: HTML id attribute
             css: Tailwind CSS classes
-            listen_to: State name to listen for changes
+            listen_to: State/SessionState object (or list) to listen for changes
             **context: Variables to pass to the template
         """
         super().__init__(id=id, css=css, listen_to=listen_to)
@@ -986,7 +986,7 @@ class TemplateComponent(Component):
         template_path: str,
         id: str | None = None,
         css_name: str | Callable[[], str] | None = None,
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         **context: Any,
     ):
         """Create a TemplateComponent from a template file.
@@ -995,7 +995,7 @@ class TemplateComponent(Component):
             template_path: Path to the Jinja2 template file
             id: HTML id attribute
             css_name: Tailwind CSS classes
-            listen_to: State name to listen for changes
+            listen_to: State/SessionState object (or list) to listen for changes
             **context: Variables to pass to the template
         """
         with open(template_path) as f:
@@ -1111,7 +1111,7 @@ class DataTable(Component):
         | Mapping[str, str | Callable[[], str]]
         | Callable[[], str | Mapping[str, str | Callable[[], str]]]
         | None = None,
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         **attrs: Any,
     ):
         """Initialize a DataTable component.
@@ -1132,7 +1132,7 @@ class DataTable(Component):
                     - "row": <tr> elements (body rows)
                     - "cell": <td> elements (body cells)
                 - Callable: Returns either str or dict
-            listen_to: State name to listen for changes (triggers re-render)
+            listen_to: State/SessionState object (or list) to listen for changes (triggers re-render)
             **attrs: Additional HTML attributes (e.g., data-testid)
         """
         # Don't pass css to parent __init__ yet - we'll handle it specially
