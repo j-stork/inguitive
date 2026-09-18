@@ -21,7 +21,15 @@ from inguitive.components import (
     Text,
     Textarea,
 )
-from inguitive.fastapi import UI, InguitiveApp, create_app, push_update, redirect, run_app
+from inguitive.fastapi import (
+    UI,
+    InguitiveApp,
+    SessionMiddleware,
+    create_app,
+    push_update,
+    redirect,
+    run_app,
+)
 from inguitive.htmx import update_components
 from inguitive.session import (
     MemoryBackend,
@@ -66,6 +74,7 @@ __all__ = [
     # FastAPI
     "UI",
     "InguitiveApp",
+    "SessionMiddleware",
     "create_app",
     "push_update",
     "redirect",

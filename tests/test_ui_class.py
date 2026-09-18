@@ -8,7 +8,7 @@ user-owned FastAPI app, and store defaults on ``app.state``.
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from inguitive import Div, Text, UI
+from inguitive import Div, Text, UI, SessionMiddleware
 
 
 class TestUIConstruction:
@@ -44,10 +44,21 @@ class TestUIConstruction:
         response = client.get("/static/does_not_exist.txt")
         assert response.status_code == 404
 
-    def test_ui_attaches_session_middleware(self):
-        """SessionMiddleware is attached (cookie is set on a page request)."""
+    def test_ui_does_not_auto_add_session_middleware(self):
+        """UI does not add SessionMiddleware — that's the user's job."""
         app = FastAPI()
         ui = UI(app)
+        middleware_types = {
+            type(m.cls).__name__ if hasattr(m, "cls") else type(m).__name__
+            for m in app.user_middleware
+        }
+        assert "SessionMiddleware" not in middleware_types
+
+    def test_ui_page_works_once_user_adds_session_middleware(self):
+        """With SessionMiddleware added by the user, pages set a session cookie."""
+        app = FastAPI()
+        ui = UI(app)
+        app.add_middleware(SessionMiddleware)
 
         @ui.page("/")
         def home():
@@ -56,7 +67,7 @@ class TestUIConstruction:
         client = TestClient(app)
         response = client.get("/")
         assert response.status_code == 200
-        # SessionMiddleware sets a session cookie.
+        assert "Hello" in response.text
         cookies = response.cookies
         assert "inguitive_session_id" in cookies
 

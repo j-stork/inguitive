@@ -530,15 +530,16 @@ class UI:
         title: str = "inguitive",
         favicon: str | None = None,
         head: HeadContent = None,
-        session_backend: SessionBackend | None = None,
-        session_cookie_name: str = "inguitive_session_id",
-        session_cookie_max_age: int = 3600,
-        session_cookie_secure: bool = False,
-        session_cookie_httponly: bool = True,
-        session_cleanup_interval: int = 100,
         dev_mode: bool = True,
     ):
-        """Attach inguitive to *app*.
+        """Attach inguitive's UI layer to *app*.
+
+        ``UI`` wires up only what is strictly UI: page-rendering defaults,
+        the ``/_sse`` endpoint, and the ``/static`` mount.  Session identity
+        and the inguitive ``Session`` binding are the user's responsibility
+        — they add ``SessionMiddleware`` (see :class:`SessionMiddleware`)
+        themselves via ``app.add_middleware(SessionMiddleware, ...)`` so they
+        own the middleware stack.
 
         Args:
             app: The user's FastAPI application instance.
@@ -548,12 +549,6 @@ class UI:
                 ``/static/inguitive_favicon.svg``.
             head: Default head content (components and/or raw HTML strings)
                 appended to every page's ``<head>``.
-            session_backend: Session backend (defaults to ``MemoryBackend``).
-            session_cookie_name: Name of the session cookie.
-            session_cookie_max_age: Cookie max age in seconds.
-            session_cookie_secure: Whether cookie is secure (HTTPS only).
-            session_cookie_httponly: Whether cookie is HTTP-only.
-            session_cleanup_interval: Call ``cleanup_expired()`` every N requests.
             dev_mode: Enable development mode warnings (default True).
         """
         self.app = app
@@ -576,20 +571,6 @@ class UI:
             from inguitive.state import disable_dev_mode_warnings
 
             disable_dev_mode_warnings()
-
-        # Session backend
-        if session_backend is not None:
-            set_session_backend(session_backend)
-
-        # Session middleware
-        app.add_middleware(
-            SessionMiddleware,
-            session_cookie_name=session_cookie_name,
-            session_cookie_max_age=session_cookie_max_age,
-            session_cookie_secure=session_cookie_secure,
-            session_cookie_httponly=session_cookie_httponly,
-            cleanup_interval=session_cleanup_interval,
-        )
 
         # Static files mount
         self._mount_static(app)
