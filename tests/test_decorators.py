@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from inguitive import Div, State, Text, create_app, update_components
+from inguitive import Div, SessionState, State, Text, create_app, update_components
 
 
 class TestPageDecorator:
@@ -193,7 +193,7 @@ class TestStateIntegration:
     def test_trigger_with_state_update(self):
         """Test that triggers can update state and pages reflect the changes."""
         app = create_app()
-        counter_state = State(0, "counter_state")
+        counter_state = SessionState(0, "counter_state")
 
         @app.page("/counter-test")
         def counter_page():
@@ -223,7 +223,7 @@ class TestStateIntegration:
     def test_trigger_handler_with_form_data_and_state(self):
         """Test that trigger handlers can receive form data and update state."""
         app = create_app()
-        form_state = State({}, "form_state")
+        form_state = SessionState({}, "form_state")
 
         @app.trigger_handler
         def submit_form(form_data: dict):

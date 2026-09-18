@@ -10,7 +10,7 @@ from inguitive.session import (
     _set_current_session,
     set_session_backend,
 )
-from inguitive.state import State
+from inguitive.state import SessionState, State
 
 
 @pytest.fixture(autouse=True)
@@ -330,7 +330,7 @@ class TestImage:
 class TestState:
     def test_state_get_set(self):
         """Test basic state get/set."""
-        state = State("initial", "test_state")
+        state = SessionState("initial", "test_state")
         assert state.get() == "initial"
 
         state.set("updated")
@@ -338,7 +338,7 @@ class TestState:
 
     def test_listeners(self):
         """Test state listener registration."""
-        state = State(0, "counter")
+        state = SessionState(0, "counter")
         state.add_listener("component-1")
         state.add_listener("component-2")
 

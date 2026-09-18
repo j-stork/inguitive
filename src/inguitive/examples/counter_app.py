@@ -35,7 +35,7 @@ To test:
 from inguitive import (
     Button,
     Div,
-    State,
+    SessionState,
     Text,
     create_app,
     get_session_id,
@@ -50,7 +50,7 @@ app = create_app()
 
 
 # --- State Instances ---
-counter_state = State(0, "counter_state")
+counter_state = SessionState(0, "counter_state")
 
 
 # --- Trigger Handlers ---

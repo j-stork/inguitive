@@ -15,7 +15,7 @@ import asyncio
 
 import pytest
 
-from inguitive import State, create_app, push_update, session_context
+from inguitive import State, SessionState, create_app, push_update, session_context
 from inguitive.session import (
     MemoryBackend,
     Session,
@@ -148,7 +148,7 @@ def test_state_get_returns_global_when_no_session():
 
 
 def test_state_get_session_value_takes_precedence_over_global():
-    s = State(0, "_sse_t4")
+    s = SessionState(0, "_sse_t4")
     s.set(50)  # global (no session)
 
     session = Session(session_id="prec-sess")
@@ -174,7 +174,7 @@ def test_state_get_falls_back_to_global_when_session_lacks_key():
 
 
 def test_state_set_with_session_does_not_touch_global():
-    s = State(0, "_sse_t6")
+    s = SessionState(0, "_sse_t6")
     session = Session(session_id="write-sess")
     _set_current_session(session)
     try:
@@ -480,7 +480,7 @@ def test_push_update_outside_context_still_reloads_from_backend():
     for the established outside-context usage."""
     from inguitive import Text
 
-    s = State("v", "_sse_ctx_outside")
+    s = SessionState("v", "_sse_ctx_outside")
 
     async def run():
         session = Session(session_id="ctx-outside-sess")

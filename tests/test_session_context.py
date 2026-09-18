@@ -2,7 +2,7 @@
 
 import pytest
 
-from inguitive import State, session_context
+from inguitive import State, SessionState, session_context
 from inguitive.session import (
     MemoryBackend,
     Session,
@@ -41,7 +41,7 @@ class TestSessionContext:
             assert s is None
 
     async def test_set_writes_to_session_isolated_data(self, fresh_backend):
-        counter = State(0, "sc_counter")
+        counter = SessionState(0, "sc_counter")
         session = Session(session_id="sid-2")
         await get_session_backend().save_session(session)
 
@@ -79,7 +79,7 @@ class TestSessionContext:
         assert _get_current_session_from_context() is None
 
     async def test_dirty_session_saved_on_exit(self, fresh_backend):
-        counter = State(0, "sc_dirty")
+        counter = SessionState(0, "sc_dirty")
         session = Session(session_id="sid-4")
         await get_session_backend().save_session(session)
 
@@ -111,7 +111,7 @@ class TestSessionContext:
         assert _get_current_session_from_context() is None
 
     async def test_exception_in_body_still_saves_dirty_session(self, fresh_backend):
-        counter = State(0, "sc_exc")
+        counter = SessionState(0, "sc_exc")
         session = Session(session_id="sid-7")
         await get_session_backend().save_session(session)
 
@@ -124,7 +124,7 @@ class TestSessionContext:
         assert loaded.data_registry["sc_exc"] == 9
 
     async def test_consecutive_contexts_are_independent(self, fresh_backend):
-        counter = State(0, "sc_seq")
+        counter = SessionState(0, "sc_seq")
         s1 = Session(session_id="a")
         s2 = Session(session_id="b")
         await get_session_backend().save_session(s1)

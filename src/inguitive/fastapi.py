@@ -38,7 +38,6 @@ from inguitive.session import (
 )
 from inguitive.state import (
     _get_mutated_states,
-    _get_state_by_name,
     _track_mutations,
 )
 from inguitive.trigger import _trigger_args_context
@@ -292,13 +291,10 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
                     return result
 
                 # Otherwise, auto-generate OOB response from mutated states
-                mutated_state_keys = _get_mutated_states()
+                mutated_states = _get_mutated_states()
                 all_component_ids: set[str] = set()
-                for state_key in mutated_state_keys:
-                    # Get the State object for this key and collect its listeners
-                    state = _get_state_by_name(state_key)
-                    if state is not None:
-                        all_component_ids.update(state.listeners)
+                for state in mutated_states:
+                    all_component_ids.update(state.listeners)
 
                 return update_components(*all_component_ids)
 

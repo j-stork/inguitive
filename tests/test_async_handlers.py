@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from inguitive import Button, Div, State, Text, create_app, update_components
+from inguitive import Button, Div, SessionState, State, Text, create_app, update_components
 
 
 class TestAsyncPageHandlers:
@@ -71,7 +71,7 @@ class TestAsyncTriggerHandlers:
     def test_async_trigger_handler_with_state(self):
         """Test that async trigger handlers can update state."""
         app = create_app()
-        counter_state = State(0, "counter_state")
+        counter_state = SessionState(0, "counter_state")
 
         @app.page("/async-counter")
         def counter_page():

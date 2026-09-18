@@ -9,7 +9,7 @@ from inguitive.session import (
     _set_current_session,
     set_session_backend,
 )
-from inguitive.state import State, _get_state_by_name
+from inguitive.state import SessionState, State, _get_state_by_name
 
 
 @pytest.fixture(autouse=True)
@@ -32,7 +32,7 @@ class TestStateValueIsolation:
     def test_independent_values_per_session(self, isolated_sessions):
         """Two sessions must maintain independent counter values."""
         session_a, session_b = isolated_sessions
-        counter = State(0, "iso_counter")
+        counter = SessionState(0, "iso_counter")
 
         _set_current_session(session_a)
         counter.set(5)
@@ -49,7 +49,7 @@ class TestStateValueIsolation:
     def test_initial_value_returned_before_first_set(self, isolated_sessions):
         """A session that has never called set() must receive the initial value."""
         session_a, session_b = isolated_sessions
-        flag = State(False, "iso_flag")
+        flag = SessionState(False, "iso_flag")
 
         _set_current_session(session_a)
         flag.set(True)
@@ -60,7 +60,7 @@ class TestStateValueIsolation:
     def test_string_state_isolation(self, isolated_sessions):
         """String state values must be isolated across sessions."""
         session_a, session_b = isolated_sessions
-        theme = State("light", "iso_theme")
+        theme = SessionState("light", "iso_theme")
 
         _set_current_session(session_a)
         theme.set("dark")
@@ -76,7 +76,7 @@ class TestListenerIsolation:
     def test_listener_sets_are_independent(self, isolated_sessions):
         """Listeners added in one session must not appear in another."""
         session_a, session_b = isolated_sessions
-        state = State(0, "iso_listeners")
+        state = SessionState(0, "iso_listeners")
 
         _set_current_session(session_a)
         state.add_listener("comp-A1")
@@ -98,7 +98,7 @@ class TestListenerIsolation:
     def test_remove_listener_is_session_scoped(self, isolated_sessions):
         """Removing a listener in one session must not affect the other."""
         session_a, session_b = isolated_sessions
-        state = State(0, "iso_remove")
+        state = SessionState(0, "iso_remove")
 
         _set_current_session(session_a)
         state.add_listener("shared-comp")
@@ -131,7 +131,7 @@ class TestUnnamedStateBackwardCompat:
         session_a, _ = isolated_sessions
         _set_current_session(session_a)
 
-        state = State("hello")
+        state = SessionState("hello")
         assert state.get() == "hello"
         state.set("world")
         assert state.get() == "world"

@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from inguitive import Button, Div, State, Text, create_app, update_components
+from inguitive import Button, Div, SessionState, Text, create_app, update_components
 
 # Import after setting up path
 from inguitive.examples.counter_app import app
@@ -70,7 +70,7 @@ class TestSessionIsolation:
         distinct from the counter State tested above.
         """
         theme_app = create_app()
-        theme_state = State("light", "theme_state")
+        theme_state = SessionState("light", "theme_state")
 
         @theme_app.trigger_handler
         def toggle_theme():

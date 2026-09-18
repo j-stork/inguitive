@@ -32,7 +32,7 @@ from inguitive.session import (
     session_context,
     set_session_backend,
 )
-from inguitive.state import State
+from inguitive.state import State, SessionState
 from inguitive.trigger import get_trigger_args
 from inguitive.utils import nl2br
 
@@ -57,6 +57,7 @@ __all__ = [
     "DataTable",
     # State
     "State",
+    "SessionState",
     # HTMX helpers
     "update_components",
     # Trigger
