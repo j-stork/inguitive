@@ -88,7 +88,7 @@ class TestSessionIsolation:
                     listen_to=theme_state,
                     id="theme-label",
                 ),
-                Button("Toggle", trigger="toggle_theme"),
+                Button("Toggle", trigger=toggle_theme),
                 id="theme-card",
                 css=lambda: f"min-h-screen flex items-center justify-center {bg()}",
             )

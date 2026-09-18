@@ -102,7 +102,7 @@ def AddButton(step: int, color: str) -> Button:  # noqa: N802
 
     return Button(
         f"+{step}" if step > 0 else f"{step}",
-        trigger="add",
+        trigger=add,
         trigger_args={"step": step},
         css=css,
     )
@@ -128,7 +128,7 @@ def home():
                 AddButton(step=-1, color="red"),
                 Button(
                     "Reset",
-                    trigger="reset",
+                    trigger=reset,
                     css=f"{BUTTON_SECONDARY_CSS}",
                 ),
                 css="grid grid-cols-5 gap-6 w-full",

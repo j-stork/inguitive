@@ -124,9 +124,9 @@ def PeopleTable() -> DataTable:  # noqa: N802
 
 def Controls() -> Div:  # noqa: N802
     return Div(
-        Button("Reorder columns", trigger="reorder_columns", css=BUTTON_PRIMARY_BLUE_CSS),
-        Button("Custom styling", trigger="toggle_style", css=BUTTON_PRIMARY_YELLOW_CSS),
-        Button("Reset", trigger="reset", css=BUTTON_SECONDARY_CSS),
+        Button("Reorder columns", trigger=reorder_columns, css=BUTTON_PRIMARY_BLUE_CSS),
+        Button("Custom styling", trigger=toggle_style, css=BUTTON_PRIMARY_YELLOW_CSS),
+        Button("Reset", trigger=reset, css=BUTTON_SECONDARY_CSS),
         css="grid grid-cols-3 gap-6 w-full",
     )
 

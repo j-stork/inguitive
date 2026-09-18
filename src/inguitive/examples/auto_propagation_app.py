@@ -69,8 +69,8 @@ def home():
                 listen_to=counter_state,
             ),
             Div(
-                Button("+1", trigger="increment", css=BUTTON_PRIMARY_BLUE_CSS),
-                Button("Reset", trigger="reset", css=BUTTON_SECONDARY_CSS),
+                Button("+1", trigger=increment, css=BUTTON_PRIMARY_BLUE_CSS),
+                Button("Reset", trigger=reset, css=BUTTON_SECONDARY_CSS),
                 css="grid grid-cols-2 gap-6 w-full",
             ),
         ),

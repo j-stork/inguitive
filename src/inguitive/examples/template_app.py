@@ -98,8 +98,8 @@ def home():
         Title("TemplateComponent Example"),
         CounterCard(),
         Div(
-            Button("+1", trigger="increment", css=f"{BUTTON_PRIMARY_BLUE_CSS} w-full"),
-            Button("Reset", trigger="reset", css=f"{BUTTON_SECONDARY_CSS} w-full"),
+            Button("+1", trigger=increment, css=f"{BUTTON_PRIMARY_BLUE_CSS} w-full"),
+            Button("Reset", trigger=reset, css=f"{BUTTON_SECONDARY_CSS} w-full"),
             css="flex w-sm gap-6",
         ),
     )

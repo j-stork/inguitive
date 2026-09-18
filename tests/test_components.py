@@ -63,14 +63,24 @@ class TestButton:
 
     def test_trigger_generates_htmx_attrs(self):
         """Test that trigger generates HTMX attributes."""
-        btn = Button("Click", trigger="test_action")
+
+        def test_action():
+            pass
+
+        test_action._inguitive_trigger_url = "/_trigger/test_action"
+        btn = Button("Click", trigger=test_action)
         html = btn.render()
         assert 'hx-post="/_trigger/test_action"' in html
         assert 'hx-target="#hx-target"' in html
 
     def test_trigger_with_args(self):
         """Test trigger with query parameters."""
-        btn = Button("Click", trigger="action", trigger_args={"key": "value"})
+
+        def action():
+            pass
+
+        action._inguitive_trigger_url = "/_trigger/action"
+        btn = Button("Click", trigger=action, trigger_args={"key": "value"})
         html = btn.render()
         assert 'hx-post="/_trigger/action?key=value"' in html
 

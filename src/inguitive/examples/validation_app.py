@@ -208,7 +208,7 @@ def ValidationForm() -> Div:  # noqa: N802
                     type="submit",
                     css=f"{BUTTON_PRIMARY_GREEN_CSS} w-full",
                 ),
-                trigger="register",
+                trigger=register,
                 css="space-y-6",
             ),
         ),

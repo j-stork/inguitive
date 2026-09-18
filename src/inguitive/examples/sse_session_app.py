@@ -145,7 +145,7 @@ def CounterDisplay() -> Div:  # noqa: N802
             ),
             Button(
                 "Start my counter",
-                trigger="start_counter",
+                trigger=start_counter,
                 css=f"w-full {BUTTON_PRIMARY_GREEN_CSS}",
             ),
         ),

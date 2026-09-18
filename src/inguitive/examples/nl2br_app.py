@@ -144,7 +144,7 @@ def TextForm() -> Div:  # noqa: N802
                     type="submit",
                     css=f"{BUTTON_PRIMARY_GREEN_CSS} w-full",
                 ),
-                trigger="submit",
+                trigger=submit,
                 css="space-y-6",
             ),
         ),

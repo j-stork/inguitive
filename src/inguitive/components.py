@@ -35,7 +35,7 @@ class Component:
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
         listen_to: State | list[State] | None = None,
-        trigger: str | None = None,
+        trigger: Callable | None = None,
         trigger_args: dict[str, str] | None = None,
         **attrs: Any,
     ):
@@ -47,7 +47,7 @@ class Component:
 
         # Handle action parameters (trigger = POST)
         if trigger:
-            url = f"/_trigger/{trigger.lstrip('/')}"
+            url = trigger._inguitive_trigger_url
             if trigger_args:
                 url += "?" + "&".join(f"{k}={v}" for k, v in trigger_args.items())
             attrs.setdefault("hx-post", url)

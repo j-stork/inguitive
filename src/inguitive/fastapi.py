@@ -391,6 +391,7 @@ def trigger_handler_decorator(app, trigger_name: str | None | Callable = None):
         actual_trigger_name = func.__name__
         app.state.trigger_handlers[actual_trigger_name] = func
         _register_trigger_route(app, actual_trigger_name, func)
+        func._inguitive_trigger_url = f"/_trigger/{actual_trigger_name}"  # type: ignore[attr-defined]
         return func
     else:
         # Called as @app.trigger_handler("name") (with parentheses)
@@ -399,6 +400,7 @@ def trigger_handler_decorator(app, trigger_name: str | None | Callable = None):
             actual_trigger_name = trigger_name or func.__name__
             app.state.trigger_handlers[actual_trigger_name] = func
             _register_trigger_route(app, actual_trigger_name, func)
+            func._inguitive_trigger_url = f"/_trigger/{actual_trigger_name}"  # type: ignore[attr-defined]
             return func
 
         return decorator

@@ -79,7 +79,7 @@ def IconDemo() -> Div:  # noqa: N802
                 Button(
                     Icon(ARROWS_UP_DOWN, css="w-6 h-6 mr-2"),
                     "Toggle",
-                    trigger="toggle_mode",
+                    trigger=toggle_mode,
                     css=f"inline-flex {BUTTON_PRIMARY_YELLOW_CSS}",
                 ),
                 css="flex justify-end w-full",

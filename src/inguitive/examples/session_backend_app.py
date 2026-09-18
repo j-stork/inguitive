@@ -132,12 +132,12 @@ def Counter() -> Div:  # noqa: N802
             Div(
                 Button(
                     "+1",
-                    trigger="increment",
+                    trigger=increment,
                     css=BUTTON_PRIMARY_BLUE_CSS,
                 ),
                 Button(
                     "Reset",
-                    trigger="reset",
+                    trigger=reset,
                     css=BUTTON_SECONDARY_CSS,
                 ),
                 css="grid grid-cols-2 gap-6 w-full",

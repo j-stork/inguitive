@@ -167,7 +167,7 @@ def RegistrationForm() -> Div:  # noqa: N802
                     type="submit",
                     css=f"w-full {BUTTON_PRIMARY_GREEN_CSS}",
                 ),
-                trigger="submit",
+                trigger=submit,
                 css="space-y-6",
             ),
         ),
