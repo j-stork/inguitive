@@ -9,7 +9,6 @@ import contextvars
 import functools
 import importlib.resources
 import inspect
-import traceback
 import uuid
 import warnings
 from collections.abc import Callable
@@ -19,8 +18,6 @@ from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
 import markupsafe
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
-from fastapi.templating import Jinja2Templates
-from jinja2 import BaseLoader, ChoiceLoader, FileSystemLoader, PackageLoader
 
 from inguitive.components import Component
 from inguitive.htmx import update_components
@@ -197,6 +194,69 @@ class InguitiveApp(Protocol[_P, _T]):
     def on_event(self, event_type: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
 
 
+def _render_page_shell(content: str, title: str, favicon: str, head_extra: str) -> str:
+    """Render a full HTML document shell wrapping the given content.
+
+    Replaces the former base.html Jinja2 template with inline Python string
+    composition. The shell includes HTMX + SSE extension, Tailwind CSS, Inter
+    font, the hidden #hx-target div for SSE auto-connect, and the pagehide
+    cleanup script.
+    """
+    return f"""<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{title}</title>
+        <link rel="icon" href="{favicon}">
+        <!-- HTMX -->
+        <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+        <!-- HTMX SSE extension — enables server-initiated component updates -->
+        <script src="https://unpkg.com/htmx.org@1.9.6/dist/ext/sse.js"></script>
+        <!-- Tailwind CSS -->
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <!-- Inter Font -->
+        <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
+        <!-- Configure Tailwind to use Inter as default sans-serif -->
+        <style type="text/tailwindcss">
+            @theme {{
+                --font-sans: Inter, sans-serif;
+            }}
+        </style>
+        {head_extra}  <!-- Custom head content injection -->
+    </head>
+    <body class="min-h-screen">
+        {content}
+        <!-- Hidden target for HTMX requests (POST triggers and SSE updates) -->
+        <div id="hx-target"
+             hx-ext="sse"
+             sse-connect="/_sse"
+             sse-swap="message"
+             style="display: none;"></div>
+        <!-- Close the SSE EventSource when the page is unloaded so the
+             server detects the disconnect immediately and frees the
+             connection slot.  Without this, the browser holds the
+             connection open until the server's 0.5s disconnect poll fires,
+             which exhausts the browser's per-origin connection limit
+             (6 for HTTP/1.1) during rapid page navigation and blocks
+             subsequent page loads.
+
+             We trigger the SSE extension's own cleanup event
+             (htmx:beforeCleanupElement) rather than calling
+             htmx.getInternalData directly, because getInternalData is an
+             internal API not exposed on the public htmx object. -->
+        <script>
+            window.addEventListener("pagehide", function () {{
+                var elt = document.getElementById("hx-target");
+                if (elt && typeof htmx !== "undefined") {{
+                    htmx.trigger(elt, "htmx:beforeCleanupElement");
+                }}
+            }});
+        </script>
+    </body>
+</html>"""
+
+
 def _register_page_route(
     app,
     path: str,
@@ -291,13 +351,9 @@ def _register_page_route(
         # Render and concatenate all sources
         head_extra = "".join(_render_template_content(source) for source in head_sources)
 
-        # Wrap in base template with title and favicon
-        templates = app.state.templates
-        return templates.TemplateResponse(
-            request,
-            "base.html",
-            {"content": content, "title": effective_title, "favicon": effective_favicon, "head_extra": head_extra},
-        )
+        # Wrap in the HTML document shell
+        html = _render_page_shell(content, effective_title, effective_favicon, head_extra)
+        return HTMLResponse(content=html)
 
 
 def _register_trigger_route(app, trigger_name: str, handler: Callable):
@@ -549,83 +605,7 @@ class SessionMiddleware:
             _clear_current_session()
 
 
-def _create_template_loader(template_dir: str | Path = "templates") -> ChoiceLoader:
-    """Create a template loader that supports both local and bundled templates.
-
-    Local templates (specified via template_dir) take precedence over bundled templates.
-    This allows users to customize templates while falling back to package defaults.
-
-    Args:
-        template_dir: Directory containing Jinja2 templates (local path)
-
-    Returns:
-        ChoiceLoader: A Jinja2 loader that checks local directory first, then bundled templates
-    """
-    # Convert to Path if it's a string
-    template_path = Path(template_dir) if isinstance(template_dir, str) else template_dir
-
-    # Create list of loaders - local first, then bundled
-    loaders: list[BaseLoader] = []
-
-    # Add FileSystemLoader for local templates if directory exists
-    if template_path.exists() and template_path.is_dir():
-        loaders.append(FileSystemLoader(str(template_path)))
-
-    # Add PackageLoader for bundled templates from the inguitive package
-    # We try to add it unconditionally - if the package isn't installed or templates don't exist,
-    # Jinja2 will skip this loader when templates aren't found
-    try:
-        # Check if we can access the templates as a package resource
-        # This will work if inguitive is installed (even in editable mode)
-        importlib.resources.files("inguitive")
-        # If we get here, the package exists, so we can add the PackageLoader
-        loaders.append(PackageLoader("inguitive", "templates"))
-    except (ImportError, ModuleNotFoundError, AttributeError):
-        # Package not installed or not accessible - skip bundled templates
-        pass
-
-    # If no loaders were added, use a default FileSystemLoader
-    if not loaders:
-        loaders.append(FileSystemLoader("templates"))
-
-    # ChoiceLoader tries loaders in order, so local templates override bundled ones
-    return ChoiceLoader(loaders)
-
-
-def _dev_error_handler(request: Request, exc: Exception) -> HTMLResponse:
-    """Exception handler that returns a styled error page.
-
-    In dev mode (dev_mode=True), displays full traceback.
-    In production mode (dev_mode=False), displays a simple error message.
-
-    Args:
-        request: The FastAPI request object
-        exc: The exception that was raised
-
-    Returns:
-        TemplateResponse with the error page template, status_code=500
-    """
-
-    templates: Jinja2Templates = request.app.state.templates
-    dev_mode = getattr(request.app.state, "dev_mode", False)
-    # Use format_exception to get the full traceback for the given exception
-    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-
-    return templates.TemplateResponse(
-        request,
-        "error.html",
-        {
-            "dev_mode": dev_mode,
-            "traceback": tb,
-            "request_url": str(request.url),
-            "request_method": request.method,
-        },
-        status_code=500,
-    )
-
-
 def create_app(
-    template_dir: str | Path = "templates",
     title: str = "inguitive",
     favicon: str | None = None,
     head: HeadContent = None,
@@ -640,10 +620,6 @@ def create_app(
     """Create and configure a FastAPI application for inguitive.
 
     Args:
-        template_dir: Directory containing Jinja2 templates. If the directory exists,
-            it will be used first. If not found, bundled templates from the inguitive
-            package will be used as a fallback. This allows for template customization
-            while providing defaults out of the box.
         title: Default title for pages. Can be overridden per-page via the @app.page decorator.
             Defaults to "inguitive".
         favicon: Default favicon path for pages. Can be overridden per-page via the @app.page
@@ -665,18 +641,11 @@ def create_app(
 
     Returns:
         InguitiveApp - the FastAPI application with inguitive decorators
-        (trigger_handler and page) and templates accessible via app.state.templates
+        (trigger_handler and page)
     """
     app = FastAPI()
-    loader = _create_template_loader(template_dir)
-    # Create Jinja2 environment with our custom loader
-    from jinja2 import Environment
 
-    env = Environment(loader=loader)
-    templates = Jinja2Templates(env=env)
-    app.state.templates = templates
-
-    # Store dev_mode on app state for exception handler access
+    # Store dev_mode on app state
     app.state.dev_mode = dev_mode
 
     # Set the default title for pages
@@ -687,9 +656,6 @@ def create_app(
 
     # Set the default head content for pages
     app.state.head = head
-
-    # Register exception handler for styled error pages
-    app.add_exception_handler(Exception, _dev_error_handler)
 
     # Initialize per-app storage for handlers
     app.state.trigger_handlers = {}
