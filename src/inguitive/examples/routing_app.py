@@ -31,7 +31,7 @@ To test:
 3. Click "Back to Page 1" — the URL changes back to ``/page1``
 """
 
-from inguitive import Div, Link, Text, create_app, redirect
+from inguitive import Div, Anchor, Text, create_app, redirect
 
 from .css import BUTTON_PRIMARY_BLUE_CSS, BUTTON_PRIMARY_YELLOW_CSS, TEXT_CSS
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title
@@ -54,7 +54,7 @@ def PageContainer(page_title: str, page_text: str, link_label: str, href: str) -
         Card(
             Title(page_title, level=2),
             Text(page_text, css=TEXT_CSS),
-            Link(
+            Anchor(
                 link_label,
                 href=href,
                 css=link_css,

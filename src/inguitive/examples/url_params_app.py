@@ -35,7 +35,7 @@ To test:
 5. Manually visit ``/item/abc`` — returns 400 (invalid int)
 """
 
-from inguitive import Div, Link, Text, create_app
+from inguitive import Div, Anchor, Text, create_app
 
 from .css import BRAND_COLORS, LINK_CSS
 from .custom_components import BaseContainer, InguitiveLogo, Title
@@ -63,7 +63,7 @@ def PageContent(label: str, value: object) -> Div:  # noqa: N802
     return PageContainer(
         Text(f"{label}: {value}", css=f"text-{BRAND_COLORS['green']}"),
         Text(f"Parsed type: {type(value).__name__}", css=f"text-{BRAND_COLORS['yellow']}"),
-        Link("Back", href="/", css=LINK_CSS),
+        Anchor("Back", href="/", css=LINK_CSS),
     )
 
 
@@ -71,9 +71,9 @@ def PageContent(label: str, value: object) -> Div:  # noqa: N802
 @app.page("/")
 def index():
     return PageContainer(
-        Link("Item 42", href="/item/42", css=LINK_CSS),
-        Link("User ada", href="/user/ada", css=LINK_CSS),
-        Link("Files a/b/c.txt", href="/files/a/b/c.txt", css=LINK_CSS),
+        Anchor("Item 42", href="/item/42", css=LINK_CSS),
+        Anchor("User ada", href="/user/ada", css=LINK_CSS),
+        Anchor("Files a/b/c.txt", href="/files/a/b/c.txt", css=LINK_CSS),
         Text(
             "Try /item/abc to see the 400 from a failed int parse.",
             css=f"text-{BRAND_COLORS['red']}",

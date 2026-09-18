@@ -252,8 +252,8 @@ class Label(Component):
         return f"<label {attrs}>{resolved_text}</label>"
 
 
-class Link(Component):
-    """HTML link/anchor component for semantic navigation.
+class Anchor(Component):
+    """HTML anchor (<a>) component for semantic navigation.
 
     Renders a standard <a> tag. Use for traditional links where semantic
     HTML matters (SEO, accessibility, browser behavior).
@@ -261,11 +261,11 @@ class Link(Component):
     Supports children like Div and Button, allowing nested components.
 
     Example:
-        Link("Home", href="/")
-        Link(Text("Documentation"), href="/docs", css="text-blue-500 hover:underline")
-        Link(Icon(HOME_SVG), href="/", css="w-6 h-6")
-        Link(Button("Click"), href="/page1")
-        Link([Text("A"), Text("B")], href="/")
+        Anchor("Home", href="/")
+        Anchor(Text("Documentation"), href="/docs", css="text-blue-500 hover:underline")
+        Anchor(Icon(HOME_SVG), href="/", css="w-6 h-6")
+        Anchor(Button("Click"), href="/page1")
+        Anchor([Text("A"), Text("B")], href="/")
     """
 
     def __init__(
@@ -276,10 +276,10 @@ class Link(Component):
         css: str | Callable[[], str] | None = None,
         **attrs: Any,
     ):
-        """Initialize a Link component.
+        """Initialize an Anchor component.
 
         Args:
-            *children: Link content (strings, Components, or callables)
+            *children: Anchor content (strings, Components, or callables)
             href: URL to link to
             id: HTML id attribute
             css: Tailwind CSS classes

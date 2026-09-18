@@ -12,7 +12,7 @@ from inguitive.components import (
     Icon,
     Input,
     Label,
-    Link,
+    Anchor,
     Radio,
     Select,
     TemplateComponent,
@@ -104,8 +104,8 @@ class TestXSSInTextContent:
 
     @pytest.mark.parametrize("payload,expected", zip(XSS_PAYLOADS, ESCAPED_PAYLOADS))
     def test_link_children(self, payload, expected):
-        """Test Link component escapes XSS in children."""
-        component = Link(payload, href="/test")
+        """Test Anchor component escapes XSS in children."""
+        component = Anchor(payload, href="/test")
         html = component.render()
         assert expected in html or markupsafe.escape(payload) in html
         assert payload not in html or expected == payload
