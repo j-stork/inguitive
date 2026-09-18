@@ -71,89 +71,6 @@ class _PageDecorator(Protocol[_P, _T]):
     ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 
 
-# Supported path parameter types and their converters
-_PATH_PARAM_CONVERTERS: dict[str, Callable[[str], Any]] = {
-    "str": lambda x: x,
-    "int": lambda x: int(x),
-    "float": lambda x: float(x),
-    "bool": lambda x: x.lower() in {"true", "1", "yes", "on"},
-    "path": lambda x: x,
-    "uuid": lambda x: uuid.UUID(x),
-}
-
-
-def _convert_path_param(value: str, type_name: str) -> Any:
-    """Convert and validate a path parameter based on its declared type.
-
-    Args:
-        value: The raw string value from the URL
-        type_name: The declared type (str, int, float, bool, path, uuid)
-
-    Returns:
-        Converted value of the appropriate type
-
-    Raises:
-        ValueError: If conversion fails (handled by FastAPI as 400)
-    """
-    # Handle unknown types by treating them as str
-    if type_name not in _PATH_PARAM_CONVERTERS:
-        type_name = "str"
-
-    converter = _PATH_PARAM_CONVERTERS[type_name]
-    return converter(value)
-
-
-def _parse_path_pattern(path: str) -> tuple[str, list[tuple[str, str]]]:
-    """Parse Inguitive path pattern and convert to FastAPI format.
-
-    Args:
-        path: Path string with optional <name:type> patterns
-
-    Returns:
-        Tuple of (fastapi_compatible_path, list_of_(param_name, param_type))
-
-    Example:
-        _parse_path_pattern("/user/<username:str>/<id:int>")
-        # Returns: ("/user/{username}/{id}", [("username", "str"), ("id", "int")])
-    """
-    import re
-
-    # Regex to match <name:type> or <name> patterns
-    pattern = r'<([a-zA-Z_][a-zA-Z0-9_]*)(?:\:([a-zA-Z_][a-zA-Z0-9_]*))?>'
-
-    fastapi_path = path
-    params = []
-
-    # Find all parameter patterns and replace them
-    for match in re.finditer(pattern, path):
-        param_name = match.group(1)
-        param_type = match.group(2) if match.group(2) else "str"
-
-        # Prevent use of reserved parameter names
-        if param_name in ("request", "form_data"):
-            raise ValueError(
-                f"Path parameter name '{param_name}' is reserved and cannot be used. "
-                f"These names are used for FastAPI request injection."
-            )
-
-        # Validate that type names don't start with underscore
-        if param_type and param_type.startswith("_"):
-            raise ValueError(
-                f"Path parameter type '{param_type}' is invalid. "
-                f"Type names cannot start with underscore."
-            )
-
-        params.append((param_name, param_type))
-        # Replace the <name:type> with {name} or {name:path} for path type
-        if param_type == "path":
-            replacement = "{" + param_name + ":path}"
-        else:
-            replacement = "{" + param_name + "}"
-        fastapi_path = fastapi_path.replace(match.group(0), replacement, 1)
-
-    return fastapi_path, params
-
-
 def _render_template_content(value: HeadContent) -> str:
     """Render a value (Component, list, string, or Markup) to HTML string for template injection.
 
@@ -276,13 +193,8 @@ def _register_page_route(
         page_head: Optional page-specific head content. Can be a string, Component, or list of both.
             This is appended AFTER app-level head content (from create_app).
     """
-    # Parse path pattern to extract path parameters
-    fastapi_path, path_params = _parse_path_pattern(path)
-
-    # Store path parameter metadata on the handler for use in the wrapper
-    handler._inguitive_path_params = path_params  # type: ignore
-
-    @app.get(fastapi_path, response_class=HTMLResponse)
+    # Path is passed directly to FastAPI, which handles {param} syntax natively.
+    @app.get(path, response_class=HTMLResponse)
     async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon, ph=page_head):
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
@@ -291,22 +203,12 @@ def _register_page_route(
 
         kwargs: dict[str, Any] = {}
 
-        # Extract and convert path parameters first (they take precedence)
-        path_params_meta = getattr(h, '_inguitive_path_params', [])
+        # Pass FastAPI path parameters through to the handler as keyword arguments.
         path_params_dict = dict(request.path_params)
-
-        for param_name, param_type in path_params_meta:
-            if param_name in path_params_dict:
-                raw_value = path_params_dict[param_name]
-                try:
-                    converted_value = _convert_path_param(raw_value, param_type)
-                    kwargs[param_name] = converted_value
-                except (ValueError, TypeError) as e:
-                    from fastapi import HTTPException
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid {param_name}: {e}"
-                    )
+        handler_params = sig.parameters
+        for param_name in path_params_dict:
+            if param_name in handler_params:
+                kwargs[param_name] = path_params_dict[param_name]
 
         # Add request and form_data if the handler needs them
         if needs_request:
