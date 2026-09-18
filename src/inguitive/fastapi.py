@@ -505,6 +505,240 @@ class SessionMiddleware:
             _clear_current_session()
 
 
+class UI:
+    """UI layer that attaches inguitive to a user-owned FastAPI app.
+
+    The user constructs their own ``FastAPI()`` instance and passes it to
+    ``UI(app, ...)``.  The constructor synchronously wires up session
+    middleware, the ``/_sse`` endpoint, the ``/static`` mount, and the
+    trigger-handler decorator surface.  FastAPI's own constructor surface
+    (lifespan, docs URLs, OpenAPI metadata, root path, etc.) stays fully in
+    the user's hands — ``UI()`` takes only inguitive-specific parameters.
+
+    Usage::
+
+        from fastapi import FastAPI
+        from inguitive import UI
+
+        app = FastAPI()
+        ui = UI(app, title="My App", favicon="/static/favicon.ico")
+    """
+
+    def __init__(
+        self,
+        app: FastAPI,
+        title: str = "inguitive",
+        favicon: str | None = None,
+        head: HeadContent = None,
+        session_backend: SessionBackend | None = None,
+        session_cookie_name: str = "inguitive_session_id",
+        session_cookie_max_age: int = 3600,
+        session_cookie_secure: bool = False,
+        session_cookie_httponly: bool = True,
+        session_cleanup_interval: int = 100,
+        dev_mode: bool = True,
+    ):
+        """Attach inguitive to *app*.
+
+        Args:
+            app: The user's FastAPI application instance.
+            title: Default ``<title>`` for all pages. Overridden per-page
+                via ``ui.page(..., title=...)``.
+            favicon: Default favicon path. Defaults to the bundled
+                ``/static/inguitive_favicon.svg``.
+            head: Default head content (components and/or raw HTML strings)
+                appended to every page's ``<head>``.
+            session_backend: Session backend (defaults to ``MemoryBackend``).
+            session_cookie_name: Name of the session cookie.
+            session_cookie_max_age: Cookie max age in seconds.
+            session_cookie_secure: Whether cookie is secure (HTTPS only).
+            session_cookie_httponly: Whether cookie is HTTP-only.
+            session_cleanup_interval: Call ``cleanup_expired()`` every N requests.
+            dev_mode: Enable development mode warnings (default True).
+        """
+        self.app = app
+
+        # Store defaults on app.state so existing _register_page_route and
+        # _render_page_shell can read them with no changes.
+        app.state.title = title
+        app.state.favicon = favicon
+        app.state.head = head
+        app.state.dev_mode = dev_mode
+        app.state.trigger_handlers = {}
+        app.state.page_routes = {}
+
+        # Dev mode warnings
+        if dev_mode:
+            from inguitive.state import enable_dev_mode_warnings
+
+            enable_dev_mode_warnings()
+        else:
+            from inguitive.state import disable_dev_mode_warnings
+
+            disable_dev_mode_warnings()
+
+        # Session backend
+        if session_backend is not None:
+            set_session_backend(session_backend)
+
+        # Session middleware
+        app.add_middleware(
+            SessionMiddleware,
+            session_cookie_name=session_cookie_name,
+            session_cookie_max_age=session_cookie_max_age,
+            session_cookie_secure=session_cookie_secure,
+            session_cookie_httponly=session_cookie_httponly,
+            cleanup_interval=session_cleanup_interval,
+        )
+
+        # Static files mount
+        self._mount_static(app)
+
+        # SSE endpoint
+        self._register_sse_route(app)
+
+    def _mount_static(self, app: FastAPI) -> None:
+        """Mount ``/static`` serving user static/ then package static/."""
+        static_dirs: list[str] = []
+
+        cwd_static = Path.cwd() / "static"
+        if cwd_static.exists() and cwd_static.is_dir():
+            static_dirs.append(str(cwd_static))
+
+        pkg_static = Path(str(importlib.resources.files("inguitive"))) / "static"
+        if pkg_static.exists() and pkg_static.is_dir():
+            static_dirs.append(str(pkg_static))
+
+        if static_dirs:
+            from starlette.responses import Response
+            from starlette.routing import get_route_path
+
+            async def static_files_app(scope, receive, send):
+                if scope["type"] != "http":
+                    return
+                path = get_route_path(scope).lstrip("/")
+                for directory in static_dirs:
+                    file_path = Path(directory) / path
+                    if file_path.exists() and file_path.is_file():
+                        return await FileResponse(str(file_path))(scope, receive, send)
+                return await Response(
+                    content=b"Not Found",
+                    status_code=404,
+                    media_type="text/plain",
+                )(scope, receive, send)
+
+            app.mount("/static", static_files_app, name="static")
+        else:
+            warnings.warn(
+                "Could not mount static files directory. "
+                "The default favicon at '/static/inguitive_favicon.svg' will not be available. "
+                "To fix this, either install the package properly or provide a custom favicon "
+                "path to UI(app, favicon='...').",
+                UserWarning,
+                stacklevel=2,
+            )
+
+    def _register_sse_route(self, app: FastAPI) -> None:
+        """Register the ``GET /_sse`` endpoint."""
+
+        @app.get("/_sse")
+        async def _sse_route(request: Request):  # type: ignore[return-value]
+            session = _get_current_session_from_context()
+            if session is None:
+                return HTMLResponse("No active session", status_code=401)
+
+            session_id = session.session_id
+            queue = _register_sse_connection(session_id)
+
+            async def _event_generator():
+                loop = asyncio.get_event_loop()
+
+                async def _disconnect_future() -> None:
+                    while not await request.is_disconnected():
+                        await asyncio.sleep(0.5)
+
+                disconnect_task = loop.create_task(_disconnect_future())
+                queue_task: asyncio.Task | None = None
+
+                try:
+                    while True:
+                        queue_task = loop.create_task(queue.get())
+                        done, pending = await asyncio.wait(
+                            {queue_task, disconnect_task},
+                            timeout=30.0,
+                            return_when=asyncio.FIRST_COMPLETED,
+                        )
+
+                        if disconnect_task in done or not done:
+                            if not done:
+                                queue_task.cancel()
+                                await asyncio.wait({queue_task})
+                                yield ": heartbeat\n\n"
+                                continue
+                            break
+
+                        html: str | None = queue_task.result()
+                        if html is None:
+                            break
+                        lines = "\n".join(f"data: {line}" for line in html.splitlines())
+                        yield f"{lines}\n\n"
+                except asyncio.CancelledError:
+                    pass
+                finally:
+                    for task in (disconnect_task, queue_task):
+                        if task is not None and not task.done():
+                            task.cancel()
+                            try:
+                                await asyncio.wait({task})
+                            except (asyncio.CancelledError, Exception):
+                                pass
+                    _unregister_sse_connection(session_id, queue)
+
+            return StreamingResponse(
+                _event_generator(),
+                media_type="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no",
+                    "Connection": "keep-alive",
+                },
+            )
+
+    # ------------------------------------------------------------------
+    # Decorator surfaces
+    # ------------------------------------------------------------------
+
+    def trigger_handler(self, trigger_name=None):  # type: ignore[no-untyped-def]
+        """Register a trigger handler as a POST route at ``/_trigger/<name>``.
+
+        Supports both ``@ui.trigger_handler`` and ``@ui.trigger_handler("name")``.
+        """
+        return trigger_handler_decorator(self.app, trigger_name)
+
+    def page(
+        self,
+        path: str | None = None,
+        title: str | None = None,
+        favicon: str | None = None,
+        head: HeadContent = None,
+    ):
+        """Register a page route at *path* that returns ``ui.page(...)`` content.
+
+        This is the ``@ui.page("/path")`` decorator.  It wraps the handler
+        in the HTML document shell, resolving title/favicon/head against
+        the ``UI`` defaults.
+        """
+        def decorator(handler: Callable):
+            actual_path = path or "/"
+            _register_page_route(
+                self.app, actual_path, handler,
+                page_title=title, page_favicon=favicon, page_head=head,
+            )
+            return handler
+
+        return decorator
+
+
 def create_app(
     title: str = "inguitive",
     favicon: str | None = None,
