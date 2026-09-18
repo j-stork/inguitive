@@ -31,7 +31,6 @@ dependencies = [
     "jinja2>=3.1.0",
     "markupsafe>=2.0.0",
     "python-multipart>=0.0.6",
-    "rich>=13.0.0",
 ]
 
 [project.optional-dependencies]
@@ -89,5 +88,3 @@ python_files = ["test_*.py", "*_test.py"]
 addopts = "-v --tb=short"
 testpaths = ["tests"]
 
-[project.scripts]
-inguitive = "inguitive.cli:main"
