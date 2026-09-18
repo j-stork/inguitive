@@ -30,7 +30,8 @@ class TestRedisBackend:
         """Test basic save, get, and delete operations with RedisBackend."""
         self._check_redis_available()
 
-        from inguitive.session import RedisBackend, _create_session
+        from inguitive.backends.redis import RedisBackend
+        from inguitive.session import _create_session
 
         # Create RedisBackend
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
@@ -54,7 +55,8 @@ class TestRedisBackend:
         """Test that sessions with data are correctly serialized for Redis."""
         self._check_redis_available()
 
-        from inguitive.session import RedisBackend, _create_session
+        from inguitive.backends.redis import RedisBackend
+        from inguitive.session import _create_session
 
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
 
@@ -85,7 +87,8 @@ class TestRedisBackend:
 
         self._check_redis_available()
 
-        from inguitive.session import RedisBackend, _create_session
+        from inguitive.backends.redis import RedisBackend
+        from inguitive.session import _create_session
 
         # Use a very short TTL for testing
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0, ttl_seconds=1)
@@ -107,7 +110,8 @@ class TestRedisBackend:
         """Test that Redis keys are correctly formatted."""
         self._check_redis_available()
 
-        from inguitive.session import RedisBackend, _create_session
+        from inguitive.backends.redis import RedisBackend
+        from inguitive.session import _create_session
 
         client = redis.Redis.from_url("redis://localhost:6379", db=0, decode_responses=True)
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
@@ -130,7 +134,8 @@ class TestRedisBackend:
         """Test that multiple sessions are stored independently."""
         self._check_redis_available()
 
-        from inguitive.session import RedisBackend, _create_session
+        from inguitive.backends.redis import RedisBackend
+        from inguitive.session import _create_session
 
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
 
@@ -156,7 +161,7 @@ class TestRedisBackend:
         """Test that cleanup_expired returns 0 (Redis handles TTL automatically)."""
         self._check_redis_available()
 
-        from inguitive.session import RedisBackend
+        from inguitive.backends.redis import RedisBackend
 
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
 
@@ -173,7 +178,8 @@ class TestRedisBackend:
         self._check_redis_available()
 
         from inguitive.components import Button, Div, Text
-        from inguitive.session import RedisBackend, _create_session
+        from inguitive.backends.redis import RedisBackend
+        from inguitive.session import _create_session
 
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
 
@@ -206,7 +212,7 @@ class TestRedisBackend:
         """Test that getting a nonexistent session returns None."""
         self._check_redis_available()
 
-        from inguitive.session import RedisBackend
+        from inguitive.backends.redis import RedisBackend
 
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)
 

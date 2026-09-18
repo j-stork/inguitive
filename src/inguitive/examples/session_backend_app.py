@@ -46,7 +46,6 @@ from inguitive import (
     Button,
     Div,
     MemoryBackend,
-    RedisBackend,
     State,
     Text,
     create_app,
@@ -54,6 +53,7 @@ from inguitive import (
     get_session_id,
     set_session_backend,
 )
+from inguitive.backends.redis import RedisBackend
 
 from .css import BRAND_COLORS, BUTTON_PRIMARY_BLUE_CSS, BUTTON_SECONDARY_CSS
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title
