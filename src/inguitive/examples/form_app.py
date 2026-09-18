@@ -175,7 +175,7 @@ def RegistrationForm() -> Div:  # noqa: N802
         Text(
             lambda: f"{form_state.get()}",
             css=f"font-mono text-center text-{BRAND_COLORS['yellow']}",
-            listen_to="form_state",
+            listen_to=form_state,
         ),
     )
 

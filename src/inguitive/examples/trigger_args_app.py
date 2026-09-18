@@ -118,7 +118,7 @@ def home():
             Text(
                 lambda: f"Count: {counter_state.get()}",
                 css=f"{TEXT_CSS} text-xl text-center",
-                listen_to="counter_state",
+                listen_to=counter_state,
             ),
             Div(
                 # All 4 buttons share one handler; only trigger_args differs.

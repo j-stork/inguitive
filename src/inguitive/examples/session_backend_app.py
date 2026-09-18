@@ -127,7 +127,7 @@ def Counter() -> Div:  # noqa: N802
             Text(
                 dynamic_counter_text,
                 css=dynamic_css,
-                listen_to="counter_state",
+                listen_to=counter_state,
             ),
             Div(
                 Button(

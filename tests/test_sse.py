@@ -197,7 +197,7 @@ def test_push_sse_sends_html_to_connected_queue():
 
     async def run():
         session = Session(session_id="push-sess")
-        txt = Text(lambda: s.get(), id="push-txt", listen_to="_sse_push_state")
+        txt = Text(lambda: s.get(), id="push-txt", listen_to=s)
         session.component_registry["push-txt"] = txt
         session.data_registry["__listeners___sse_push_state"] = {"push-txt"}
         session.data_registry["_sse_push_state"] = "world"
@@ -224,7 +224,7 @@ def test_push_sse_fans_out_to_all_tabs_of_a_session():
 
     async def run():
         session = Session(session_id="mt-sess")
-        txt = Text(lambda: s.get(), id="mt-txt", listen_to="_sse_multi_tab")
+        txt = Text(lambda: s.get(), id="mt-txt", listen_to=s)
         session.component_registry["mt-txt"] = txt
         session.data_registry["__listeners___sse_multi_tab"] = {"mt-txt"}
         session.data_registry["_sse_multi_tab"] = "updated"
@@ -256,7 +256,7 @@ def test_push_sse_closed_tab_does_not_affect_remaining_tab():
 
     async def run():
         session = Session(session_id="close-sess")
-        txt = Text(lambda: s.get(), id="ct-txt", listen_to="_sse_closed_tab")
+        txt = Text(lambda: s.get(), id="ct-txt", listen_to=s)
         session.component_registry["ct-txt"] = txt
         session.data_registry["__listeners___sse_closed_tab"] = {"ct-txt"}
         session.data_registry["_sse_closed_tab"] = "after-close"
@@ -733,7 +733,7 @@ def test_push_sse_works_with_serialising_backend():
         set_session_backend(backend)
 
         session = Session(session_id="redis-sess")
-        txt = Text(lambda: s.get(), id="redis-txt", listen_to="_sse_redis_state")
+        txt = Text(lambda: s.get(), id="redis-txt", listen_to=s)
         session.component_registry["redis-txt"] = txt
         session.data_registry["__listeners___sse_redis_state"] = {"redis-txt"}
         session.data_registry["_sse_redis_state"] = "from-redis"

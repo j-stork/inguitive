@@ -20,8 +20,6 @@ _T = TypeVar("_T")
 
 _LISTENERS_PREFIX = "__listeners__"
 
-_state_name_registry: dict[str, State] = {}
-
 # Values set via State.set() from a background-task context (no active HTTP
 # request).  These serve as the broadcast / "latest global" value and are also
 # the fallback for sessions that have not yet written the key locally.
@@ -75,11 +73,6 @@ def _get_mutated_states() -> set:
     return _mutated_states.get().copy()
 
 
-def _get_state_by_name(name: str) -> State | None:
-    """Look up a named State object from the global registry."""
-    return _state_name_registry.get(name)
-
-
 class State(Generic[_T]):
     """Reactive state container with global (process-wide) scope.
 
@@ -98,8 +91,6 @@ class State(Generic[_T]):
         self._initial_value = initial_value
         self.name = name
         self._key = name if name else f"__anon_{uuid.uuid4().hex}"
-        if name:
-            _state_name_registry[name] = self
 
     def get(self) -> _T:
         """Return the current global value.

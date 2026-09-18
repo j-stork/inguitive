@@ -76,7 +76,7 @@ class TestAsyncTriggerHandlers:
         @app.page("/async-counter")
         def counter_page():
             return Div(
-                Text(lambda: f"Count: {counter_state.get()}", listen_to="counter_state"),
+                Text(lambda: f"Count: {counter_state.get()}", listen_to=counter_state),
                 id="async-counter-display",
             )
 

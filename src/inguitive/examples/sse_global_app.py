@@ -54,7 +54,7 @@ async def _tick():
 
     Called from a startup task with no session bound, so ``State.set()`` writes
     to the global broadcast value and the framework auto-pushes OOB HTML to
-    every connected tab whose components ``listen_to="counter_state"``. Each
+    every connected tab whose components ``listen_to=counter_state``. Each
     session's ``Text`` component reads the global value as a fallback (it never
     sets the key locally), so all sessions display the same number.
 
@@ -98,7 +98,7 @@ def CounterDisplay() -> Div:  # noqa: N802
             Text(
                 lambda: str(counter_state.get()),
                 id="counter-display",
-                listen_to="counter_state",
+                listen_to=counter_state,
                 css=dynamic_css,
             ),
         )

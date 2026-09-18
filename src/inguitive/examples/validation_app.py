@@ -148,7 +148,7 @@ def ResultPanel() -> Div:  # noqa: N802
     return Card(
         Text(
             dynamic_text,
-            listen_to="result_state",
+            listen_to=result_state,
             css=dynamic_css,
         ),
     )

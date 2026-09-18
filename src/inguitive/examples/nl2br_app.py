@@ -81,7 +81,7 @@ def TextDisplay(header_text: str, dynamic_text_func: Callable[[], str]) -> Div: 
         Title(header_text, level=2),
         Text(
             dynamic_text_func,
-            listen_to="text_state",
+            listen_to=text_state,
             css=f"text-center {TEXT_CSS}",
         ),
         css="space-y-6",

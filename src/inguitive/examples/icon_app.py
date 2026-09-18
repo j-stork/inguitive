@@ -73,7 +73,7 @@ def IconDemo() -> Div:  # noqa: N802
             Icon(
                 lambda: MOON if mode_state.get() == "moon" else SUN,  # callable → re-evaluated on every render
                 css=dynamic_css,  # callable → re-evaluated on every render
-                listen_to="mode_state",  # re-render this icon when the mode changes
+                listen_to=mode_state,  # re-render this icon when the mode changes
             ),
             Div(
                 Button(

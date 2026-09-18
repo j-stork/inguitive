@@ -541,7 +541,7 @@ class TestDataTable:
 
         state = State([{"name": "Alice"}], "test_table_state")
         table = DataTable(
-            data=state.get, listen_to="test_table_state", css={"header": "bg-orange-500"}
+            data=state.get, listen_to=state, css={"header": "bg-orange-500"}
         )
         html = table.render()
 

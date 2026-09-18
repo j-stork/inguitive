@@ -9,7 +9,7 @@ from inguitive.session import (
     _set_current_session,
     set_session_backend,
 )
-from inguitive.state import SessionState, State, _get_state_by_name
+from inguitive.state import SessionState, State
 
 
 @pytest.fixture(autouse=True)
@@ -111,18 +111,6 @@ class TestListenerIsolation:
         assert "shared-comp" in state.listeners, (
             "Removing listener in Session B should not affect Session A"
         )
-
-
-class TestGlobalNameRegistry:
-    def test_named_state_is_findable_by_name(self, isolated_sessions):
-        """_get_state_by_name must return the same object that was constructed."""
-        state = State(42, "iso_named_lookup")
-        assert _get_state_by_name("iso_named_lookup") is state
-
-    def test_unnamed_state_is_not_in_name_registry(self, isolated_sessions):
-        """Unnamed states must not pollute the global name registry."""
-        _ = State(0)
-        assert _get_state_by_name("") is None
 
 
 class TestUnnamedStateBackwardCompat:

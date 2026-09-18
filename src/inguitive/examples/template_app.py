@@ -86,7 +86,7 @@ def CounterCard() -> TemplateComponent:  # noqa: N802
     return TemplateComponent(
         COUNTER_TEMPLATE,
         value=lambda: counter_state.get(),  # callable → resolved on each render
-        listen_to="counter_state",  # re-render when the state changes
+        listen_to=counter_state,  # re-render when the state changes
     )
 
 

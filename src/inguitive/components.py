@@ -8,12 +8,15 @@ import re
 import uuid
 import xml.etree.ElementTree as ET
 from collections.abc import Callable, Mapping
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import jinja2
 import markupsafe
 
 from inguitive.session import _get_component_registry
+
+if TYPE_CHECKING:
+    from inguitive.state import State
 
 # Register well-known SVG namespace prefixes with ElementTree so that round-trip
 # serialisation (fromstring → tostring) preserves them instead of inventing ns0:,
@@ -31,7 +34,7 @@ class Component:
         self,
         id: str | None = None,
         css: str | Callable[[], str] | None = None,
-        listen_to: str | list[str] | None = None,
+        listen_to: State | list[State] | None = None,
         trigger: str | None = None,
         trigger_args: dict[str, str] | None = None,
         **attrs: Any,
@@ -53,14 +56,9 @@ class Component:
         self.attrs = attrs
         _get_component_registry()[self.id] = self
         if listen_to:
-            from inguitive.state import _get_state_by_name
-
-            # Normalize to list for uniform handling
-            state_names = [listen_to] if isinstance(listen_to, str) else listen_to
-            for state_name in state_names:
-                state = _get_state_by_name(state_name)
-                if state is not None:
-                    state.add_listener(self.id)
+            states = [listen_to] if not isinstance(listen_to, list) else listen_to
+            for state in states:
+                state.add_listener(self.id)
 
     def _resolve(
         self, value: str | Callable[[], str] | list | dict | tuple

@@ -85,7 +85,7 @@ class TestSessionIsolation:
             return Div(
                 Text(
                     lambda: theme_state.get(),
-                    listen_to="theme_state",
+                    listen_to=theme_state,
                     id="theme-label",
                 ),
                 Button("Toggle", trigger="toggle_theme"),

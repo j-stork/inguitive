@@ -140,7 +140,7 @@ def CounterDisplay() -> Div:  # noqa: N802
             Text(
                 lambda: str(counter_state.get()),
                 id="counter-display",
-                listen_to="counter_state",
+                listen_to=counter_state,
                 css=dynamic_css,
             ),
             Button(

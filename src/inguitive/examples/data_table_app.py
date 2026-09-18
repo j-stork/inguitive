@@ -25,7 +25,7 @@ exercised here:
    table separately.
 
 4. **Multi-state ``listen_to``.** The single table declares
-   ``listen_to=["people_state", "columns_state", "style_state"]`` so it
+   ``listen_to=[people_state, columns_state, style_state]`` so it
    re-renders when any of the three states changes — one component reacting
    to multiple states.
 
@@ -118,7 +118,7 @@ def PeopleTable() -> DataTable:  # noqa: N802
         data=lambda: people_state.get(),
         columns=lambda: columns_state.get(),
         css=dynamic_css,
-        listen_to=["people_state", "columns_state", "style_state"],
+        listen_to=[people_state, columns_state, style_state],
     )
 
 

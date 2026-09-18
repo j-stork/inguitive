@@ -66,7 +66,7 @@ def home():
             Text(
                 lambda: f"Count: {counter_state.get()}",
                 css=f"text-xl text-center text-{BRAND_COLORS['text_0']}",
-                listen_to="counter_state",
+                listen_to=counter_state,
             ),
             Div(
                 Button("+1", trigger="increment", css=BUTTON_PRIMARY_BLUE_CSS),

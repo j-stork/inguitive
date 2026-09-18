@@ -337,7 +337,7 @@ class TestTemplateComponent:
         component = TemplateComponent(
             template="<div>{{ content }}</div>",
             content=state.get,
-            listen_to="test_state",
+            listen_to=state,
         )
         html = component.render()
         assert "&lt;script&gt;" in html or "<script>" not in html
@@ -349,7 +349,7 @@ class TestStateBasedContent:
     def test_state_based_text(self):
         """Test that state-based text content is escaped."""
         state = State("<script>alert(1)</script>", "test_state")
-        component = Text(state.get, listen_to="test_state")
+        component = Text(state.get, listen_to=state)
         html = component.render()
         assert "&lt;script&gt;" in html
         assert "<script>" not in html
@@ -357,7 +357,7 @@ class TestStateBasedContent:
     def test_state_based_attribute(self):
         """Test that state-based attribute values are escaped."""
         state = State("<script>alert(1)</script>", "test_state")
-        component = Div(id=state.get, listen_to="test_state")
+        component = Div(id=state.get, listen_to=state)
         html = component.render()
         assert "&lt;script&gt;" in html
         assert "<script>" not in html
@@ -365,7 +365,7 @@ class TestStateBasedContent:
     def test_state_update(self):
         """Test that state updates still escape content."""
         state = State("<script>alert(1)</script>", "test_state")
-        component = Text(state.get, listen_to="test_state")
+        component = Text(state.get, listen_to=state)
 
         # Initial render
         html1 = component.render()
