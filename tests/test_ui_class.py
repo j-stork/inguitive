@@ -67,9 +67,9 @@ class TestUIConstruction:
         app = FastAPI()
         ui = UI(app)
 
-        @ui.page("/")
+        @app.get("/")
         def home():
-            return Div(Text("Hello"))
+            return ui.page(Div(Text("Hello")))
 
         client = TestClient(app)
         response = client.get("/")
@@ -83,9 +83,9 @@ class TestUIConstruction:
         ui = UI(app, configure_session_middleware=False)
         app.add_middleware(SessionMiddleware)
 
-        @ui.page("/")
+        @app.get("/")
         def home():
-            return Div(Text("Hello"))
+            return ui.page(Div(Text("Hello")))
 
         client = TestClient(app)
         response = client.get("/")
@@ -100,9 +100,9 @@ class TestUIConstruction:
         app = FastAPI()
         ui = UI(app, configure_session_middleware=False)
 
-        @ui.page("/")
+        @app.get("/")
         def home():
-            return Div(Text("Hello"))
+            return ui.page(Div(Text("Hello")))
 
         client = TestClient(app, raise_server_exceptions=True)
         with pytest.raises(RuntimeError, match="SessionMiddleware"):
@@ -123,20 +123,89 @@ class TestUIConstruction:
         with pytest.raises(RuntimeError, match="SessionMiddleware"):
             client.post("/_trigger/my_action")
 
-    def test_ui_page_decorator_serves_html(self):
-        """@ui.page('/') renders the component inside the document shell."""
+    def test_ui_page_renders_component_in_shell(self):
+        """ui.page() renders the component inside the document shell."""
         app = FastAPI()
         ui = UI(app, title="Home Page")
 
-        @ui.page("/")
+        @app.get("/")
         def home():
-            return Div(Text("Hello World"))
+            return ui.page(Div(Text("Hello World")))
 
         client = TestClient(app)
         response = client.get("/")
         assert response.status_code == 200
         assert "Hello World" in response.text
         assert "<title>Home Page</title>" in response.text
+
+    def test_ui_page_per_page_title_override(self):
+        """Per-page title overrides the UI default."""
+        app = FastAPI()
+        ui = UI(app, title="Global Title")
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")), title="Page Title")
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert "<title>Page Title</title>" in response.text
+        assert "Global Title" not in response.text
+
+    def test_ui_page_per_page_favicon_override(self):
+        """Per-page favicon overrides the UI default."""
+        app = FastAPI()
+        ui = UI(app, favicon="/global.ico")
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")), favicon="/page.ico")
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert '/page.ico' in response.text
+        assert '/global.ico' not in response.text
+
+    def test_ui_page_head_merges_global_and_page_by_default(self):
+        """replace_global_head=False (default): both global and page head appear."""
+        app = FastAPI()
+        ui = UI(app, head="<meta name='global'>")
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")), head="<meta name='page'>")
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert "<meta name='global'>" in response.text
+        assert "<meta name='page'>" in response.text
+
+    def test_ui_page_replace_global_head_true(self):
+        """replace_global_head=True: only page head appears, global is dropped."""
+        app = FastAPI()
+        ui = UI(app, head="<meta name='global'>")
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")), head="<meta name='page'>", replace_global_head=True)
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert "<meta name='page'>" in response.text
+        assert "<meta name='global'>" not in response.text
+
+    def test_ui_page_replace_global_head_true_no_page_head(self):
+        """replace_global_head=True with no page head: neither appears."""
+        app = FastAPI()
+        ui = UI(app, head="<meta name='global'>")
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")), replace_global_head=True)
+
+        client = TestClient(app)
+        response = client.get("/")
+        assert "<meta name='global'>" not in response.text
 
     def test_ui_trigger_handler_registers_post_route(self):
         """@ui.trigger_handler registers a POST route at /_trigger/<name>."""

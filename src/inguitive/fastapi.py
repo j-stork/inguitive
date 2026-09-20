@@ -29,6 +29,7 @@ from inguitive.session import (
     _get_current_session_from_context,
     _get_sse_queues,
     _hydrate_component_registry,
+    _is_session_bound,
     _put_bounded,
     _register_sse_connection,
     _set_current_session,
@@ -430,8 +431,13 @@ def _require_session_context() -> None:
     ``app.add_middleware(SessionMiddleware)`` themselves.  Without a bound
     session, SessionState, SSE, and OOB re-rendering silently degrade; this
     turns that silent failure into an immediate, explained error.
+
+    Checks ``_is_session_bound()`` rather than just looking for a Session
+    object, because ``_get_or_create_current_session()`` auto-creates sessions
+    during component construction — a Session object alone doesn't prove the
+    middleware ran.
     """
-    if _get_current_session_from_context() is None:
+    if not _is_session_bound():
         raise RuntimeError(_SESSION_MIDDLEWARE_MISSING_MSG)
 
 
@@ -760,26 +766,69 @@ class UI:
 
     def page(
         self,
-        path: str | None = None,
+        component,
         title: str | None = None,
         favicon: str | None = None,
         head: HeadContent = None,
-    ):
-        """Register a page route at *path* that returns ``ui.page(...)`` content.
+        replace_global_head: bool = False,
+    ) -> HTMLResponse:
+        """Render *component* inside the HTML document shell and return it.
 
-        This is the ``@ui.page("/path")`` decorator.  It wraps the handler
-        in the HTML document shell, resolving title/favicon/head against
-        the ``UI`` defaults.
+        Called from inside a plain FastAPI route::
+
+            @app.get("/")
+            def home():
+                return ui.page(Div(Text("Hello")), title="Home")
+
+        Renders the component via ``.render()``, resolves per-page
+        ``title``/``favicon``/``head`` against the ``UI`` defaults stored on
+        ``app.state``, merges or replaces ``head`` per ``replace_global_head``,
+        and wraps everything in :func:`_render_page_shell`.
+
+        Args:
+            component: A :class:`Component` (or anything with a ``.render()``
+                method, or a plain string) to render as the page body.
+            title: Per-page ``<title>``. Falls back to the UI default, then
+                ``"inguitive"``.
+            favicon: Per-page favicon path. Falls back to the UI default, then
+                the bundled ``/static/inguitive_favicon.svg``.
+            head: Per-page head content (components and/or raw HTML strings).
+                Merged *after* the UI-level head content unless
+                ``replace_global_head`` is True.
+            replace_global_head: When False (default), both the UI-level and
+                page-level head content are included (UI-level first). When
+                True, only the page-level head content is used.
         """
-        def decorator(handler: Callable):
-            actual_path = path or "/"
-            _register_page_route(
-                self.app, actual_path, handler,
-                page_title=title, page_favicon=favicon, page_head=head,
-            )
-            return handler
+        _require_session_context()
 
-        return decorator
+        # Render the component to HTML.
+        if hasattr(component, "render") and callable(component.render):
+            content = component.render()
+        else:
+            content = str(component)
+
+        # Resolve effective title/favicon with fallback chain.
+        effective_title = title or getattr(self.app.state, "title", "inguitive")
+        effective_favicon = (
+            favicon
+            or getattr(self.app.state, "favicon", None)
+            or "/static/inguitive_favicon.svg"
+        )
+
+        # Merge or replace head content per replace_global_head.
+        if replace_global_head:
+            head_sources = [head] if head is not None else []
+        else:
+            head_sources = []
+            app_head = getattr(self.app.state, "head", None)
+            if app_head is not None:
+                head_sources.append(app_head)
+            if head is not None:
+                head_sources.append(head)
+        head_extra = "".join(_render_template_content(source) for source in head_sources)
+
+        html = _render_page_shell(content, effective_title, effective_favicon, head_extra)
+        return HTMLResponse(content=html)
 
 
 def create_app(

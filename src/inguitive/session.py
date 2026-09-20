@@ -172,6 +172,12 @@ _session_backend: SessionBackend | None = None
 # Context variable for current Session object (for direct sync access)
 _current_session: ContextVar[Session | None] = ContextVar("current_session", default=None)
 
+# Tracks whether a session was explicitly bound by SessionMiddleware or
+# session_context — as opposed to auto-created by _get_or_create_current_session()
+# during component construction.  Used by _require_session_context() to detect
+# a missing SessionMiddleware without being fooled by auto-created sessions.
+_session_bound: ContextVar[bool] = ContextVar("session_bound", default=False)
+
 
 def get_session_backend() -> SessionBackend:
     """Get the configured session backend. Defaults to MemoryBackend."""
@@ -219,13 +225,24 @@ def _get_or_create_current_session() -> Session:
 
 
 def _set_current_session(session: Session) -> None:
-    """Set the current session for this request/context."""
+    """Set the current session for this request/context.
+
+    Marks the session as explicitly bound so _require_session_context() can
+    distinguish middleware-bound sessions from auto-created ones.
+    """
     _current_session.set(session)
+    _session_bound.set(True)
 
 
 def _clear_current_session() -> None:
     """Clear the current session from context."""
     _current_session.set(None)
+    _session_bound.set(False)
+
+
+def _is_session_bound() -> bool:
+    """Return True if a session was explicitly bound by middleware or session_context."""
+    return _session_bound.get()
 
 
 def get_session_id() -> str | None:
