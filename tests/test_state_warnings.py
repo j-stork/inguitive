@@ -79,18 +79,6 @@ class TestStateWarnings:
             inguitive_warnings = [r for r in caplog.records if r.name == "inguitive.state"]
             assert len(inguitive_warnings) == 0
 
-    def test_warning_for_anonymous_state(self, caplog):
-        """Test that anonymous states also emit warnings."""
-        enable_dev_mode_warnings()
-
-        state = SessionState(0)  # No name
-
-        with caplog.at_level("WARNING"):
-            state.set(1)
-
-            assert len(caplog.records) == 1
-            assert "no component is listening" in caplog.records[0].message
-
     def test_multiple_listeners_no_warning(self, caplog):
         """Test that multiple listeners also prevent warnings."""
         enable_dev_mode_warnings()

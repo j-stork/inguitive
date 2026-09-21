@@ -7,7 +7,6 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import logging
-import uuid
 from contextlib import contextmanager
 from typing import Any, Generic, TypeVar
 
@@ -93,19 +92,18 @@ class State(Generic[_T]):
     When mutated from a background task, an SSE push broadcasts the update
     to every connected session.
 
-    The ``name`` parameter is optional but recommended: it becomes the
-    storage key in the process-wide dict and in any serializing backend
-    (e.g. ``RedisBackend``). A named state (``State(0, "counter")``) keeps
-    the same key across process restarts, so the persisted value survives.
-    An unnamed state gets a fresh random UUID on every process start, so
-    its persisted value is orphaned after a restart. The name is not used
-    for listener resolution — ``listen_to`` takes the state object directly.
+    The ``name`` parameter is required: it becomes the storage key in the
+    process-wide dict and in any serializing backend (e.g. ``RedisBackend``).
+    A named state (``State(0, "counter")``) keeps the same key across
+    process restarts, so the persisted value survives. The name is not
+    used for listener resolution — ``listen_to`` takes the state object
+    directly.
     """
 
-    def __init__(self, initial_value: _T, name: str = ""):
+    def __init__(self, initial_value: _T, name: str):
         self._initial_value = initial_value
         self.name = name
-        self._key = name if name else f"__anon_{uuid.uuid4().hex}"
+        self._key = name
 
     def get(self) -> _T:
         """Return the current global value.
@@ -170,9 +168,8 @@ class SessionState(State[_T]):
     a global fallback and an SSE push is scheduled.
 
     The ``name`` parameter is inherited from :class:`State` and remains
-    optional but recommended — see the :class:`State` docstring for the
-    rationale (stable storage key across restarts with a serializing
-    backend).
+    required — see the :class:`State` docstring for the rationale (stable
+    storage key across restarts with a serializing backend).
     """
 
     def get(self) -> _T:

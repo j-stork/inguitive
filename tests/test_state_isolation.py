@@ -113,13 +113,13 @@ class TestListenerIsolation:
         )
 
 
-class TestUnnamedStateBackwardCompat:
-    def test_unnamed_state_get_set(self, isolated_sessions):
-        """Unnamed states must still support basic get/set within a session."""
+class TestNamedStateGetSet:
+    def test_named_state_get_set(self, isolated_sessions):
+        """Named states support basic get/set within a session."""
         session_a, _ = isolated_sessions
         _set_current_session(session_a)
 
-        state = SessionState("hello")
+        state = SessionState("hello", "greeting")
         assert state.get() == "hello"
         state.set("world")
         assert state.get() == "world"

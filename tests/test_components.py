@@ -107,7 +107,7 @@ class TestLabel:
 
     def test_callable_text(self):
         """Test dynamic text via callable."""
-        state = State("initial")
+        state = State("initial", "label_text")
         lbl = Label(text=lambda: state.get())
         html = lbl.render()
         assert "initial" in html
@@ -139,7 +139,7 @@ class TestIcon:
         """Test dynamic SVG via callable."""
         from .svg import MOON, SUN
 
-        state = State("light")
+        state = State("light", "icon_mode")
         icon = Icon(lambda: MOON if state.get() == "light" else SUN)
 
         html = icon.render()
@@ -298,7 +298,7 @@ class TestImage:
 
     def test_callable_src(self):
         """Test dynamic src via callable."""
-        state = State("/static/initial.png")
+        state = State("/static/initial.png", "img_src")
         img = Image(src=lambda: state.get(), alt="Dynamic")
 
         html = img.render()
@@ -310,7 +310,7 @@ class TestImage:
 
     def test_callable_alt(self):
         """Test dynamic alt via callable."""
-        state = State("Initial Alt")
+        state = State("Initial Alt", "img_alt")
         img = Image(src="/static/test.png", alt=lambda: state.get())
 
         html = img.render()
