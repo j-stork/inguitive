@@ -139,8 +139,9 @@ uvicorn inguitive.examples.url_params_app:app --reload
 
 Server-Sent Events with per-user push. Demonstrates:
 
-- A background task running inside `session_context` to write isolated state
-- `push_update(session_id, *state.listeners)` re-rendering one user's component over their SSE stream
+- A per-session background task started from a trigger handler via `asyncio.create_task` (inherits the bound session)
+- `SessionState.set()` auto-pushing OOB HTML to only this session's open SSE connections
+- `session_active()` as the loop's termination condition
 - An idempotency guard (live `asyncio.Task` in process memory) preventing duplicate loops
 
 ```bash
@@ -155,7 +156,7 @@ Server-Sent Events as a global broadcast. Demonstrates:
 
 - A startup task with no session bound, so `State.set()` takes the background-task branch
 - Automatic OOB push to every connected tab whose components `listen_to` the state
-- No `session_context`, `push_update`, or idempotency guard needed (single writer)
+- No `session_context` or idempotency guard needed (single writer)
 
 ```bash
 uvicorn inguitive.examples.sse_global_app:app --reload

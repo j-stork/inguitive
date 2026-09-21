@@ -13,13 +13,14 @@ The difference from ``sse_session_app.py`` is where ``State.set()`` is called
 from. Here the loop runs as a startup task with **no session bound**, so
 ``State.set()`` takes its background-task branch: the value is stored as a
 global broadcast and the framework auto-pushes OOB HTML to every connected tab
-whose components ``listen_to`` the state. No ``session_context``, no
-``push_update``, no button, and no idempotency guard are needed — the single
-startup task is the only writer.
+whose components ``listen_to`` the state. No ``session_context``, no button,
+and no idempotency guard are needed — the single startup task is the only
+writer.
 
-Contrast with ``sse_session_app.py``, where the loop runs inside a
-``session_context`` so ``State.set()`` writes to one user's isolated data, and
-``push_update`` is called explicitly to re-render that user's component.
+Contrast with ``sse_session_app.py``, where the loop is started from a trigger
+handler with ``asyncio.create_task`` (inheriting the handler's bound session),
+``SessionState.set()`` writes to one user's isolated data, and the framework
+auto-pushes the update only to that session's open SSE connections.
 
 To test:
 1. Open this app in two browser windows (regular + incognito)

@@ -5,7 +5,6 @@ Covers:
 - Per-session SSE queue registry (including multi-tab, i.e. multiple queues per session)
 - State.get() / State.set() outside a request context (global values)
 - _push_sse_for_state: OOB HTML delivered to every queue for a session
-- push_update: explicit per-session push fanned out to all open tabs
 - GET /_sse route registration and response type
 """
 
@@ -15,7 +14,7 @@ import asyncio
 
 import pytest
 
-from inguitive import State, SessionState, UI, push_update, session_context
+from inguitive import State, SessionState, UI
 from inguitive.session import (
     MemoryBackend,
     Session,
@@ -327,194 +326,6 @@ def test_push_sse_does_not_raise_on_render_error():
 
 
 # ---------------------------------------------------------------------------
-# push_update — fan-out to all queues
-# ---------------------------------------------------------------------------
-
-
-def test_push_update_sends_oob_html():
-    from inguitive import Text
-
-    s = State("initial", "_sse_pu_state")
-
-    async def run():
-        session = Session(session_id="pu-sess")
-        _set_current_session(session)
-        txt = Text(lambda: s.get(), id="pu-txt")
-        session.component_registry["pu-txt"] = txt
-        session.data_registry["_sse_pu_state"] = "updated"
-        from inguitive.session import get_session_backend
-        await get_session_backend().save_session(session)
-
-        q = _register_sse_connection("pu-sess")
-        await push_update("pu-sess", "pu-txt")
-
-        assert not q.empty()
-        html = await q.get()
-        assert "pu-txt" in html
-
-    asyncio.run(run())
-
-
-def test_push_update_fans_out_to_all_tabs():
-    """push_update delivers OOB HTML to every open tab of the session."""
-    from inguitive import Text
-
-    s = State("v", "_sse_pu_multi")
-
-    async def run():
-        session = Session(session_id="pu-multi")
-        _set_current_session(session)
-        txt = Text(lambda: s.get(), id="pu-m-txt")
-        session.component_registry["pu-m-txt"] = txt
-        session.data_registry["_sse_pu_multi"] = "value"
-        from inguitive.session import get_session_backend
-        await get_session_backend().save_session(session)
-
-        q1 = _register_sse_connection("pu-multi")
-        q2 = _register_sse_connection("pu-multi")
-        await push_update("pu-multi", "pu-m-txt")
-
-        assert not q1.empty(), "Tab 1 should receive the push"
-        assert not q2.empty(), "Tab 2 should receive the push"
-
-    asyncio.run(run())
-
-
-def test_push_update_no_op_when_no_sse_connection():
-    async def run():
-        await push_update("no-sse-sess", "some-comp")
-
-    asyncio.run(run())  # must not raise
-
-
-def test_push_update_no_op_when_session_not_found():
-    async def run():
-        _register_sse_connection("ghost-sess")
-        await push_update("ghost-sess", "comp-a")
-
-    asyncio.run(run())  # must not raise
-
-
-def test_push_update_multiple_components():
-    from inguitive import Text
-
-    s = State("v", "_sse_multi_comp")
-
-    async def run():
-        session = Session(session_id="mc-sess")
-        _set_current_session(session)
-        for cid in ("mc-a", "mc-b"):
-            session.component_registry[cid] = Text(lambda: s.get(), id=cid)
-        session.data_registry["_sse_multi_comp"] = "value"
-        from inguitive.session import get_session_backend
-        await get_session_backend().save_session(session)
-
-        q = _register_sse_connection("mc-sess")
-        await push_update("mc-sess", "mc-a", "mc-b")
-
-        assert not q.empty()
-        html = await q.get()
-        assert "mc-a" in html
-        assert "mc-b" in html
-
-    asyncio.run(run())
-
-
-def test_push_update_inside_session_context_uses_listeners_form():
-    """push_update(sid, *state.listeners) inside session_context renders the
-    just-set value — the same form as update_components(*state.listeners)."""
-    from inguitive import Text
-
-    s = State(0, "_sse_ctx_listeners")
-
-    async def run():
-        session = Session(session_id="ctx-sess")
-        _set_current_session(session)
-        session.component_registry["ctx-txt"] = Text(lambda: str(s.get()), id="ctx-txt")
-        session.data_registry["_sse_ctx_listeners"] = 0
-        session.data_registry["__listeners___sse_ctx_listeners"] = {"ctx-txt"}
-        from inguitive.session import get_session_backend
-        await get_session_backend().save_session(session)
-
-        q = _register_sse_connection("ctx-sess")
-
-        async with session_context("ctx-sess"):
-            s.set(s.get() + 1)
-            await push_update("ctx-sess", *s.listeners)
-
-        assert not q.empty()
-        html = await q.get()
-        assert "ctx-txt" in html
-        assert ">1<" in html, f"expected rendered value 1, got: {html!r}"
-
-    asyncio.run(run())
-
-
-def test_push_update_inside_context_uses_in_memory_session_not_stale_reload():
-    """On a serialising backend, push_update inside session_context must see
-    the in-flight (not-yet-saved) value. Without the in-memory shortcut it
-    would reload a stale copy via from_dict and render the old value."""
-    from inguitive import Text
-    from inguitive.session import _cache_component_registry
-
-    s = State(0, "_sse_ctx_serial")
-
-    async def run():
-        backend = _SerializingBackend()
-        set_session_backend(backend)
-
-        session = Session(session_id="ctx-serial-sess")
-        _set_current_session(session)
-        session.component_registry["cs-txt"] = Text(lambda: str(s.get()), id="cs-txt")
-        session.data_registry["_sse_ctx_serial"] = 0
-        session.data_registry["__listeners___sse_ctx_serial"] = {"cs-txt"}
-        await backend.save_session(session)
-        _cache_component_registry(session)
-
-        q = _register_sse_connection("ctx-serial-sess")
-
-        async with session_context("ctx-serial-sess"):
-            s.set(7)  # not saved until context exit
-            await push_update("ctx-serial-sess", *s.listeners)
-
-        assert not q.empty()
-        html = await q.get()
-        assert ">7<" in html, (
-            f"push_update should render the in-memory value 7, got: {html!r}"
-        )
-
-    asyncio.run(run())
-
-
-def test_push_update_outside_context_still_reloads_from_backend():
-    """When no session is bound (or a different one is), push_update must still
-    load from the backend — the in-memory shortcut must not change behaviour
-    for the established outside-context usage."""
-    from inguitive import Text
-
-    s = SessionState("v", "_sse_ctx_outside")
-
-    async def run():
-        session = Session(session_id="ctx-outside-sess")
-        _set_current_session(session)
-        session.component_registry["co-txt"] = Text(lambda: s.get(), id="co-txt")
-        session.data_registry["_sse_ctx_outside"] = "persisted"
-        from inguitive.session import get_session_backend
-        await get_session_backend().save_session(session)
-
-        q = _register_sse_connection("ctx-outside-sess")
-        # No session_context — no current session bound.
-        await push_update("ctx-outside-sess", "co-txt")
-
-        assert not q.empty()
-        html = await q.get()
-        assert "co-txt" in html
-        assert "persisted" in html
-
-    asyncio.run(run())
-
-
-# ---------------------------------------------------------------------------
 # Backpressure — bounded queue, drop-oldest policy
 # ---------------------------------------------------------------------------
 
@@ -558,34 +369,6 @@ def test_queue_stays_bounded_under_many_pushes():
 
     # Queue must never exceed capacity regardless of the burst.
     assert q.qsize() <= _SSE_QUEUE_MAX
-
-
-def test_push_sse_stays_bounded_for_stalled_tab():
-    """push_update to a non-consuming tab must not grow the queue beyond max."""
-    from inguitive import Text
-    from inguitive.session import _SSE_QUEUE_MAX
-
-    s = State("v", "_sse_bp_state")
-
-    async def run():
-        session = Session(session_id="bp-sess")
-        _set_current_session(session)
-        txt = Text(lambda: s.get(), id="bp-txt")
-        session.component_registry["bp-txt"] = txt
-        session.data_registry["_sse_bp_state"] = "value"
-        from inguitive.session import get_session_backend
-        await get_session_backend().save_session(session)
-
-        q = _register_sse_connection("bp-sess")
-
-        # Push far more than the queue can hold; the consumer never reads.
-        for i in range(_SSE_QUEUE_MAX * 5):
-            await push_update("bp-sess", "bp-txt")
-
-        # Queue must be bounded.
-        assert q.qsize() <= _SSE_QUEUE_MAX
-
-    asyncio.run(run())
 
 
 def test_cleanup_works_after_backpressure():
@@ -763,33 +546,6 @@ def test_push_sse_works_with_serialising_backend():
         html = await q.get()
         assert "redis-txt" in html
         assert "hx-swap-oob" in html
-
-    asyncio.run(run())
-
-
-def test_push_update_works_with_serialising_backend():
-    from inguitive import Text
-    from inguitive.session import _cache_component_registry
-
-    s = State("v", "_sse_redis_pu")
-
-    async def run():
-        backend = _SerializingBackend()
-        set_session_backend(backend)
-
-        session = Session(session_id="redis-pu-sess")
-        _set_current_session(session)
-        session.component_registry["rpu-txt"] = Text(lambda: s.get(), id="rpu-txt")
-        session.data_registry["_sse_redis_pu"] = "value"
-        await backend.save_session(session)
-        _cache_component_registry(session)
-
-        q = _register_sse_connection("redis-pu-sess")
-        await push_update("redis-pu-sess", "rpu-txt")
-
-        assert not q.empty()
-        html = await q.get()
-        assert "rpu-txt" in html
 
     asyncio.run(run())
 

@@ -138,14 +138,34 @@ have every worker subscribe and forward to its locally-connected clients.
 inguitive leaves the broker choice to you (Redis Pub/Sub, NATS, RabbitMQ, …)
 so it does not add a messaging dependency for users who don't need it.
 
-The recipe is ~10 lines. For Redis Pub/Sub, publish a small payload and have
-each worker run a subscriber that calls `push_update(session_id, *component_ids)`
-for its own locally-connected sessions:
+inguitive no longer ships an explicit per-session push function. The
+auto-push path (`State.set()` / `SessionState.set()`) targets only the
+sessions connected to *this* worker, so cross-worker fan-out is a
+build-it-yourself recipe on top of two public primitives:
+
+- `update_components(*component_ids)` — render OOB HTML for the components
+  registered in the *current* session.
+- `_get_sse_queues(session_id)` — the set of open SSE queues for a session on
+  *this* worker (empty if the session has no local connection here).
+
+A subscriber on each worker renders the components for its locally-connected
+sessions and enqueues the HTML. Sketch (Redis Pub/Sub):
 
 ```python
 import asyncio
+import contextvars
 import json
 import redis.asyncio as redis
+
+from inguitive import update_components
+from inguitive.session import (
+    _get_sse_queues,
+    _hydrate_component_registry,
+    _put_bounded,
+    _set_current_session,
+    get_session_backend,
+)
+
 
 async def start_fanout_subscriber(redis_url: str):
     """Subscribe to push events and forward to locally-connected SSE clients."""
@@ -156,11 +176,32 @@ async def start_fanout_subscriber(redis_url: str):
         if msg["type"] != "message":
             continue
         data = json.loads(msg["data"])
-        session_id = data["session_id"]
-        component_ids = data["component_ids"]
-        # push_update is a no-op for sessions with no local SSE connection,
-        # so it is safe to call on every worker.
-        await push_update(session_id, *component_ids)
+        await _local_push(data["session_id"], *data["component_ids"])
+
+
+async def _local_push(session_id: str, *component_ids: str) -> None:
+    """Render the components for session_id and fan out to this worker's queues.
+
+    No-op when the session has no SSE connection on this worker, so it is safe
+    to call on every worker.
+    """
+    queues = _get_sse_queues(session_id)
+    if not queues:
+        return
+    backend = get_session_backend()
+    session = await backend.get_session(session_id)
+    if session is None:
+        return
+    _hydrate_component_registry(session)
+
+    def _render(s=session, ids=component_ids) -> str:
+        _set_current_session(s)
+        return update_components(*ids)
+
+    html = contextvars.copy_context().run(_render)
+    if html:
+        for queue in list(queues):
+            _put_bounded(queue, html)
 
 
 async def publish_push(redis_url: str, session_id: str, *component_ids: str):

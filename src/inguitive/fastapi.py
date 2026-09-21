@@ -5,7 +5,6 @@ FastAPI integration for inguitive.
 from __future__ import annotations
 
 import asyncio
-import contextvars
 import importlib.resources
 import inspect
 import uuid
@@ -25,10 +24,7 @@ from inguitive.session import (
     SessionBackend,
     _cache_component_registry,
     _clear_current_session,
-    _get_current_session_from_context,
-    _get_sse_queues,
     _hydrate_component_registry,
-    _put_bounded,
     _register_sse_connection,
     _require_current_session,
     _SESSION_MIDDLEWARE_MISSING_MSG,
@@ -653,71 +649,3 @@ class UI:
 
         html = _render_page_shell(content, effective_title, effective_favicon, head_extra)
         return HTMLResponse(content=html)
-
-
-async def push_update(session_id: str, *component_ids: str) -> None:
-    """Push OOB HTML for specific components to a session's SSE stream.
-
-    Use this for fine-grained, per-session pushes from background tasks or
-    webhook handlers.  For a broadcast push to *all* connected sessions, call
-    :meth:`State.set` from outside a request context instead.
-
-    Args:
-        session_id: The session to push to.  Obtain it from
-            :func:`~inguitive.session.get_session_id` during a request and
-            store it for later use.
-        *component_ids: IDs of the components to re-render as OOB swaps.
-            The components must already be registered in the session's
-            component registry (i.e. they must have been rendered at least
-            once when the page loaded).
-
-    Example::
-
-        from inguitive import push_update, get_session_id
-
-        # Inside a request handler — capture the session ID:
-        current_session = get_session_id()
-
-        # Later, in a background task:
-        async def notify():
-            await push_update(current_session, "notification-banner")
-
-    When called from within a ``session_context`` block for the same session,
-    component IDs can be resolved the same way as ``update_components``::
-
-        async with session_context(session_id) as session:
-            if session is None:
-                return
-            counter_state.set(counter_state.get() + 1)
-            await push_update(session_id, *counter_state.listeners)
-    """
-    queues = _get_sse_queues(session_id)
-    if not queues:
-        return  # Session has no active SSE connections — nothing to do.
-
-    # If the target session is the one currently bound in this context (e.g.
-    # push_update called from within a session_context block), use it directly
-    # rather than reloading from the backend. This sees in-flight mutations
-    # that have not yet been persisted (the save happens at context exit) and
-    # avoids a stale-copy read on serialising backends such as RedisBackend.
-    session = _get_current_session_from_context()
-    if session is None or session.session_id != session_id:
-        backend = get_session_backend()
-        session = await backend.get_session(session_id)
-        if session is None:
-            return
-        # Rendering requires a populated component_registry.  MemoryBackend
-        # returns the live session; for serialising backends (RedisBackend) the
-        # registry is restored from the worker's process-local component cache.
-        _hydrate_component_registry(session)
-
-    def _render(s=session, ids=component_ids) -> str:
-        _set_current_session(s)
-        return update_components(*ids)
-
-    html = contextvars.copy_context().run(_render)
-    if html:
-        # Fan out to every open tab for this session.
-        # _put_bounded is non-blocking and applies drop-oldest backpressure.
-        for queue in list(queues):  # snapshot to avoid mutation during iteration
-            _put_bounded(queue, html)

@@ -3,31 +3,39 @@ Server-Sent Events (SSE) example application using inguitive.
 
 Run with: uvicorn inguitive.examples.sse_session_app:app --reload
 
-Per-User Counter via push_update
+Per-User Counter via SessionState
 ---------------------------------
-This example demonstrates inguitive's SSE server-push for a per-user counter
-that increments by 1 every second until it reaches 10. Unlike a global
-broadcast counter, each browser session maintains its own independent count
-and receives updates only on its own SSE stream.
+This example demonstrates inguitive's session-scoped SSE push for a per-user
+counter that increments by 1 every second until it reaches 10. Unlike the
+global broadcast counter in ``sse_global_app.py``, each browser session
+maintains its own independent count and receives updates only on its own SSE
+stream.
 
-The background task runs inside a ``session_context`` so ``State.set()`` writes
-to that user's isolated data, then calls ``push_update(session_id,
-*counter_state.listeners)`` — the same form used by ``update_components`` in a
-trigger handler — to re-render just that user's component over their open SSE
-connection.
+The loop is started from a trigger handler with ``asyncio.create_task``. The
+task inherits the handler's bound session via Python's contextvar copy
+semantics, so:
+
+- ``SessionState.set()`` writes to *this* session's isolated data and the
+  framework auto-pushes the OOB update to this session's open SSE connections.
+- ``session_active()`` returns ``True`` while at least one tab for this
+  session has an open SSE connection, and ``False`` once they all close —
+  the loop's ``while session_active():`` terminates the task cleanly.
+
+No ``session_context`` and no ``push_update`` are needed: the auto-push
+path covers the entire workflow. This matches the vision code in TODO.md.
 
 Starting the counter is idempotent: the guard reads the live ``asyncio.Task``
 from a module-level dict (process memory, never serialized), so concurrent
-clicks cannot spawn a second loop. This works on both MemoryBackend and
-RedisBackend because the guard never touches serializable session state.
-Clicking again after the loop finished resets the counter to 0 and restarts it.
+clicks cannot spawn a second loop. Clicking again after the loop finished
+resets the counter to 0 and restarts it.
 
 To test:
 1. Open this app in one regular browser window and one incognito/private window
 2. Click "Start my counter" in both windows
 3. Each window's counter increments independently once per second, to 10
 4. Click again to restart; clicking while running is a no-op
-5. Closing a tab stops only that tab's loop when its session is evicted
+5. Closing all of a session's tabs stops that session's loop via
+   ``session_active()`` returning ``False``
 """
 
 import asyncio
@@ -37,12 +45,11 @@ from fastapi import FastAPI
 from inguitive import (
     Button,
     Div,
-    State,
+    SessionState,
     Text,
     UI,
     get_session_id,
-    push_update,
-    session_context,
+    session_active,
 )
 
 from .css import BRAND_COLORS, BUTTON_PRIMARY_GREEN_CSS
@@ -54,7 +61,9 @@ ui = UI(app)
 
 
 # --- State Instances ---
-counter_state = State(0, "counter_state")
+# SessionState: each session has its own isolated value. Auto-push targets
+# only the session whose context the .set() call runs in.
+counter_state = SessionState(0, "counter_state")
 
 # Per-worker, in-process registry of running counter loops. The live Task
 # handle is not JSON-serializable, so it stays out of the session's
@@ -77,6 +86,11 @@ def start_counter():
     The handler must stay synchronous: if it ever becomes async and awaits
     between the check and the store, the atomicity is lost and an
     ``asyncio.Lock`` keyed by session_id would be needed around that section.
+
+    ``asyncio.create_task`` copies the current context (including the bound
+    session) into the new task, so ``session_active()`` and
+    ``SessionState.set()`` inside ``_tick`` resolve to *this* session without
+    any explicit ``session_context`` binding.
     """
     session_id = get_session_id()
     existing = _counter_tasks.get(session_id)
@@ -90,25 +104,25 @@ def start_counter():
 
 # --- Background Task ---
 async def _tick(session_id: str):
-    """Increment the per-user counter once per second and push via SSE.
+    """Increment the per-user counter once per second and auto-push via SSE.
 
-    ``session_context`` binds the session so ``State.set()`` writes to this
-    user's isolated data and the session is persisted on exit.
-    ``push_update`` is called inside the context with
-    ``*counter_state.listeners`` and reuses the in-memory session so it sees
-    the just-set value without waiting for the save. The loop stops at 10 or
-    when the session no longer exists; ``add_done_callback`` in
-    ``start_counter`` clears the module-level entry on either exit.
+    Runs in the trigger handler's copied context, so ``counter_state`` (a
+    ``SessionState``) reads and writes this session's isolated value, and
+    each ``.set()`` triggers the framework's auto-push to this session's
+    open SSE connections. No explicit ``push_update`` call is needed.
+
+    The loop terminates when either:
+    - the counter reaches 10 (the cap), or
+    - ``session_active()`` returns ``False`` (all of this session's SSE
+      connections have closed — e.g. the user closed every tab).
+    ``add_done_callback`` in ``start_counter`` clears the module-level entry
+    on either exit.
     """
-    while True:
+    while session_active():
         await asyncio.sleep(1)
-        async with session_context(session_id) as session:
-            if session is None:
-                return
-            counter_state.set(counter_state.get() + 1)
-            await push_update(session_id, *counter_state.listeners)
-            if counter_state.get() >= 10:
-                return
+        counter_state.set(counter_state.get() + 1)
+        if counter_state.get() >= 10:
+            return
 
 
 # --- Components ---
@@ -138,7 +152,7 @@ def CounterDisplay() -> Div:  # noqa: N802
     return BaseContainer(
         InguitiveLogo(),
         Title("SSE Events Example"),
-        Title("Per-User Counter via push_update", level=2),
+        Title("Per-User Counter via SessionState", level=2),
         Card(
             Text(
                 lambda: str(counter_state.get()),

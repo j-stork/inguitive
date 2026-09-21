@@ -24,7 +24,6 @@ from inguitive.components import (
 from inguitive.fastapi import (
     UI,
     SessionMiddleware,
-    push_update,
 )
 from inguitive.htmx import update_components
 from inguitive.session import (
@@ -72,7 +71,6 @@ __all__ = [
     # FastAPI
     "UI",
     "SessionMiddleware",
-    "push_update",
     # Session
     "Session",
     "SessionBackend",

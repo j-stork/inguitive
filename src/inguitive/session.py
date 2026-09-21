@@ -292,14 +292,14 @@ async def session_context(session_id: str) -> AsyncIterator[Session | None]:
             if session is None:
                 return
             counter_state.set(counter_state.get() + 1)
-            ids = list(counter_state.listeners)
-        await push_update(session_id, *ids)
 
-    Note: ``push_update`` reloads the session from the backend before
-    rendering, so it must run *after* the context exits — the save performed
-    on exit is what makes the new state visible to the push. Listener IDs
-    must be captured *inside* the context, since ``State.listeners`` reads
-    the active session's registry.
+    ``State.set()`` / ``SessionState.set()`` called inside the block write to
+    the bound session's isolated data. When called from outside a trigger
+    handler (i.e. from a background task, which is the typical
+    ``session_context`` use case), the framework's auto-push path schedules
+    the OOB update to the session's open SSE queues — no explicit push call is
+    needed. Listener IDs are captured automatically from the session's
+    registry at render time.
 
     Concurrent mutation of the same session (e.g. a background task and a
     concurrent request handler) is last-save-wins; guard against it in your
