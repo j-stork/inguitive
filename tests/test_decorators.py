@@ -1,20 +1,22 @@
-"""Tests for @app.page and @app.trigger_handler decorator wiring in inguitive."""
+"""Tests for @app.get + ui.page() and @ui.trigger_handler wiring in inguitive."""
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from inguitive import Div, SessionState, State, Text, create_app, update_components
+from inguitive import Div, SessionState, State, Text, UI, update_components
 
 
 class TestPageDecorator:
-    """Tests for @app.page decorator wiring."""
+    """Tests for ui.page() inside @app.get routes."""
 
     def test_page_decorator_registration(self):
-        """Test that @app.page registers the route correctly."""
-        app = create_app()
+        """Test that @app.get + ui.page() registers the route correctly."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/test")
+        @app.get("/test")
         def test_page():
-            return Div(Text("Test Page"))
+            return ui.page(Div(Text("Test Page")))
 
         client = TestClient(app)
         response = client.get("/test")
@@ -22,12 +24,13 @@ class TestPageDecorator:
         assert "Test Page" in response.text
 
     def test_page_decorator_root_path(self):
-        """Test that @app.page(\"/\") registers at the root path."""
-        app = create_app()
+        """Test that @app.get("/") registers at the root path."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/")
+        @app.get("/")
         def root_page():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
         client = TestClient(app)
         response = client.get("/")
@@ -35,12 +38,13 @@ class TestPageDecorator:
         assert "Root" in response.text
 
     def test_page_decorator_custom_path(self):
-        """Test that @app.page works with various custom paths."""
-        app = create_app()
+        """Test that @app.get works with various custom paths."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/custom/path")
+        @app.get("/custom/path")
         def custom_page():
-            return Div(Text("Custom Path"))
+            return ui.page(Div(Text("Custom Path")))
 
         client = TestClient(app)
         response = client.get("/custom/path")
@@ -49,13 +53,14 @@ class TestPageDecorator:
 
 
 class TestTriggerHandlerDecorator:
-    """Tests for @app.trigger_handler decorator wiring."""
+    """Tests for @ui.trigger_handler decorator wiring."""
 
     def test_trigger_handler_decorator_registration(self):
-        """Test that @app.trigger_handler registers the POST route correctly."""
-        app = create_app()
+        """Test that @ui.trigger_handler registers the POST route correctly."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def increment():
             return "OK"
 
@@ -65,10 +70,11 @@ class TestTriggerHandlerDecorator:
         assert response.status_code == 200
 
     def test_trigger_handler_with_custom_name(self):
-        """Test that @app.trigger_handler(\"custom_name\") uses the custom name."""
-        app = create_app()
+        """Test that @ui.trigger_handler("custom_name") uses the custom name."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.trigger_handler("custom_trigger")
+        @ui.trigger_handler("custom_trigger")
         def my_handler():
             return "OK"
 
@@ -78,10 +84,11 @@ class TestTriggerHandlerDecorator:
 
     def test_trigger_handler_form_data_injection(self):
         """Test that form_data is correctly injected into trigger handlers."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         received_data = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def handle_form(form_data: dict):
             received_data.update(form_data)
             return "OK"
@@ -93,9 +100,10 @@ class TestTriggerHandlerDecorator:
 
     def test_trigger_handler_async(self):
         """Test that async trigger handlers work correctly."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.trigger_handler
+        @ui.trigger_handler
         async def async_trigger():
             return "OK"
 
@@ -105,19 +113,20 @@ class TestTriggerHandlerDecorator:
 
 
 class TestMultipleDecorators:
-    """Tests for multiple decorators on the same app."""
+    """Tests for multiple routes on the same app."""
 
     def test_multiple_page_routes(self):
-        """Test that multiple @app.page routes can be registered."""
-        app = create_app()
+        """Test that multiple @app.get routes can be registered."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/page1")
+        @app.get("/page1")
         def page1():
-            return Div(Text("Page 1"))
+            return ui.page(Div(Text("Page 1")))
 
-        @app.page("/page2")
+        @app.get("/page2")
         def page2():
-            return Div(Text("Page 2"))
+            return ui.page(Div(Text("Page 2")))
 
         client = TestClient(app)
 
@@ -130,14 +139,15 @@ class TestMultipleDecorators:
         assert "Page 2" in response2.text
 
     def test_multiple_trigger_handlers(self):
-        """Test that multiple @app.trigger_handler routes can be registered."""
-        app = create_app()
+        """Test that multiple @ui.trigger_handler routes can be registered."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.trigger_handler("trigger1")
+        @ui.trigger_handler("trigger1")
         def handler1():
             return "Handler 1"
 
-        @app.trigger_handler("trigger2")
+        @ui.trigger_handler("trigger2")
         def handler2():
             return "Handler 2"
 
@@ -150,14 +160,15 @@ class TestMultipleDecorators:
         assert response2.status_code == 200
 
     def test_page_and_trigger_coexistence(self):
-        """Test that @app.page and @app.trigger_handler can coexist on the same app."""
-        app = create_app()
+        """Test that @app.get and @ui.trigger_handler can coexist on the same app."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/test-page")
+        @app.get("/test-page")
         def test_page():
-            return Div(Text("Test Page"))
+            return ui.page(Div(Text("Test Page")))
 
-        @app.trigger_handler("test-trigger")
+        @ui.trigger_handler("test-trigger")
         def test_trigger():
             return "OK"
 
@@ -174,16 +185,17 @@ class TestMultipleDecorators:
 
 
 class TestStateIntegration:
-    """Tests for decorator integration with state management."""
+    """Tests for route integration with state management."""
 
     def test_page_with_state(self):
         """Test that pages can access and display state."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         message_state = State("Hello", "message_state")
 
-        @app.page("/state-test")
+        @app.get("/state-test")
         def state_page():
-            return Div(Text(lambda: message_state.get()))
+            return ui.page(Div(Text(lambda: message_state.get())))
 
         client = TestClient(app)
         response = client.get("/state-test")
@@ -192,17 +204,20 @@ class TestStateIntegration:
 
     def test_trigger_with_state_update(self):
         """Test that triggers can update state and pages reflect the changes."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         counter_state = SessionState(0, "counter_state")
 
-        @app.page("/counter-test")
+        @app.get("/counter-test")
         def counter_page():
-            return Div(
-                Text(lambda: f"Count: {counter_state.get()}", listen_to=counter_state),
-                id="counter-display",
+            return ui.page(
+                Div(
+                    Text(lambda: f"Count: {counter_state.get()}", listen_to=counter_state),
+                    id="counter-display",
+                )
             )
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def increment():
             counter_state.set(counter_state.get() + 1)
             return update_components("counter-display")
@@ -222,19 +237,22 @@ class TestStateIntegration:
 
     def test_trigger_handler_with_form_data_and_state(self):
         """Test that trigger handlers can receive form data and update state."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         form_state = SessionState({}, "form_state")
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def submit_form(form_data: dict):
             form_state.set(form_data)
             return update_components(*form_state.listeners)
 
-        @app.page("/form-test")
+        @app.get("/form-test")
         def form_page():
-            return Div(
-                Text(lambda: f"Name: {form_state.get().get('name', '')}", listen_to=form_state),
-                id="form-display",
+            return ui.page(
+                Div(
+                    Text(lambda: f"Name: {form_state.get().get('name', '')}", listen_to=form_state),
+                    id="form-display",
+                )
             )
 
         client = TestClient(app)
@@ -253,11 +271,12 @@ class TestPageTitles:
 
     def test_default_title(self):
         """Test that default title 'inguitive' is used when no title is specified."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/")
+        @app.get("/")
         def root_page():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
         client = TestClient(app)
         response = client.get("/")
@@ -266,11 +285,12 @@ class TestPageTitles:
 
     def test_app_level_title(self):
         """Test that custom app-level title works."""
-        app = create_app(title="My App")
+        app = FastAPI()
+        ui = UI(app, title="My App")
 
-        @app.page("/")
+        @app.get("/")
         def root_page():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
         client = TestClient(app)
         response = client.get("/")
@@ -278,12 +298,13 @@ class TestPageTitles:
         assert "<title>My App</title>" in response.text
 
     def test_page_level_title(self):
-        """Test that page-level title via @app.page decorator works."""
-        app = create_app()
+        """Test that page-level title via ui.page() works."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/login", title="Login Page")
+        @app.get("/login")
         def login():
-            return Div(Text("Login"))
+            return ui.page(Div(Text("Login")), title="Login Page")
 
         client = TestClient(app)
         response = client.get("/login")
@@ -292,11 +313,12 @@ class TestPageTitles:
 
     def test_page_level_title_overrides_app_title(self):
         """Test that page title overrides app title."""
-        app = create_app(title="My App")
+        app = FastAPI()
+        ui = UI(app, title="My App")
 
-        @app.page("/login", title="Login Page")
+        @app.get("/login")
         def login():
-            return Div(Text("Login"))
+            return ui.page(Div(Text("Login")), title="Login Page")
 
         client = TestClient(app)
         response = client.get("/login")
@@ -306,42 +328,45 @@ class TestPageTitles:
     def test_title_fallback_chain(self):
         """Test the complete title fallback chain: page -> app -> default."""
         # Test app-level fallback to default
-        app1 = create_app()
+        app1 = FastAPI()
+        ui1 = UI(app1)
 
-        @app1.page("/test1")
+        @app1.get("/test1")
         def test1():
-            return Div(Text("Test 1"))
+            return ui1.page(Div(Text("Test 1")))
 
         client1 = TestClient(app1)
         response1 = client1.get("/test1")
         assert "<title>inguitive</title>" in response1.text
 
         # Test app-level title
-        app2 = create_app(title="Custom App")
+        app2 = FastAPI()
+        ui2 = UI(app2, title="Custom App")
 
-        @app2.page("/test2")
+        @app2.get("/test2")
         def test2():
-            return Div(Text("Test 2"))
+            return ui2.page(Div(Text("Test 2")))
 
         client2 = TestClient(app2)
         response2 = client2.get("/test2")
         assert "<title>Custom App</title>" in response2.text
 
         # Test page-level override
-        @app2.page("/test3", title="Page Title")
+        @app2.get("/test3")
         def test3():
-            return Div(Text("Test 3"))
+            return ui2.page(Div(Text("Test 3")), title="Page Title")
 
         response3 = client2.get("/test3")
         assert "<title>Page Title</title>" in response3.text
 
     def test_title_in_rendered_html(self):
         """Test that title appears correctly in the rendered HTML."""
-        app = create_app(title="Test App")
+        app = FastAPI()
+        ui = UI(app, title="Test App")
 
-        @app.page("/title-test", title="Title Test Page")
+        @app.get("/title-test")
         def title_test():
-            return Div(Text("Content"))
+            return ui.page(Div(Text("Content")), title="Title Test Page")
 
         client = TestClient(app)
         response = client.get("/title-test")
@@ -353,19 +378,20 @@ class TestPageTitles:
 
     def test_mixed_titles(self):
         """Test that different pages can have different titles."""
-        app = create_app(title="Default App")
+        app = FastAPI()
+        ui = UI(app, title="Default App")
 
-        @app.page("/")
+        @app.get("/")
         def root():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
-        @app.page("/login", title="Login")
+        @app.get("/login")
         def login():
-            return Div(Text("Login"))
+            return ui.page(Div(Text("Login")), title="Login")
 
-        @app.page("/about", title="About Us")
+        @app.get("/about")
         def about():
-            return Div(Text("About"))
+            return ui.page(Div(Text("About")), title="About Us")
 
         client = TestClient(app)
 
@@ -387,11 +413,12 @@ class TestFavicon:
 
     def test_default_favicon(self):
         """Test that default INGUITIVE favicon is used when no favicon is specified."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/")
+        @app.get("/")
         def root_page():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
         client = TestClient(app)
         response = client.get("/")
@@ -401,11 +428,12 @@ class TestFavicon:
 
     def test_custom_app_favicon(self):
         """Test that custom app-level favicon works."""
-        app = create_app(favicon="/custom/favicon.ico")
+        app = FastAPI()
+        ui = UI(app, favicon="/custom/favicon.ico")
 
-        @app.page("/")
+        @app.get("/")
         def root_page():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
         client = TestClient(app)
         response = client.get("/")
@@ -413,12 +441,13 @@ class TestFavicon:
         assert '<link rel="icon" href="/custom/favicon.ico"' in response.text
 
     def test_page_level_favicon(self):
-        """Test that page-level favicon via @app.page decorator works."""
-        app = create_app()
+        """Test that page-level favicon via ui.page() works."""
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/login", favicon="/login/favicon.png")
+        @app.get("/login")
         def login():
-            return Div(Text("Login"))
+            return ui.page(Div(Text("Login")), favicon="/login/favicon.png")
 
         client = TestClient(app)
         response = client.get("/login")
@@ -427,11 +456,12 @@ class TestFavicon:
 
     def test_page_favicon_overrides_app_favicon(self):
         """Test that page favicon overrides app favicon."""
-        app = create_app(favicon="/app/favicon.ico")
+        app = FastAPI()
+        ui = UI(app, favicon="/app/favicon.ico")
 
-        @app.page("/login", favicon="/page/favicon.png")
+        @app.get("/login")
         def login():
-            return Div(Text("Login"))
+            return ui.page(Div(Text("Login")), favicon="/page/favicon.png")
 
         client = TestClient(app)
         response = client.get("/login")
@@ -442,42 +472,45 @@ class TestFavicon:
     def test_favicon_fallback_chain(self):
         """Test the complete favicon fallback chain: page -> app -> default."""
         # Test app-level fallback to default
-        app1 = create_app()
+        app1 = FastAPI()
+        ui1 = UI(app1)
 
-        @app1.page("/test1")
+        @app1.get("/test1")
         def test1():
-            return Div(Text("Test 1"))
+            return ui1.page(Div(Text("Test 1")))
 
         client1 = TestClient(app1)
         response1 = client1.get("/test1")
         assert '<link rel="icon" href="/static/inguitive_favicon.svg"' in response1.text
 
         # Test app-level favicon
-        app2 = create_app(favicon="/custom/favicon.svg")
+        app2 = FastAPI()
+        ui2 = UI(app2, favicon="/custom/favicon.svg")
 
-        @app2.page("/test2")
+        @app2.get("/test2")
         def test2():
-            return Div(Text("Test 2"))
+            return ui2.page(Div(Text("Test 2")))
 
         client2 = TestClient(app2)
         response2 = client2.get("/test2")
         assert '<link rel="icon" href="/custom/favicon.svg"' in response2.text
 
         # Test page-level override
-        @app2.page("/test3", favicon="/page/favicon.ico")
+        @app2.get("/test3")
         def test3():
-            return Div(Text("Test 3"))
+            return ui2.page(Div(Text("Test 3")), favicon="/page/favicon.ico")
 
         response3 = client2.get("/test3")
         assert '<link rel="icon" href="/page/favicon.ico"' in response3.text
 
     def test_favicon_in_rendered_html(self):
         """Test that favicon link appears correctly in the rendered HTML."""
-        app = create_app(favicon="/test/favicon.svg")
+        app = FastAPI()
+        ui = UI(app, favicon="/test/favicon.svg")
 
-        @app.page("/favicon-test", favicon="/page/favicon.png")
+        @app.get("/favicon-test")
         def favicon_test():
-            return Div(Text("Content"))
+            return ui.page(Div(Text("Content")), favicon="/page/favicon.png")
 
         client = TestClient(app)
         response = client.get("/favicon-test")
@@ -489,19 +522,20 @@ class TestFavicon:
 
     def test_mixed_favicons(self):
         """Test that different pages can have different favicons."""
-        app = create_app(favicon="/default/favicon.ico")
+        app = FastAPI()
+        ui = UI(app, favicon="/default/favicon.ico")
 
-        @app.page("/")
+        @app.get("/")
         def root():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
-        @app.page("/login", favicon="/login/favicon.png")
+        @app.get("/login")
         def login():
-            return Div(Text("Login"))
+            return ui.page(Div(Text("Login")), favicon="/login/favicon.png")
 
-        @app.page("/about", favicon="/about/favicon.svg")
+        @app.get("/about")
         def about():
-            return Div(Text("About"))
+            return ui.page(Div(Text("About")), favicon="/about/favicon.svg")
 
         client = TestClient(app)
 
@@ -519,11 +553,12 @@ class TestFavicon:
 
     def test_static_favicon_endpoint(self):
         """Test that the default favicon file is actually served via the /static endpoint."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/")
+        @app.get("/")
         def root_page():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
         client = TestClient(app)
 
@@ -544,15 +579,16 @@ class TestHeadContent:
 
     def test_app_level_head(self):
         """Test that app-level head content appears on all pages."""
-        app = create_app(head='<meta name="app-level" content="test">')
+        app = FastAPI()
+        ui = UI(app, head='<meta name="app-level" content="test">')
 
-        @app.page("/")
+        @app.get("/")
         def root_page():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
-        @app.page("/other")
+        @app.get("/other")
         def other_page():
-            return Div(Text("Other"))
+            return ui.page(Div(Text("Other")))
 
         client = TestClient(app)
 
@@ -568,15 +604,16 @@ class TestHeadContent:
 
     def test_page_level_head(self):
         """Test that page-level head content appears only on that page."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/login", head='<meta name="page-level" content="login">')
+        @app.get("/login")
         def login():
-            return Div(Text("Login"))
+            return ui.page(Div(Text("Login")), head='<meta name="page-level" content="login">')
 
-        @app.page("/about")
+        @app.get("/about")
         def about():
-            return Div(Text("About"))
+            return ui.page(Div(Text("About")))
 
         client = TestClient(app)
 
@@ -592,11 +629,12 @@ class TestHeadContent:
 
     def test_app_and_page_level_head_concatenation(self):
         """Test that app-level and page-level head content are concatenated with app first."""
-        app = create_app(head='<meta name="app" content="app-value">')
+        app = FastAPI()
+        ui = UI(app, head='<meta name="app" content="app-value">')
 
-        @app.page("/test", head='<meta name="page" content="page-value">')
+        @app.get("/test")
         def test_page():
-            return Div(Text("Test"))
+            return ui.page(Div(Text("Test")), head='<meta name="page" content="page-value">')
 
         client = TestClient(app)
         response = client.get("/test")
@@ -613,11 +651,15 @@ class TestHeadContent:
 
     def test_head_with_list(self):
         """Test that head content can be provided as a list."""
-        app = create_app(head=['<meta name="app1" content="a">', '<meta name="app2" content="b">'])
+        app = FastAPI()
+        ui = UI(app, head=['<meta name="app1" content="a">', '<meta name="app2" content="b">'])
 
-        @app.page("/test", head=['<meta name="page1" content="c">', '<meta name="page2" content="d">'])
+        @app.get("/test")
         def test_page():
-            return Div(Text("Test"))
+            return ui.page(
+                Div(Text("Test")),
+                head=['<meta name="page1" content="c">', '<meta name="page2" content="d">'],
+            )
 
         client = TestClient(app)
         response = client.get("/test")
@@ -648,11 +690,12 @@ class TestHeadContent:
             def render(self):
                 return f'<meta name="{self.name}" content="{self.content}">'
 
-        app = create_app(head=MetaTag("app-component", "comp"))
+        app = FastAPI()
+        ui = UI(app, head=MetaTag("app-component", "comp"))
 
-        @app.page("/test", head=MetaTag("page-component", "comp"))
+        @app.get("/test")
         def test_page():
-            return Div(Text("Test"))
+            return ui.page(Div(Text("Test")), head=MetaTag("page-component", "comp"))
 
         client = TestClient(app)
         response = client.get("/test")
@@ -664,11 +707,12 @@ class TestHeadContent:
 
     def test_head_empty_by_default(self):
         """Test that pages have no extra head content when none is specified."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/")
+        @app.get("/")
         def root_page():
-            return Div(Text("Root"))
+            return ui.page(Div(Text("Root")))
 
         client = TestClient(app)
         response = client.get("/")
@@ -678,11 +722,12 @@ class TestHeadContent:
 
     def test_page_level_head_overrides_empty_app_head(self):
         """Test that page-level head works when app-level is None."""
-        app = create_app(head=None)
+        app = FastAPI()
+        ui = UI(app, head=None)
 
-        @app.page("/test", head='<meta name="page-only" content="test">')
+        @app.get("/test")
         def test_page():
-            return Div(Text("Test"))
+            return ui.page(Div(Text("Test")), head='<meta name="page-only" content="test">')
 
         client = TestClient(app)
         response = client.get("/test")
@@ -691,11 +736,12 @@ class TestHeadContent:
 
     def test_app_level_head_with_empty_page_head(self):
         """Test that app-level head works when page-level is None."""
-        app = create_app(head='<meta name="app-only" content="test">')
+        app = FastAPI()
+        ui = UI(app, head='<meta name="app-only" content="test">')
 
-        @app.page("/test")
+        @app.get("/test")
         def test_page():
-            return Div(Text("Test"))
+            return ui.page(Div(Text("Test")))
 
         client = TestClient(app)
         response = client.get("/test")
