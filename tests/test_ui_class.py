@@ -164,6 +164,43 @@ class TestUIConstruction:
         assert "Hello World" in response.text
         assert "<title>Home Page</title>" in response.text
 
+    def test_ui_page_renders_full_document_shell(self):
+        """ui.page() emits the full HTML document shell, not just the component.
+
+        Asserts the skeleton that _render_page_shell produces: DOCTYPE, <html>,
+        <head> with charset + viewport metas, the <title>, the favicon <link>,
+        the HTMX + SSE extension + Tailwind CDN <script> tags, and the hidden
+        #hx-target div wired to sse-connect="/_sse". These are the load-bearing
+        pieces for HTMX OOB swaps and SSE auto-connect; a regression in any
+        breaks the whole UI layer silently.
+        """
+        app = FastAPI()
+        ui = UI(app, title="Shell Test", favicon="/fav.ico")
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("body content")))
+
+        client = TestClient(app)
+        response = client.get("/")
+        html = response.text
+        assert html.startswith("<!DOCTYPE html>"), "shell must start with DOCTYPE"
+        assert "<html" in html
+        assert "<head>" in html
+        assert '<meta charset="UTF-8">' in html
+        assert '<meta name="viewport"' in html
+        assert "<title>Shell Test</title>" in html
+        assert '<link rel="icon" href="/fav.ico">' in html
+        # HTMX core + SSE extension + Tailwind CDN
+        assert "htmx.org" in html
+        assert "sse.js" in html
+        assert "tailwindcss" in html
+        # Hidden SSE auto-connect target
+        assert 'id="hx-target"' in html
+        assert 'sse-connect="/_sse"' in html
+        # Body content is rendered inside the shell
+        assert "body content" in html
+
     def test_ui_page_per_page_title_override(self):
         """Per-page title overrides the UI default."""
         app = FastAPI()
