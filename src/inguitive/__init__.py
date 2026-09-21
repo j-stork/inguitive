@@ -28,7 +28,6 @@ from inguitive.fastapi import (
 from inguitive.htmx import update_components
 from inguitive.session import (
     MemoryBackend,
-    Session,
     SessionBackend,
     get_session_backend,
     get_session_id,
@@ -72,7 +71,6 @@ __all__ = [
     "UI",
     "SessionMiddleware",
     # Session
-    "Session",
     "SessionBackend",
     "MemoryBackend",
     "set_session_backend",
