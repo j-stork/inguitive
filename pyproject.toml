@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "inguitive"
 version = "1.0.1"
-description = "A pure Python web framework combining intuitive syntax with HTMX for partial page reloads and Tailwind CSS for styling"
+description = "A pure Python UI layer for FastAPI: compose pages from Python components instead of templates, with reactive state and SSE-driven partial updates via HTMX"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [
     {name = "Johannes Stork", email = "info@stork-software.de"}
 ]
-keywords = ["web", "framework", "htmx", "tailwind", "fastapi", "python"]
+keywords = ["web", "ui", "htmx", "tailwind", "fastapi", "python", "components", "sse"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

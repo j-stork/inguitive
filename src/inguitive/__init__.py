@@ -1,5 +1,7 @@
 """
-inguitive - A pure Python web framework combining intuitive syntax with HTMX and Tailwind CSS.
+inguitive - A pure Python UI layer for FastAPI: compose pages from Python
+components instead of templates, with reactive state and SSE-driven partial
+updates via HTMX.
 """
 
 from inguitive.components import (
