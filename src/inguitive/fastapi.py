@@ -639,12 +639,49 @@ class UI:
                 session_cookie_httponly=session_cookie_httponly,
                 cleanup_interval=session_cleanup_interval,
             )
+        else:
+            # User opted out — they must add SessionMiddleware themselves.
+            # Register a startup check that inspects app.user_middleware and
+            # raises a loud, actionable error if they forgot.  (When the user
+            # uses a `lifespan` context manager instead of `on_event`, this
+            # handler is skipped — the request-time _require_session_context()
+            # backstop in ui.page()/trigger routes still catches it.)
+            self._register_session_middleware_check(app)
 
         # Static files mount
         self._mount_static(app)
 
         # SSE endpoint
         self._register_sse_route(app)
+
+    def _register_session_middleware_check(self, app: FastAPI) -> None:
+        """Register a startup handler that verifies SessionMiddleware is present.
+
+        Only used when ``configure_session_middleware=False``.  By startup
+        time, all ``add_middleware`` calls have happened, so we can inspect
+        ``app.user_middleware`` and fail fast if the user forgot.
+
+        Uses ``on_event("startup")`` rather than a ``lifespan`` context manager
+        because ``lifespan`` is singular — setting one would override the
+        user's.  ``on_event`` is additive: multiple handlers coexist.
+        When the user uses a ``lifespan`` context manager instead of
+        ``on_event``, this handler is skipped — the request-time
+        ``_require_session_context()`` backstop in ``ui.page()`` and trigger
+        routes still catches it.
+        """
+
+        @app.on_event("startup")
+        def _check_session_middleware() -> None:
+            has_it = any(
+                getattr(m, "cls", None) is SessionMiddleware
+                or (
+                    isinstance(getattr(m, "cls", None), type)
+                    and issubclass(m.cls, SessionMiddleware)
+                )
+                for m in app.user_middleware
+            )
+            if not has_it:
+                raise RuntimeError(_SESSION_MIDDLEWARE_MISSING_MSG)
 
     def _mount_static(self, app: FastAPI) -> None:
         """Mount ``/static`` serving user static/ then package static/."""

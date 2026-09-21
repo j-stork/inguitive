@@ -123,6 +123,32 @@ class TestUIConstruction:
         with pytest.raises(RuntimeError, match="SessionMiddleware"):
             client.post("/_trigger/my_action")
 
+    def test_ui_startup_check_raises_when_middleware_missing(self):
+        """Opt out + forgot: startup itself raises, before any request."""
+        import pytest
+
+        app = FastAPI()
+        ui = UI(app, configure_session_middleware=False)
+
+        with pytest.raises(RuntimeError, match="SessionMiddleware"):
+            with TestClient(app, raise_server_exceptions=True):
+                pass
+
+    def test_ui_startup_check_passes_when_middleware_added_after_opt_out(self):
+        """Opt out + did add: startup succeeds, pages work."""
+        app = FastAPI()
+        ui = UI(app, configure_session_middleware=False)
+        app.add_middleware(SessionMiddleware)
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hello")))
+
+        with TestClient(app) as client:
+            response = client.get("/")
+            assert response.status_code == 200
+            assert "Hello" in response.text
+
     def test_ui_page_renders_component_in_shell(self):
         """ui.page() renders the component inside the document shell."""
         app = FastAPI()
