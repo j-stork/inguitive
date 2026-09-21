@@ -1,8 +1,9 @@
 """Tests for session isolation in inguitive."""
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from inguitive import Button, Div, SessionState, Text, create_app, update_components
+from inguitive import Button, Div, SessionState, Text, UI, update_components
 
 # Import after setting up path
 from inguitive.examples.counter_app import app
@@ -69,20 +70,21 @@ class TestSessionIsolation:
         still exercises session isolation of a *second* per-session State
         distinct from the counter State tested above.
         """
-        theme_app = create_app()
+        theme_app = FastAPI()
+        theme_ui = UI(theme_app)
         theme_state = SessionState("light", "theme_state")
 
-        @theme_app.trigger_handler
+        @theme_ui.trigger_handler
         def toggle_theme():
             theme_state.set("dark" if theme_state.get() == "light" else "light")
             return update_components(*theme_state.listeners)
 
-        @theme_app.page("/")
+        @theme_app.get("/")
         def home():
             def bg() -> str:
                 return "bg-slate-900" if theme_state.get() == "dark" else "bg-slate-100"
 
-            return Div(
+            return theme_ui.page(Div(
                 Text(
                     lambda: theme_state.get(),
                     listen_to=theme_state,
@@ -91,7 +93,7 @@ class TestSessionIsolation:
                 Button("Toggle", trigger=toggle_theme),
                 id="theme-card",
                 css=lambda: f"min-h-screen flex items-center justify-center {bg()}",
-            )
+            ))
 
         # User 1 with fresh client
         client1 = TestClient(theme_app)

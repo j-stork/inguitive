@@ -15,7 +15,7 @@ import asyncio
 
 import pytest
 
-from inguitive import State, SessionState, create_app, push_update, session_context
+from inguitive import State, SessionState, UI, push_update, session_context
 from inguitive.session import (
     MemoryBackend,
     Session,
@@ -48,7 +48,11 @@ def clean_registries():
 
 @pytest.fixture
 def app():
-    return create_app(dev_mode=False)
+    from fastapi import FastAPI
+
+    ui_app = FastAPI()
+    UI(ui_app, dev_mode=False)
+    return ui_app
 
 
 # ---------------------------------------------------------------------------
@@ -608,7 +612,7 @@ def test_cleanup_works_after_backpressure():
 
 
 def test_sse_route_is_registered(app):
-    """create_app must register a GET /_sse route."""
+    """UI(app) must register a GET /_sse route."""
     paths = {route.path for route in app.routes}
     assert "/_sse" in paths
 

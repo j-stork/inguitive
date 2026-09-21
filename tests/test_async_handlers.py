@@ -1,8 +1,9 @@
 """Tests for async page and trigger handlers in inguitive."""
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from inguitive import Button, Div, SessionState, State, Text, create_app, update_components
+from inguitive import Button, Div, SessionState, State, Text, UI, update_components
 
 
 class TestAsyncPageHandlers:
@@ -10,11 +11,12 @@ class TestAsyncPageHandlers:
 
     def test_async_page_handler(self):
         """Test that async page handlers work correctly."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/async-page")
+        @app.get("/async-page")
         async def async_page():
-            return Div(Text("Async Page"))
+            return ui.page(Div(Text("Async Page")))
 
         client = TestClient(app)
         response = client.get("/async-page")
@@ -23,12 +25,13 @@ class TestAsyncPageHandlers:
 
     def test_async_page_handler_with_state(self):
         """Test that async page handlers can access and display state."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         message_state = State("Async Hello", "message_state")
 
-        @app.page("/async-state-page")
+        @app.get("/async-state-page")
         async def async_state_page():
-            return Div(Text(lambda: message_state.get()))
+            return ui.page(Div(Text(lambda: message_state.get())))
 
         client = TestClient(app)
         response = client.get("/async-state-page")
@@ -37,11 +40,12 @@ class TestAsyncPageHandlers:
 
     def test_async_page_handler_returns_component(self):
         """Test that async page handlers can return Component instances."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/async-component")
+        @app.get("/async-component")
         async def async_component_page():
-            return Div(Text("Async Component"), Button("Click me"))
+            return ui.page(Div(Text("Async Component"), Button("Click me")))
 
         client = TestClient(app)
         response = client.get("/async-component")
@@ -55,10 +59,11 @@ class TestAsyncTriggerHandlers:
 
     def test_async_trigger_handler_with_form_data(self):
         """Test that async trigger handlers can receive form_data."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         received = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         async def async_handle_form(form_data: dict):
             received.update(form_data)
             return "OK"
@@ -70,17 +75,18 @@ class TestAsyncTriggerHandlers:
 
     def test_async_trigger_handler_with_state(self):
         """Test that async trigger handlers can update state."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         counter_state = SessionState(0, "counter_state")
 
-        @app.page("/async-counter")
+        @app.get("/async-counter")
         def counter_page():
-            return Div(
+            return ui.page(Div(
                 Text(lambda: f"Count: {counter_state.get()}", listen_to=counter_state),
                 id="async-counter-display",
-            )
+            ))
 
-        @app.trigger_handler
+        @ui.trigger_handler
         async def async_increment():
             counter_state.set(counter_state.get() + 1)
             return update_components("async-counter-display")
@@ -100,10 +106,11 @@ class TestAsyncTriggerHandlers:
 
     def test_async_trigger_handler_with_request(self):
         """Test that async trigger handlers can receive request parameter."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         received_path = None
 
-        @app.trigger_handler
+        @ui.trigger_handler
         async def async_handler_with_request(request):
             nonlocal received_path
             received_path = request.url.path
@@ -116,10 +123,11 @@ class TestAsyncTriggerHandlers:
 
     def test_async_trigger_handler_complex_form_data(self):
         """Test async trigger handler with nested/structured form data."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         received = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         async def async_complex_handler(form_data: dict):
             received.update(form_data)
             return "OK"
@@ -146,21 +154,22 @@ class TestAsyncIntegration:
 
     def test_multiple_async_handlers(self):
         """Test that multiple async handlers can be registered on the same app."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/async-page-1")
+        @app.get("/async-page-1")
         async def async_page_1():
-            return Div(Text("Async Page 1"))
+            return ui.page(Div(Text("Async Page 1")))
 
-        @app.page("/async-page-2")
+        @app.get("/async-page-2")
         async def async_page_2():
-            return Div(Text("Async Page 2"))
+            return ui.page(Div(Text("Async Page 2")))
 
-        @app.trigger_handler
+        @ui.trigger_handler
         async def async_trigger_1():
             return "OK"
 
-        @app.trigger_handler
+        @ui.trigger_handler
         async def async_trigger_2():
             return "OK"
 
@@ -184,21 +193,22 @@ class TestAsyncIntegration:
 
     def test_mixed_sync_and_async_handlers(self):
         """Test that sync and async handlers can coexist on the same app."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
 
-        @app.page("/sync-page")
+        @app.get("/sync-page")
         def sync_page():
-            return Div(Text("Sync Page"))
+            return ui.page(Div(Text("Sync Page")))
 
-        @app.page("/async-page")
+        @app.get("/async-page")
         async def async_page():
-            return Div(Text("Async Page"))
+            return ui.page(Div(Text("Async Page")))
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def sync_trigger():
             return "OK"
 
-        @app.trigger_handler
+        @ui.trigger_handler
         async def async_trigger():
             return "OK"
 
