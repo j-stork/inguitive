@@ -1,7 +1,7 @@
 """
 TemplateComponent example using inguitive.
 
-Run with: uvicorn inguitive.examples.template_app:app --reload
+Run with: uvicorn examples.template_app:app --reload
 
 Rendering a Jinja2 Template as a Component
 ------------------------------------------
@@ -112,4 +112,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.template_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.template_app:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,10 +1,10 @@
 """
 Session backends example using inguitive.
 
-Run with: uvicorn inguitive.examples.session_backend_app:app --reload
+Run with: uvicorn examples.session_backend_app:app --reload
       (MemoryBackend, default)
       SESSION_BACKEND=redis REDIS_URL=redis://localhost:6379 \\
-          uvicorn inguitive.examples.session_backend_app:app --reload
+          uvicorn examples.session_backend_app:app --reload
       (RedisBackend)
 
 Switching Session Backends
@@ -167,4 +167,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.session_backend_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.session_backend_app:app", host="0.0.0.0", port=8000, reload=True)

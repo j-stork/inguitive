@@ -1,28 +1,27 @@
 # Examples
 
-All examples live in the `src/inguitive/examples/` directory of the
-repository. Each one focuses on a single feature and can be run directly
-with `uvicorn`. (There is no `examples` package on `sys.path`; use the
-module path shown in each section.)
+All examples live in the `examples/` directory at the repository root. Each
+one focuses on a single feature and can be run directly with `uvicorn` from
+the repo root.
 
 ## Counter app
 
-**File:** `src/inguitive/examples/counter_app.py`
+**File:** `examples/counter_app.py`
 
 Per-session reactive counter. Demonstrates:
 
-- `State` with `get()` / `set()` and `listen_to` for automatic re-rendering
+- `SessionState` with `get()` / `set()` and `listen_to` for automatic re-rendering
 - Per-session isolation (two windows keep independent counts)
 - Dynamic attributes via callables (`css` and `text` re-evaluated each render)
 - The explicit-response form `return update_components(*state.listeners)`
 
 ```bash
-uvicorn inguitive.examples.counter_app:app --reload
+uvicorn examples.counter_app:app --reload
 ```
 
 ## Trigger arguments app
 
-**File:** `src/inguitive/examples/trigger_args_app.py`
+**File:** `examples/trigger_args_app.py`
 
 Passing data to a handler without a form. Demonstrates:
 
@@ -31,12 +30,12 @@ Passing data to a handler without a form. Demonstrates:
 - One handler reused by several buttons that differ only in their `trigger_args`
 
 ```bash
-uvicorn inguitive.examples.trigger_args_app:app --reload
+uvicorn examples.trigger_args_app:app --reload
 ```
 
 ## Auto-propagation app
 
-**File:** `src/inguitive/examples/auto_propagation_app.py`
+**File:** `examples/auto_propagation_app.py`
 
 Letting the framework build the OOB response. Demonstrates:
 
@@ -45,40 +44,26 @@ Letting the framework build the OOB response. Demonstrates:
 - The no-return form as the counterpart to the explicit `update_components(...)` used elsewhere
 
 ```bash
-uvicorn inguitive.examples.auto_propagation_app:app --reload
+uvicorn examples.auto_propagation_app:app --reload
 ```
 
 ## Form app
 
-**File:** `src/inguitive/examples/form_app.py`
+**File:** `examples/form_app.py`
 
-Form components and `form_data`. Demonstrates:
+Form components and `get_form_data`. Demonstrates:
 
 - `Form` with `Input`, `Textarea`, `Select`, `Checkbox`, `Radio`, and `Label`
-- Auto-set `name` attributes (matching the component `id`) so `form_data` keys line up
-- A trigger handler receiving submitted values via the `form_data` parameter
+- Auto-set `name` attributes (matching the component `id`) so form fields line up
+- A trigger handler receiving submitted values via `get_form_data(request)`
 
 ```bash
-uvicorn inguitive.examples.form_app:app --reload
-```
-
-## Validation app
-
-**File:** `src/inguitive/examples/validation_app.py`
-
-Declarative form validation. Demonstrates:
-
-- `FormSchema` with typed, validated `field` declarations
-- The `@validate_form` decorator and built-in validators
-- `ValidationError` and the `raise_on_invalid` flag controlling raise-vs-pass-errors
-
-```bash
-uvicorn inguitive.examples.validation_app:app --reload
+uvicorn examples.form_app:app --reload
 ```
 
 ## Data table app
 
-**File:** `src/inguitive/examples/data_table_app.py`
+**File:** `examples/data_table_app.py`
 
 The `DataTable` component. Demonstrates:
 
@@ -88,12 +73,12 @@ The `DataTable` component. Demonstrates:
 - Multi-state `listen_to` so one table reacts to several `State` objects
 
 ```bash
-uvicorn inguitive.examples.data_table_app:app --reload
+uvicorn examples.data_table_app:app --reload
 ```
 
 ## Icon app
 
-**File:** `src/inguitive/examples/icon_app.py`
+**File:** `examples/icon_app.py`
 
 The `Icon` component. Demonstrates:
 
@@ -102,40 +87,40 @@ The `Icon` component. Demonstrates:
 - Class rewriting so the `css` you pass applies to the SVG
 
 ```bash
-uvicorn inguitive.examples.icon_app:app --reload
+uvicorn examples.icon_app:app --reload
 ```
 
 ## Routing app
 
-**File:** `src/inguitive/examples/routing_app.py`
+**File:** `examples/routing_app.py`
 
-Multi-page routing. Demonstrates:
+Multi-page routing with FastAPI. Demonstrates:
 
-- Multiple pages registered with `@app.page("/path")`
-- `redirect()` for URL-level navigation (HTTP 302, address bar updates)
-- `Link` for anchor-based navigation between routes
+- Multiple pages registered with `@app.get("/path")` returning `ui.page(...)`
+- FastAPI's native `RedirectResponse` for URL-level navigation (HTTP 302, address bar updates)
+- `Anchor` for anchor-based navigation between routes
 
 ```bash
-uvicorn inguitive.examples.routing_app:app --reload
+uvicorn examples.routing_app:app --reload
 ```
 
 ## URL parameters app
 
-**File:** `src/inguitive/examples/url_params_app.py`
+**File:** `examples/url_params_app.py`
 
-Dynamic path segments `<name:type>`. Demonstrates:
+Dynamic path segments with FastAPI. Demonstrates:
 
-- `int`, `str` (default), and `path` segment types with type coercion
-- Automatic HTTP 400 on type mismatch, with no handler-level validation code
+- FastAPI native path parameters with type annotations (`int`, `str`, `path`)
+- Automatic HTTP 422 on type mismatch, with no handler-level validation code
 - The parsed, typed value passed to the page handler as a keyword argument
 
 ```bash
-uvicorn inguitive.examples.url_params_app:app --reload
+uvicorn examples.url_params_app:app --reload
 ```
 
 ## SSE per-session app
 
-**File:** `src/inguitive/examples/sse_session_app.py`
+**File:** `examples/sse_session_app.py`
 
 Server-Sent Events with per-user push. Demonstrates:
 
@@ -145,12 +130,12 @@ Server-Sent Events with per-user push. Demonstrates:
 - An idempotency guard (live `asyncio.Task` in process memory) preventing duplicate loops
 
 ```bash
-uvicorn inguitive.examples.sse_session_app:app --reload
+uvicorn examples.sse_session_app:app --reload
 ```
 
 ## SSE global app
 
-**File:** `src/inguitive/examples/sse_global_app.py`
+**File:** `examples/sse_global_app.py`
 
 Server-Sent Events as a global broadcast. Demonstrates:
 
@@ -159,12 +144,12 @@ Server-Sent Events as a global broadcast. Demonstrates:
 - No `session_context` or idempotency guard needed (single writer)
 
 ```bash
-uvicorn inguitive.examples.sse_global_app:app --reload
+uvicorn examples.sse_global_app:app --reload
 ```
 
 ## Session backends app
 
-**File:** `src/inguitive/examples/session_backend_app.py`
+**File:** `examples/session_backend_app.py`
 
 Swapping session storage backends. Demonstrates:
 
@@ -173,14 +158,14 @@ Swapping session storage backends. Demonstrates:
 - Identical app code regardless of the backend in use
 
 ```bash
-uvicorn inguitive.examples.session_backend_app:app --reload
+uvicorn examples.session_backend_app:app --reload
 SESSION_BACKEND=redis REDIS_URL=redis://localhost:6379 \
-    uvicorn inguitive.examples.session_backend_app:app --reload
+    uvicorn examples.session_backend_app:app --reload
 ```
 
 ## nl2br app
 
-**File:** `src/inguitive/examples/nl2br_app.py`
+**File:** `examples/nl2br_app.py`
 
 The `nl2br` utility. Demonstrates:
 
@@ -189,12 +174,12 @@ The `nl2br` utility. Demonstrates:
 - Returning `markupsafe.Markup` so the framework emits the result as HTML without re-escaping the `<br>` tags
 
 ```bash
-uvicorn inguitive.examples.nl2br_app:app --reload
+uvicorn examples.nl2br_app:app --reload
 ```
 
 ## Template app
 
-**File:** `src/inguitive/examples/template_app.py`
+**File:** `examples/template_app.py`
 
 `TemplateComponent` with Jinja2. Demonstrates:
 
@@ -203,5 +188,5 @@ uvicorn inguitive.examples.nl2br_app:app --reload
 - Autoescaping on, matching the safety of the built-in components
 
 ```bash
-uvicorn inguitive.examples.template_app:app --reload
+uvicorn examples.template_app:app --reload
 ```

@@ -1,7 +1,7 @@
 """
 Trigger arguments example using inguitive.
 
-Run with: uvicorn inguitive.examples.trigger_args_app:app --reload
+Run with: uvicorn examples.trigger_args_app:app --reload
 
 Passing Data via trigger_args
 -----------------------------
@@ -144,4 +144,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.trigger_args_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.trigger_args_app:app", host="0.0.0.0", port=8000, reload=True)

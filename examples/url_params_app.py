@@ -1,7 +1,7 @@
 """
 URL path parameters example using inguitive.
 
-Run with: uvicorn inguitive.examples.url_params_app:app --reload
+Run with: uvicorn examples.url_params_app:app --reload
 
 Dynamic Path Segments: FastAPI {name} + type annotations
 --------------------------------------------------------
@@ -107,4 +107,4 @@ def files(subpath: str):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.url_params_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.url_params_app:app", host="0.0.0.0", port=8000, reload=True)

@@ -1,7 +1,7 @@
 """
 Server-Sent Events (SSE) example application using inguitive.
 
-Run with: uvicorn inguitive.examples.sse_global_app:app --reload
+Run with: uvicorn examples.sse_global_app:app --reload
 
 Global Broadcast Counter
 ------------------------
@@ -117,4 +117,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.sse_global_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.sse_global_app:app", host="0.0.0.0", port=8000, reload=True)

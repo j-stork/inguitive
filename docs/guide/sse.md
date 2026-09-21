@@ -88,7 +88,7 @@ async def _tick():
         await asyncio.sleep(1)
 ```
 
-See `src/inguitive/examples/sse_global_app.py` for a runnable version.
+See `examples/sse_global_app.py` for a runnable version.
 
 ## Pushing to a single session
 
@@ -149,7 +149,7 @@ def home():
     )
 ```
 
-See `src/inguitive/examples/sse_session_app.py` for a runnable version with an
+See `examples/sse_session_app.py` for a runnable version with an
 idempotency guard against double-clicks.
 
 ## `session_context`: binding a session outside a request

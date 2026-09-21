@@ -1,7 +1,7 @@
 """
 nl2br utility example using inguitive.
 
-Run with: uvicorn inguitive.examples.nl2br_app:app --reload
+Run with: uvicorn examples.nl2br_app:app --reload
 
 Newline-to-<br> Conversion (safe by default)
 --------------------------------------------
@@ -170,4 +170,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.nl2br_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.nl2br_app:app", host="0.0.0.0", port=8000, reload=True)

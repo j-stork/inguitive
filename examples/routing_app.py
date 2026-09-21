@@ -1,7 +1,7 @@
 """
 Multi-page routing example using inguitive.
 
-Run with: uvicorn inguitive.examples.routing_app:app --reload
+Run with: uvicorn examples.routing_app:app --reload
 
 Routing: @app.get + ui.page, RedirectResponse, and Anchor
 ---------------------------------------------------------
@@ -99,4 +99,4 @@ def about():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.routing_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.routing_app:app", host="0.0.0.0", port=8000, reload=True)

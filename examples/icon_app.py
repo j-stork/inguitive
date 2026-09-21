@@ -1,7 +1,7 @@
 """
 Icon example using inguitive.
 
-Run with: uvicorn inguitive.examples.icon_app:app --reload
+Run with: uvicorn examples.icon_app:app --reload
 
 The Icon Component
 -----------------
@@ -101,4 +101,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.icon_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.icon_app:app", host="0.0.0.0", port=8000, reload=True)

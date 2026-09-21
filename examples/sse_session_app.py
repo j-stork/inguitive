@@ -1,7 +1,7 @@
 """
 Server-Sent Events (SSE) example application using inguitive.
 
-Run with: uvicorn inguitive.examples.sse_session_app:app --reload
+Run with: uvicorn examples.sse_session_app:app --reload
 
 Per-User Counter via SessionState
 ---------------------------------
@@ -179,4 +179,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.sse_session_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.sse_session_app:app", host="0.0.0.0", port=8000, reload=True)

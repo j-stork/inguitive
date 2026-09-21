@@ -1,7 +1,7 @@
 """
 Auto-propagation example using inguitive.
 
-Run with: uvicorn inguitive.examples.auto_propagation_app:app --reload
+Run with: uvicorn examples.auto_propagation_app:app --reload
 
 Letting the Framework Build the Response
 -----------------------------------------
@@ -84,4 +84,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.auto_propagation_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.auto_propagation_app:app", host="0.0.0.0", port=8000, reload=True)

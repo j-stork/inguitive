@@ -1,7 +1,7 @@
 """
 DataTable example using inguitive.
 
-Run with: uvicorn inguitive.examples.data_table_app:app --reload
+Run with: uvicorn examples.data_table_app:app --reload
 
 The DataTable Component
 -----------------------
@@ -151,4 +151,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.data_table_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.data_table_app:app", host="0.0.0.0", port=8000, reload=True)

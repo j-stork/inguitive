@@ -168,13 +168,12 @@ def gather_package_documentation() -> str:
                 output_lines.append(f"**Location:**\n\n`{template_file}`\n")
 
     # List example applications as an index, not embedded source. The apps
-    # ship inside the package (see [tool.setuptools.packages.find] in
-    # pyproject.toml), so an LLM with file access can read any of them on
-    # demand via the listed path. Embedding ~1500 lines of source would
-    # bloat the index and crowd the context window with content the reader
-    # may never need; a compact, descriptive map lets the reader decide
-    # which file to open.
-    examples_path = inguitive_src_path / "examples"
+    # live at the repo root in ``examples/`` (outside the installed package),
+    # so an LLM with file access can read any of them on demand via the
+    # listed path. Embedding ~1500 lines of source would bloat the index and
+    # crowd the context window with content the reader may never need; a
+    # compact, descriptive map lets the reader decide which file to open.
+    examples_path = inguitive_src_path.parent.parent / "examples"
     if examples_path.is_dir():
         _append_examples_section(output_lines, examples_path)
 
@@ -218,7 +217,7 @@ def _append_examples_section(output_lines: list[str], examples_path: Path) -> No
 
     Args:
         output_lines: The running list of Markdown lines to append to.
-        examples_path: Path to the ``inguitive/examples/`` directory.
+        examples_path: Path to the repo-root ``examples/`` directory.
     """
     support_files = {"css.py", "svg.py"}
     all_files = sorted(p for p in examples_path.glob("*.py") if p.name != "__init__.py")

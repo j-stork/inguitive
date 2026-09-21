@@ -1,7 +1,7 @@
 """
 Form components example using inguitive.
 
-Run with: uvicorn inguitive.examples.form_app:app --reload
+Run with: uvicorn examples.form_app:app --reload
 
 Form Components and form_data
 -----------------------------
@@ -194,4 +194,4 @@ def home():
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("inguitive.examples.form_app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("examples.form_app:app", host="0.0.0.0", port=8000, reload=True)
