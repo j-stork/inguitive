@@ -179,12 +179,15 @@ class TestStateWarnings:
             state.set(4)
             assert len(caplog.records) == 1
 
-    def test_create_app_dev_mode_false_disables_warnings(self, caplog):
-        """Test that create_app(dev_mode=False) disables warnings."""
-        from inguitive.fastapi import create_app
+    def test_ui_dev_mode_false_disables_warnings(self, caplog):
+        """Test that UI(app, dev_mode=False) disables warnings."""
+        from fastapi import FastAPI
 
-        # First create app with dev_mode=True (default)
-        app1 = create_app(dev_mode=True)  # noqa: F841
+        from inguitive import UI
+
+        # First create UI with dev_mode=True (default)
+        app1 = FastAPI()
+        ui1 = UI(app1, dev_mode=True)  # noqa: F841
 
         # Verify warnings are enabled
         state1 = SessionState(0, "test_state_1")
@@ -193,8 +196,9 @@ class TestStateWarnings:
             state1.set(1)
             assert len(caplog.records) == 1
 
-        # Now create app with dev_mode=False
-        app2 = create_app(dev_mode=False)  # noqa: F841
+        # Now create UI with dev_mode=False
+        app2 = FastAPI()
+        ui2 = UI(app2, dev_mode=False)  # noqa: F841
 
         # Verify warnings are disabled
         state2 = SessionState(0, "test_state_2")
