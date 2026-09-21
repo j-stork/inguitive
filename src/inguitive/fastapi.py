@@ -672,8 +672,14 @@ class UI:
 
         @app.on_event("startup")
         def _check_session_middleware() -> None:
+            # Check for SessionMiddleware in app.user_middleware.
+            # This handles both:
+            # 1. Direct SessionMiddleware instances (cls is the class itself)
+            # 2. Subclasses of SessionMiddleware (cls is a type, check issubclass)
             has_it = any(
+                # Case 1: Direct SessionMiddleware instance
                 getattr(m, "cls", None) is SessionMiddleware
+                # Case 2: Subclass of SessionMiddleware
                 or (
                     isinstance(getattr(m, "cls", None), type)
                     and issubclass(m.cls, SessionMiddleware)
