@@ -456,13 +456,10 @@ class UI:
             # 1. Direct SessionMiddleware instances (cls is the class itself)
             # 2. Subclasses of SessionMiddleware (cls is a type, check issubclass)
             has_it = any(
-                # Case 1: Direct SessionMiddleware instance
-                getattr(m, "cls", None) is SessionMiddleware
-                # Case 2: Subclass of SessionMiddleware
-                or (
-                    isinstance(getattr(m, "cls", None), type)
-                    and issubclass(m.cls, SessionMiddleware)
-                )
+                # m.cls may be a type or a _MiddlewareFactory callable; narrow
+                # via a local so isinstance() carries through to issubclass().
+                (cls := m.cls) is SessionMiddleware
+                or (isinstance(cls, type) and issubclass(cls, SessionMiddleware))
                 for m in app.user_middleware
             )
             if not has_it:
