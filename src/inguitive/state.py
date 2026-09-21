@@ -30,6 +30,12 @@ _global_state_values: dict[str, Any] = {}
 # so the trigger handler can read .listeners directly without a name lookup.
 _mutated_states = contextvars.ContextVar("mutated_states", default=set())
 
+# Context var that is True while inside a trigger handler's _track_mutations()
+# scope. Lets State.set() / SessionState.set() distinguish "called from a
+# trigger handler" (auto-propagation handles the push) from "called from a
+# background task" (must schedule the SSE push ourselves).
+_in_trigger_handler = contextvars.ContextVar("in_trigger_handler", default=False)
+
 # Module-level flag to control dev mode warnings
 _dev_mode_warnings_enabled = False
 
@@ -55,12 +61,17 @@ def _track_mutations():
 
     Use this to wrap trigger handler execution. All State.set() calls within
     the context will be recorded and can be retrieved via get_mutated_states().
+    Also sets ``_in_trigger_handler`` so ``State.set()`` / ``SessionState.set()``
+    know the auto-propagation path will handle the OOB push and they should
+    not schedule their own SSE push.
     """
-    token = _mutated_states.set(set())
+    token_mutations = _mutated_states.set(set())
+    token_in_handler = _in_trigger_handler.set(True)
     try:
         yield
     finally:
-        _mutated_states.reset(token)
+        _mutated_states.reset(token_mutations)
+        _in_trigger_handler.reset(token_in_handler)
 
 
 def _get_mutated_states() -> set:
@@ -101,26 +112,30 @@ class State(Generic[_T]):
         return _global_state_values.get(self._key, self._initial_value)  # type: ignore[no-any-return]
 
     def set(self, new_value: _T) -> None:
-        """Write a new global value and track the mutation.
+        """Write a new global value and broadcast the update.
 
-        Inside a request, the mutation is tracked for auto-propagation
-        via the trigger handler's OOB response. Outside a request
-        (background task), an SSE push is scheduled to broadcast the
-        update to every connected session.
+        A global ``State`` is shared across all sessions. When mutated, the
+        update is pushed to every connected session's SSE queues (broadcast).
+        Inside a trigger handler, the mutation is also tracked so the
+        trigger route's auto-propagation renders the OOB update for the
+        requesting session immediately in the HTTP response; the broadcast
+        then delivers the same update to all other (and the requesting)
+        sessions via SSE.
         """
         _global_state_values[self._key] = new_value
-        session = _get_current_session_from_context()
-        if session is None:
-            _schedule_sse_push(self._key)
-            return
-        _mutated_states.get().add(self)
-        session.mark_dirty()
-        if _dev_mode_warnings_enabled and not self.listeners:
-            logger.warning(
-                "State '%s' was mutated but no component is listening. "
-                "This may indicate a missing 'listen_to' parameter.",
-                self.name or self._key,
-            )
+        if _in_trigger_handler.get():
+            session = _get_current_session_from_context()
+            if session is not None:
+                _mutated_states.get().add(self)
+                session.mark_dirty()
+            if _dev_mode_warnings_enabled and not self.listeners:
+                logger.warning(
+                    "State '%s' was mutated but no component is listening. "
+                    "This may indicate a missing 'listen_to' parameter.",
+                    self.name or self._key,
+                )
+        # Always broadcast a global State mutation to every connected session.
+        _schedule_sse_push(self._key)
 
     @property
     def listeners(self) -> set[str]:  # type: ignore[valid-type]
@@ -167,11 +182,16 @@ class SessionState(State[_T]):
         return _global_state_values.get(self._key, self._initial_value)  # type: ignore[no-any-return]
 
     def set(self, new_value: _T) -> None:
-        """Write a new session-scoped value and track the mutation.
+        """Write a new session-scoped value and push to the current session.
 
-        Inside a request, the value is written to the session's isolated
-        data registry. Outside a request (background task), the value
-        is stored as a global fallback and an SSE push is scheduled.
+        Inside a trigger handler, the value is written to the session's
+        isolated data registry and tracked for auto-propagation via the
+        trigger route's OOB response (current session only). Outside a
+        trigger handler (background task with a session bound via
+        contextvars), the value is written and an SSE push is scheduled
+        to the current session's queues only — not a broadcast. When no
+        session is bound at all, the value is stored as a global fallback
+        and a broadcast is scheduled (edge case).
         """
         session = _get_current_session_from_context()
         if session is None:
@@ -179,8 +199,12 @@ class SessionState(State[_T]):
             _schedule_sse_push(self._key)
             return
         session.data_registry[self._key] = new_value
-        _mutated_states.get().add(self)
         session.mark_dirty()
+        if _in_trigger_handler.get():
+            _mutated_states.get().add(self)
+        else:
+            # Background task with a session bound: push to this session only.
+            _schedule_sse_push_for_session(self._key, session.session_id)
         if _dev_mode_warnings_enabled and not self.listeners:
             logger.warning(
                 "State '%s' was mutated but no component is listening. "
@@ -209,6 +233,62 @@ def _schedule_sse_push(state_key: str) -> None:
         loop.create_task(_push_sse_for_state(state_key))
     except RuntimeError:
         pass  # No running event loop — SSE push is not possible.
+
+
+def _schedule_sse_push_for_session(state_key: str, session_id: str) -> None:
+    """Schedule an async SSE push to a single session's queues.
+
+    Like :func:`_schedule_sse_push` but targets only one session (for
+    ``SessionState.set()`` from a background task). No-op when there is no
+    running event loop.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(_push_sse_for_session_state(state_key, session_id))
+    except RuntimeError:
+        pass  # No running event loop — SSE push is not possible.
+
+
+async def _push_sse_for_session_state(state_key: str, session_id: str) -> None:
+    """Push OOB HTML for *state_key* to a single session's SSE queues.
+
+    Same rendering logic as :func:`_push_sse_for_state` but limited to one
+    session — used by ``SessionState.set()`` from a background task so the
+    update reaches only that session's open tabs, not every connected session.
+    """
+    from inguitive.htmx import update_components
+    from inguitive.session import (
+        _hydrate_component_registry,
+        _get_sse_queues,
+        _put_bounded,
+        _set_current_session,
+        get_session_backend,
+    )
+
+    queues = _get_sse_queues(session_id)
+    if not queues:
+        return
+
+    backend = get_session_backend()
+    session = await backend.get_session(session_id)
+    if session is None:
+        return
+
+    _hydrate_component_registry(session)
+
+    listeners_key = f"{_LISTENERS_PREFIX}{state_key}"
+    listeners: set[str] = set(session.data_registry.get(listeners_key, set()))
+    if not listeners:
+        return
+
+    def _render(s=session, ids=listeners) -> str:
+        _set_current_session(s)
+        return update_components(*ids)
+
+    html = contextvars.copy_context().run(_render)
+    if html:
+        for queue in set(queues):
+            _put_bounded(queue, html)
 
 
 async def _push_sse_for_state(state_key: str) -> None:
