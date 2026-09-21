@@ -172,11 +172,6 @@ _session_backend: SessionBackend | None = None
 # Context variable for current Session object (for direct sync access)
 _current_session: ContextVar[Session | None] = ContextVar("current_session", default=None)
 
-# Tracks whether a session was explicitly bound by SessionMiddleware or
-# session_context — as opposed to being absent entirely.  Used by
-# _require_session_context() to detect a missing SessionMiddleware.
-_session_bound: ContextVar[bool] = ContextVar("session_bound", default=False)
-
 
 def get_session_backend() -> SessionBackend:
     """Get the configured session backend. Defaults to MemoryBackend."""
@@ -204,24 +199,13 @@ def _get_current_session_from_context() -> Session | None:
 
 
 def _set_current_session(session: Session) -> None:
-    """Set the current session for this request/context.
-
-    Marks the session as explicitly bound so _require_session_context() can
-    distinguish middleware-bound sessions from auto-created ones.
-    """
+    """Set the current session for this request/context."""
     _current_session.set(session)
-    _session_bound.set(True)
 
 
 def _clear_current_session() -> None:
     """Clear the current session from context."""
     _current_session.set(None)
-    _session_bound.set(False)
-
-
-def _is_session_bound() -> bool:
-    """Return True if a session was explicitly bound by middleware or session_context."""
-    return _session_bound.get()
 
 
 _SESSION_MIDDLEWARE_MISSING_MSG = (
@@ -238,30 +222,14 @@ _SESSION_MIDDLEWARE_MISSING_MSG = (
 )
 
 
-def _require_session_context() -> None:
-    """Raise a loud, actionable error if no session is bound to the context.
-
-    Fires when SessionMiddleware has not run for this request — i.e. the user
-    set ``configure_session_middleware=False`` on ``UI(...)`` and forgot to
-    ``app.add_middleware(SessionMiddleware)`` themselves.  Without a bound
-    session, SessionState, SSE, and OOB re-rendering silently degrade; this
-    turns that silent failure into an immediate, explained error.
-
-    Checks ``_is_session_bound()`` rather than just looking for a Session
-    object, because components construct before ``ui.page()`` is called and
-    a Session object alone doesn't prove the middleware ran.
-    """
-    if not _is_session_bound():
-        raise RuntimeError(_SESSION_MIDDLEWARE_MISSING_MSG)
-
-
 def _require_current_session() -> Session:
     """Return the current session, or raise if none is bound.
 
     Used by the registry helpers (:func:`_get_component_registry`,
-    :func:`_get_state_registry`, :func:`_get_data_registry`) so that
-    component construction fails fast with the actionable error when no
-    session is bound, rather than auto-creating a phantom session.
+    :func:`_get_state_registry`, :func:`_get_data_registry`) and by the
+    route entry points (``ui.page()``, trigger routes, SSE route) to
+    fail fast with the actionable error when no session is bound — i.e.
+    when SessionMiddleware has not run for this request.
     """
     session = _get_current_session_from_context()
     if session is None:

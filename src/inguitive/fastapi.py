@@ -29,10 +29,9 @@ from inguitive.session import (
     _get_current_session_from_context,
     _get_sse_queues,
     _hydrate_component_registry,
-    _is_session_bound,
     _put_bounded,
     _register_sse_connection,
-    _require_session_context,
+    _require_current_session,
     _SESSION_MIDDLEWARE_MISSING_MSG,
     _set_current_session,
     _unregister_sse_connection,
@@ -198,7 +197,7 @@ def _register_page_route(
     # Path is passed directly to FastAPI, which handles {param} syntax natively.
     @app.get(path, response_class=HTMLResponse)
     async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon, ph=page_head):
-        _require_session_context()
+        _require_current_session()
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
         needs_form_data = "form_data" in sig.parameters
@@ -266,7 +265,7 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
 
     @app.post(f"/_trigger/{trigger_name.lstrip('/')}", response_class=HTMLResponse)
     async def route_wrapper(request: Request, h=handler, tn=trigger_name):
-        _require_session_context()
+        _require_current_session()
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
         needs_form_data = "form_data" in sig.parameters
@@ -554,7 +553,7 @@ class UI:
         ``SessionMiddleware`` yourself (e.g. to control middleware ordering
         or swap the session source).  When opted out, inguitive raises a
         loud, actionable error on the first request if the middleware is
-        missing — see :func:`_require_session_context`.
+        missing — see :func:`_require_current_session`.
 
         Args:
             app: The user's FastAPI application instance.
@@ -614,7 +613,7 @@ class UI:
             # Register a startup check that inspects app.user_middleware and
             # raises a loud, actionable error if they forgot.  (When the user
             # uses a `lifespan` context manager instead of `on_event`, this
-            # handler is skipped — the request-time _require_session_context()
+            # handler is skipped — the request-time _require_current_session()
             # backstop in ui.page()/trigger routes still catches it.)
             self._register_session_middleware_check(app)
 
@@ -636,7 +635,7 @@ class UI:
         user's.  ``on_event`` is additive: multiple handlers coexist.
         When the user uses a ``lifespan`` context manager instead of
         ``on_event``, this handler is skipped — the request-time
-        ``_require_session_context()`` backstop in ``ui.page()`` and trigger
+        ``_require_current_session()`` backstop in ``ui.page()`` and trigger
         routes still catches it.
         """
 
@@ -705,9 +704,7 @@ class UI:
 
         @app.get("/_sse")
         async def _sse_route(request: Request):  # type: ignore[return-value]
-            _require_session_context()
-            session = _get_current_session_from_context()
-            assert session is not None  # _require_session_context guarantees this
+            session = _require_current_session()
 
             session_id = session.session_id
             queue = _register_sse_connection(session_id)
@@ -812,7 +809,7 @@ class UI:
                 page-level head content are included (UI-level first). When
                 True, only the page-level head content is used.
         """
-        _require_session_context()
+        _require_current_session()
 
         # Render the component to HTML.
         if hasattr(component, "render") and callable(component.render):
