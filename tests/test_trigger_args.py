@@ -1,8 +1,9 @@
 """Tests for get_trigger_args() functionality."""
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from inguitive import create_app, get_trigger_args
+from inguitive import UI, get_trigger_args
 
 
 class TestGetTriggerArgsBasic:
@@ -10,10 +11,11 @@ class TestGetTriggerArgsBasic:
 
     def test_trigger_args_accessed_via_get_trigger_args(self):
         """Test that trigger_args are accessible via get_trigger_args()."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         received_args = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def handler_with_trigger_args():
             received_args.update(get_trigger_args())
             return "OK"
@@ -27,10 +29,11 @@ class TestGetTriggerArgsBasic:
 
     def test_empty_trigger_args_returns_empty_dict(self):
         """Test that get_trigger_args() returns empty dict when no query params."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         received = None
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def handler_no_args():
             nonlocal received
             received = get_trigger_args()
@@ -47,10 +50,11 @@ class TestQueryParameterExtraction:
 
     def test_single_trigger_arg(self):
         """Test accessing a single trigger argument."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         result = None
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def single_arg_handler():
             nonlocal result
             result = get_trigger_args().get("key")
@@ -63,10 +67,11 @@ class TestQueryParameterExtraction:
 
     def test_multiple_trigger_args(self):
         """Test accessing multiple trigger arguments."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         result = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def multi_arg_handler():
             result.update(get_trigger_args())
             return "OK"
@@ -80,11 +85,12 @@ class TestQueryParameterExtraction:
 
     def test_trigger_args_with_post_form_data(self):
         """Test that trigger_args (query params) work alongside POST form data."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         trigger_result = {}
         form_result = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def mixed_handler(form_data: dict):
             trigger_result.update(get_trigger_args())
             form_result.update(form_data)
@@ -104,10 +110,11 @@ class TestContextIsolation:
 
     def test_trigger_args_context_isolation(self):
         """Test that trigger_args from one request don't affect another."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         results = []
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def isolation_handler():
             results.append(get_trigger_args().copy())
             return "OK"
@@ -130,10 +137,11 @@ class TestContextIsolation:
 
     def test_async_trigger_args_context_isolation(self):
         """Test context isolation with async handlers."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         results = []
 
-        @app.trigger_handler
+        @ui.trigger_handler
         async def async_isolation_handler():
             results.append(get_trigger_args().copy())
             return "OK"
@@ -156,11 +164,12 @@ class TestBackwardCompatibility:
 
     def test_trigger_args_and_form_data_coexist(self):
         """Test that get_trigger_args() works alongside form_data parameter."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         trigger_values = {}
         form_values = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def coexist_handler(form_data: dict):
             trigger_values.update(get_trigger_args())
             form_values.update(form_data)
@@ -176,10 +185,11 @@ class TestBackwardCompatibility:
 
     def test_form_data_pattern_still_works(self):
         """Test backward compatibility: form_data pattern continues to work."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         received = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def old_pattern_handler(form_data: dict):
             received.update(form_data)
             return "OK"
@@ -197,10 +207,11 @@ class TestEdgeCases:
 
     def test_trigger_args_with_special_characters(self):
         """Test that special characters in trigger_args are handled correctly."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         result = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def special_chars_handler():
             result.update(get_trigger_args())
             return "OK"
@@ -213,10 +224,11 @@ class TestEdgeCases:
 
     def test_trigger_args_with_various_types(self):
         """Test that trigger_args values are always strings (from URL params)."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         result = {}
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def types_handler():
             result.update(get_trigger_args())
             return "OK"
@@ -244,10 +256,11 @@ class TestComponentIntegration:
 
     def test_button_trigger_args_integration(self):
         """Test that Button component's trigger_args work with get_trigger_args()."""
-        app = create_app()
+        app = FastAPI()
+        ui = UI(app)
         received_column = None
 
-        @app.trigger_handler
+        @ui.trigger_handler
         def sort_handler():
             nonlocal received_column
             received_column = get_trigger_args().get("column")
