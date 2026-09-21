@@ -41,7 +41,7 @@ To test:
 
 from fastapi import FastAPI
 
-from inguitive import Button, DataTable, Div, State, UI
+from inguitive import UI, Button, DataTable, Div, State
 
 from .css import (
     BRAND_COLORS,

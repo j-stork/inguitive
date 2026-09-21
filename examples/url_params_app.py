@@ -38,7 +38,7 @@ To test:
 
 from fastapi import FastAPI
 
-from inguitive import Div, Anchor, Text, UI
+from inguitive import UI, Anchor, Div, Text
 
 from .css import BRAND_COLORS, LINK_CSS
 from .custom_components import BaseContainer, InguitiveLogo, Title

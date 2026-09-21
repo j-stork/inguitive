@@ -3,10 +3,9 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from inguitive import Button, Div, SessionState, Text, UI, update_components
-
 # Import after setting up path
 from examples.counter_app import app
+from inguitive import UI, Button, Div, SessionState, Text, update_components
 
 
 def get_client():

@@ -8,7 +8,7 @@ user-owned FastAPI app, and store defaults on ``app.state``.
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from inguitive import Div, Text, UI, SessionMiddleware
+from inguitive import UI, Div, SessionMiddleware, Text
 
 
 class TestUIConstruction:
@@ -17,7 +17,7 @@ class TestUIConstruction:
     def test_ui_stores_defaults_on_app_state(self):
         """Title, favicon, head, dev_mode land on app.state."""
         app = FastAPI()
-        ui = UI(app, title="My App", favicon="/favicon.ico", head="<meta>")
+        _ui = UI(app, title="My App", favicon="/favicon.ico", head="<meta>")
         assert app.state.title == "My App"
         assert app.state.favicon == "/favicon.ico"
         assert app.state.head == "<meta>"
@@ -26,20 +26,20 @@ class TestUIConstruction:
     def test_ui_default_title(self):
         """Default title is 'inguitive' when not specified."""
         app = FastAPI()
-        ui = UI(app)
+        _ui = UI(app)
         assert app.state.title == "inguitive"
 
     def test_ui_registers_sse_route(self):
         """The /_sse GET route is registered by the constructor."""
         app = FastAPI()
-        ui = UI(app)
+        _ui = UI(app)
         paths = {route.path for route in app.routes}
         assert "/_sse" in paths
 
     def test_ui_mounts_static(self):
         """The /static mount is present and returns 404 for missing files."""
         app = FastAPI()
-        ui = UI(app)
+        _ui = UI(app)
         client = TestClient(app)
         response = client.get("/static/does_not_exist.txt")
         assert response.status_code == 404
@@ -47,7 +47,7 @@ class TestUIConstruction:
     def test_ui_auto_adds_session_middleware_by_default(self):
         """By default UI adds SessionMiddleware automatically."""
         app = FastAPI()
-        ui = UI(app)
+        _ui = UI(app)
         middleware_types = {
             getattr(m.cls, "__name__", type(m).__name__) for m in app.user_middleware
         }
@@ -56,7 +56,7 @@ class TestUIConstruction:
     def test_ui_configure_session_middleware_false_does_not_add(self):
         """configure_session_middleware=False opts out of the auto-add."""
         app = FastAPI()
-        ui = UI(app, configure_session_middleware=False)
+        _ui = UI(app, configure_session_middleware=False)
         middleware_types = {
             getattr(m.cls, "__name__", type(m).__name__) for m in app.user_middleware
         }
@@ -128,7 +128,7 @@ class TestUIConstruction:
         import pytest
 
         app = FastAPI()
-        ui = UI(app, configure_session_middleware=False)
+        _ui = UI(app, configure_session_middleware=False)
 
         with pytest.raises(RuntimeError, match="SessionMiddleware"):
             with TestClient(app, raise_server_exceptions=True):

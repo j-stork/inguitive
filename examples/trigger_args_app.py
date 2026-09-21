@@ -36,11 +36,11 @@ To test:
 from fastapi import FastAPI
 
 from inguitive import (
+    UI,
     Button,
     Div,
     State,
     Text,
-    UI,
     get_trigger_args,
     update_components,
 )

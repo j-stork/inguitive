@@ -61,7 +61,7 @@ def test_global_state_set_broadcasts_to_all_sessions():
             _set_current_session(session)
             txt = Text(lambda: s.get(), id=f"txt-{sid}", listen_to=s)
             session.component_registry[f"txt-{sid}"] = txt
-            session.data_registry[f"__listeners__broadcast_state"] = {f"txt-{sid}"}
+            session.data_registry["__listeners__broadcast_state"] = {f"txt-{sid}"}
             from inguitive.session import get_session_backend
             await get_session_backend().save_session(session)
             _register_sse_connection(sid)
@@ -138,7 +138,7 @@ def test_session_state_set_pushes_to_current_session_only():
             _set_current_session(session)
             txt = Text(lambda: s.get(), id=f"txt-{sid}", listen_to=s)
             session.component_registry[f"txt-{sid}"] = txt
-            session.data_registry[f"__listeners__session_only_state"] = {f"txt-{sid}"}
+            session.data_registry["__listeners__session_only_state"] = {f"txt-{sid}"}
             session.data_registry["session_only_state"] = 0
             from inguitive.session import get_session_backend
             await get_session_backend().save_session(session)

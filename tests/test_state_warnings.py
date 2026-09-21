@@ -9,7 +9,7 @@ from inguitive.session import (
     _set_current_session,
     set_session_backend,
 )
-from inguitive.state import SessionState, State, disable_dev_mode_warnings, enable_dev_mode_warnings
+from inguitive.state import SessionState, disable_dev_mode_warnings, enable_dev_mode_warnings
 
 
 @pytest.fixture(autouse=True)

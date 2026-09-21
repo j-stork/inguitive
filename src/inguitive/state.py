@@ -27,7 +27,9 @@ _global_state_values: dict[str, Any] = {}
 # Context variable to track mutated State objects during request handling.
 # Each entry is the State/SessionState object itself (not a string key),
 # so the trigger handler can read .listeners directly without a name lookup.
-_mutated_states = contextvars.ContextVar("mutated_states", default=set())
+_mutated_states: contextvars.ContextVar[set[Any]] = contextvars.ContextVar(
+    "mutated_states", default=set()
+)
 
 # Context var that is True while inside a trigger handler's _track_mutations()
 # scope. Lets State.set() / SessionState.set() distinguish "called from a
@@ -264,8 +266,8 @@ async def _push_sse_for_session_state(state_key: str, session_id: str) -> None:
     """
     from inguitive.htmx import update_components
     from inguitive.session import (
-        _hydrate_component_registry,
         _get_sse_queues,
+        _hydrate_component_registry,
         _put_bounded,
         _set_current_session,
         get_session_backend,

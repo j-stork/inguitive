@@ -3,7 +3,7 @@
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from inguitive import Div, SessionState, State, Text, UI, get_form_data, update_components
+from inguitive import UI, Div, SessionState, State, Text, get_form_data, update_components
 
 
 class TestPageDecorator:

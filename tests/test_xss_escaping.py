@@ -4,6 +4,7 @@ import markupsafe
 import pytest
 
 from inguitive.components import (
+    Anchor,
     Button,
     Checkbox,
     DataTable,
@@ -12,7 +13,6 @@ from inguitive.components import (
     Icon,
     Input,
     Label,
-    Anchor,
     Radio,
     Select,
     TemplateComponent,

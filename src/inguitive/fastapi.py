@@ -20,6 +20,7 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from inguitive.components import Component
 from inguitive.htmx import update_components
 from inguitive.session import (
+    _SESSION_MIDDLEWARE_MISSING_MSG,
     Session,
     SessionBackend,
     _cache_component_registry,
@@ -27,7 +28,6 @@ from inguitive.session import (
     _hydrate_component_registry,
     _register_sse_connection,
     _require_current_session,
-    _SESSION_MIDDLEWARE_MISSING_MSG,
     _set_current_session,
     _unregister_sse_connection,
     get_session_backend,
@@ -628,7 +628,7 @@ class UI:
             content = str(component)
 
         # Resolve effective title/favicon with fallback chain.
-        effective_title = title or getattr(self.app.state, "title", "inguitive")
+        effective_title = title or str(getattr(self.app.state, "title", "inguitive"))
         effective_favicon = (
             favicon
             or getattr(self.app.state, "favicon", None)

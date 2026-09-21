@@ -14,7 +14,7 @@ import asyncio
 
 import pytest
 
-from inguitive import State, SessionState, UI
+from inguitive import UI, SessionState, State
 from inguitive.session import (
     MemoryBackend,
     Session,

@@ -32,7 +32,7 @@ import asyncio
 
 from fastapi import FastAPI
 
-from inguitive import Div, State, Text, UI
+from inguitive import UI, Div, State, Text
 
 from .css import BRAND_COLORS
 from .custom_components import BaseContainer, InguitiveLogo, Title

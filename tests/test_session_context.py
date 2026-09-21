@@ -2,7 +2,7 @@
 
 import pytest
 
-from inguitive import State, SessionState, session_context
+from inguitive import SessionState, State, session_context
 from inguitive.session import (
     MemoryBackend,
     Session,

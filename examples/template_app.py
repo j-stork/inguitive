@@ -39,7 +39,7 @@ To test:
 
 from fastapi import FastAPI
 
-from inguitive import Button, Div, State, TemplateComponent, UI
+from inguitive import UI, Button, Div, State, TemplateComponent
 
 from .css import (
     BUTTON_PRIMARY_BLUE_CSS,

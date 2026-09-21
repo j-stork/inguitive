@@ -35,7 +35,7 @@ To test:
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
-from inguitive import Div, Anchor, Text, UI
+from inguitive import UI, Anchor, Div, Text
 
 from .css import BUTTON_PRIMARY_BLUE_CSS, BUTTON_PRIMARY_YELLOW_CSS, TEXT_CSS
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title

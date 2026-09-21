@@ -35,11 +35,11 @@ To test:
 from fastapi import FastAPI
 
 from inguitive import (
+    UI,
     Button,
     Div,
     SessionState,
     Text,
-    UI,
     get_session_id,
     update_components,
 )

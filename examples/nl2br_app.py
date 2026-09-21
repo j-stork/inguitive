@@ -54,7 +54,7 @@ from collections.abc import Callable
 
 from fastapi import FastAPI, Request
 
-from inguitive import Button, Div, Form, State, Text, Textarea, UI, get_form_data, nl2br
+from inguitive import UI, Button, Div, Form, State, Text, Textarea, get_form_data, nl2br
 
 from .css import BUTTON_PRIMARY_GREEN_CSS, INPUT_CSS, TEXT_CSS
 from .custom_components import BaseContainer, Card, HorizontalRule, InguitiveLogo, Title

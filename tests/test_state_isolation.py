@@ -9,7 +9,7 @@ from inguitive.session import (
     _set_current_session,
     set_session_backend,
 )
-from inguitive.state import SessionState, State
+from inguitive.state import SessionState
 
 
 @pytest.fixture(autouse=True)

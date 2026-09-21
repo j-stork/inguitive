@@ -32,7 +32,7 @@ To test:
 
 from fastapi import FastAPI
 
-from inguitive import Button, Div, State, Text, UI
+from inguitive import UI, Button, Div, State, Text
 
 from .css import BRAND_COLORS, BUTTON_PRIMARY_BLUE_CSS, BUTTON_SECONDARY_CSS
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title

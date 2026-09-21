@@ -44,6 +44,7 @@ To test:
 from fastapi import FastAPI, Request
 
 from inguitive import (
+    UI,
     Button,
     Checkbox,
     Div,
@@ -55,7 +56,6 @@ from inguitive import (
     State,
     Text,
     Textarea,
-    UI,
     get_form_data,
 )
 

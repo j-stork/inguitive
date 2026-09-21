@@ -5,6 +5,7 @@ updates via HTMX.
 """
 
 from inguitive.components import (
+    Anchor,
     Button,
     Checkbox,
     Component,
@@ -16,7 +17,6 @@ from inguitive.components import (
     Image,
     Input,
     Label,
-    Anchor,
     Radio,
     Select,
     TemplateComponent,
@@ -37,7 +37,7 @@ from inguitive.session import (
     session_context,
     set_session_backend,
 )
-from inguitive.state import State, SessionState
+from inguitive.state import SessionState, State
 from inguitive.trigger import get_form_data, get_trigger_args
 from inguitive.utils import nl2br
 

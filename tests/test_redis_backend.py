@@ -177,8 +177,8 @@ class TestRedisBackend:
         """
         self._check_redis_available()
 
-        from inguitive.components import Button, Div, Text
         from inguitive.backends.redis import RedisBackend
+        from inguitive.components import Button, Div, Text
         from inguitive.session import _create_session
 
         backend = RedisBackend(redis_url="redis://localhost:6379", db=0)

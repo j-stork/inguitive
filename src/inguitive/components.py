@@ -47,7 +47,7 @@ class Component:
 
         # Handle action parameters (trigger = POST)
         if trigger:
-            url = trigger._inguitive_trigger_url
+            url = getattr(trigger, "_inguitive_trigger_url")
             if trigger_args:
                 url += "?" + "&".join(f"{k}={v}" for k, v in trigger_args.items())
             attrs.setdefault("hx-post", url)

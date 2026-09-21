@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 
 from fastapi import Request
+from starlette.datastructures import UploadFile
 
 # Context variable to store trigger_args for current request
 _trigger_args_var: ContextVar[dict[str, str]] = ContextVar(
@@ -36,8 +37,8 @@ def get_trigger_args() -> dict[str, str]:
     return _trigger_args_var.get()
 
 
-async def get_form_data(request: Request) -> dict[str, str]:
-    """Return the posted form fields as a ``dict[str, str]``.
+async def get_form_data(request: Request) -> dict[str, str | UploadFile]:
+    """Return the posted form fields as a dictionary.
 
     A thin convenience wrapper around ``await request.form()`` so handlers do
     not have to write ``dict(await request.form())`` themselves. The handler
@@ -54,11 +55,14 @@ async def get_form_data(request: Request) -> dict[str, str]:
         request: The FastAPI ``Request`` object (declared as a handler parameter).
 
     Returns:
-        Dict[str, str]: The posted form fields. Checkboxes that are unchecked do
-        not appear in the dict (HTML omits them), so use ``data.get("field", default)``
+        Dict[str, str | UploadFile]: The posted form fields. Text inputs are
+        returned as ``str`` values; file inputs are returned as
+        :class:`starlette.datastructures.UploadFile` (the concrete type that
+        ``request.form()`` yields). Checkboxes that are unchecked do not appear
+        in the dict (HTML omits them), so use ``data.get("field", default)``
         rather than ``data["field"]`` for optional fields.
     """
-    return dict(await request.form())
+    return {k: v for k, v in (await request.form()).items()}
 
 
 @contextmanager
