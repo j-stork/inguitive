@@ -30,13 +30,16 @@ To test:
 2. Click "Reset" — the count returns to 0
 """
 
-from inguitive import Button, Div, State, Text, create_app
+from fastapi import FastAPI
+
+from inguitive import Button, Div, State, Text, UI
 
 from .css import BRAND_COLORS, BUTTON_PRIMARY_BLUE_CSS, BUTTON_SECONDARY_CSS
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -46,20 +49,20 @@ counter_state = State(0, "counter_state")
 # --- Trigger Handlers ---
 # Note: neither handler returns anything. State.set() alone is enough — the
 # framework inspects which states were mutated and renders their listeners.
-@app.trigger_handler
+@ui.trigger_handler
 def increment():
     counter_state.set(counter_state.get() + 1)
 
 
-@app.trigger_handler
+@ui.trigger_handler
 def reset():
     counter_state.set(0)
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return BaseContainer(
+    return ui.page(BaseContainer(
         InguitiveLogo(),
         Title("Auto-Propagation Example"),
         Card(
@@ -74,7 +77,7 @@ def home():
                 css="grid grid-cols-2 gap-6 w-full",
             ),
         ),
-    )
+    ))
 
 
 # --- Start ---

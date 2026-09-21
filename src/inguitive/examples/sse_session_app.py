@@ -32,12 +32,14 @@ To test:
 
 import asyncio
 
+from fastapi import FastAPI
+
 from inguitive import (
     Button,
     Div,
     State,
     Text,
-    create_app,
+    UI,
     get_session_id,
     push_update,
     session_context,
@@ -47,7 +49,8 @@ from .css import BRAND_COLORS, BUTTON_PRIMARY_GREEN_CSS
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -61,7 +64,7 @@ _counter_tasks: dict[str, asyncio.Task] = {}
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@ui.trigger_handler
 def start_counter():
     """Start the per-user counter loop, idempotently.
 
@@ -153,9 +156,9 @@ def CounterDisplay() -> Div:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return CounterDisplay()
+    return ui.page(CounterDisplay())
 
 
 # --- Start ---

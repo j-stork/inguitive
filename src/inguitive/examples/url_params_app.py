@@ -3,28 +3,29 @@ URL path parameters example using inguitive.
 
 Run with: uvicorn inguitive.examples.url_params_app:app --reload
 
-Dynamic Path Segments: <name:type>
----------------------------------
-This example demonstrates inguitive's URL path parameter syntax. A route
-pattern contains segments like ``<id:int>`` or ``<filepath:path>``; when a
-request matches, inguitive parses the segment into the declared Python type
-and passes it to the page handler as a typed argument.
+Dynamic Path Segments: FastAPI {name} + type annotations
+--------------------------------------------------------
+This example demonstrates FastAPI's URL path parameter syntax (used directly
+via ``@app.get``). A route pattern contains segments like ``{item_id}`` or
+``{subpath:path}``; the handler's type annotation (``item_id: int``) tells
+FastAPI how to parse and validate the segment, and it passes the typed value
+to the handler as an argument.
 
 Three routes exercise the main type behaviours:
 
 | Route                         | Segment type | Behaviour                                  |
 |-------------------------------|--------------|--------------------------------------------|
-| ``/item/<item_id:int>``       | ``int``      | Coerces to int; ``/item/abc`` returns 400  |
-| ``/user/<username>``          | ``str``      | Default type when none is given             |
-| ``/files/<subpath:path>``    | ``path``     | Preserves slashes, captures the rest       |
+| ``/item/{item_id}``           | ``int``      | Coerces to int; ``/item/abc`` returns 422  |
+| ``/user/{username}``          | ``str``      | Default type when none is given             |
+| ``/files/{subpath:path}``    | ``path``     | Preserves slashes, captures the rest       |
 
 The index page links to a concrete example of each so you can see the parsed
 value reflected back. Mismatched types (e.g. ``/item/not-a-number``) produce
-an HTTP 400 with a descriptive detail, which is the framework's built-in
+an HTTP 422 with a descriptive detail, which is FastAPI's built-in
 validation for path parameters — no handler code needed.
 
 Contrast with ``routing_app.py``, which uses only static paths and
-``redirect``, and with ``trigger_args_app.py``, where per-request data flows
+``RedirectResponse``, and with ``trigger_args_app.py``, where per-request data flows
 through query parameters on a POST rather than the URL path.
 
 To test:
@@ -32,16 +33,19 @@ To test:
 2. Click "Item 42" — goes to ``/item/42``, shows "Item ID: 42"
 3. Click "User ada" — goes to ``/user/ada``, shows "Username: ada"
 4. Click "Files a/b/c.txt" — goes to ``/files/a/b/c.txt``, shows the whole path
-5. Manually visit ``/item/abc`` — returns 400 (invalid int)
+5. Manually visit ``/item/abc`` — returns 422 (invalid int)
 """
 
-from inguitive import Div, Anchor, Text, create_app
+from fastapi import FastAPI
+
+from inguitive import Div, Anchor, Text, UI
 
 from .css import BRAND_COLORS, LINK_CSS
 from .custom_components import BaseContainer, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- Components ---
@@ -68,35 +72,35 @@ def PageContent(label: str, value: object) -> Div:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def index():
-    return PageContainer(
+    return ui.page(PageContainer(
         Anchor("Item 42", href="/item/42", css=LINK_CSS),
         Anchor("User ada", href="/user/ada", css=LINK_CSS),
         Anchor("Files a/b/c.txt", href="/files/a/b/c.txt", css=LINK_CSS),
         Text(
-            "Try /item/abc to see the 400 from a failed int parse.",
+            "Try /item/abc to see the 422 from a failed int parse.",
             css=f"text-{BRAND_COLORS['red']}",
         ),
-    )
+    ))
 
 
-@app.page("/item/<item_id:int>")
+@app.get("/item/{item_id}")
 def item(item_id: int):
-    """``int`` segment — coerced and validated; bad input returns 400."""
-    return PageContent("Item ID", item_id)
+    """``int`` segment — coerced and validated; bad input returns 422."""
+    return ui.page(PageContent("Item ID", item_id))
 
 
-@app.page("/user/<username>")
+@app.get("/user/{username}")
 def user_profile(username: str):
     """No type given — defaults to ``str``."""
-    return PageContent("Username", username)
+    return ui.page(PageContent("Username", username))
 
 
-@app.page("/files/<subpath:path>")
+@app.get("/files/{subpath:path}")
 def files(subpath: str):
     """``path`` segment — captures the rest of the URL including slashes."""
-    return PageContent("File path", subpath)
+    return ui.page(PageContent("File path", subpath))
 
 
 # --- Start ---

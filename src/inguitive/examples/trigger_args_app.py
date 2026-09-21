@@ -33,12 +33,14 @@ To test:
 3. The displayed count updates immediately after each click
 """
 
+from fastapi import FastAPI
+
 from inguitive import (
     Button,
     Div,
     State,
     Text,
-    create_app,
+    UI,
     get_trigger_args,
     update_components,
 )
@@ -54,7 +56,8 @@ from .css import (
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -62,7 +65,7 @@ counter_state = State(0, "counter_state")
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@ui.trigger_handler
 def add():
     """Add the ``step`` trigger_arg to the counter.
 
@@ -81,7 +84,7 @@ def add():
     return update_components(*counter_state.listeners)
 
 
-@app.trigger_handler
+@ui.trigger_handler
 def reset():
     """Reset the counter to 0."""
     counter_state.set(0)
@@ -109,9 +112,9 @@ def AddButton(step: int, color: str) -> Button:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return BaseContainer(
+    return ui.page(BaseContainer(
         InguitiveLogo(),
         Title("Trigger Args Example"),
         Card(
@@ -134,7 +137,7 @@ def home():
                 css="grid grid-cols-5 gap-6 w-full",
             ),
         ),
-    )
+    ))
 
 
 # --- Start ---

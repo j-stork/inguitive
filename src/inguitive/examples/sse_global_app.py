@@ -29,13 +29,16 @@ To test:
 
 import asyncio
 
-from inguitive import Div, State, Text, create_app
+from fastapi import FastAPI
+
+from inguitive import Div, State, Text, UI
 
 from .css import BRAND_COLORS
 from .custom_components import BaseContainer, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -104,9 +107,9 @@ def CounterDisplay() -> Div:  # noqa: N802
         )
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return CounterDisplay()
+    return ui.page(CounterDisplay())
 
 
 # --- Start ---

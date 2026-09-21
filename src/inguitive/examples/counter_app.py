@@ -32,12 +32,14 @@ To test:
 4. Both counters turn red once they exceed 5
 """
 
+from fastapi import FastAPI
+
 from inguitive import (
     Button,
     Div,
     SessionState,
     Text,
-    create_app,
+    UI,
     get_session_id,
     update_components,
 )
@@ -46,7 +48,8 @@ from .css import BRAND_COLORS, BUTTON_PRIMARY_GREEN_CSS, BUTTON_SECONDARY_CSS
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -54,14 +57,14 @@ counter_state = SessionState(0, "counter_state")
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@ui.trigger_handler
 def increment():
     """Add 1 to the counter and re-render its listeners explicitly."""
     counter_state.set(counter_state.get() + 1)
     return update_components(*counter_state.listeners)
 
 
-@app.trigger_handler
+@ui.trigger_handler
 def reset():
     """Reset the counter to 0 and re-render its listeners explicitly."""
     counter_state.set(0)
@@ -118,9 +121,9 @@ def Counter() -> Div:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return Counter()
+    return ui.page(Counter())
 
 
 # --- Start ---

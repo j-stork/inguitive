@@ -52,13 +52,16 @@ To test:
 
 from collections.abc import Callable
 
-from inguitive import Button, Div, Form, State, Text, Textarea, create_app, nl2br
+from fastapi import FastAPI
+
+from inguitive import Button, Div, Form, State, Text, Textarea, UI, nl2br
 
 from .css import BUTTON_PRIMARY_GREEN_CSS, INPUT_CSS, TEXT_CSS
 from .custom_components import BaseContainer, Card, HorizontalRule, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -67,7 +70,7 @@ text_state = State(None, "text_state")
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@ui.trigger_handler
 def submit(form_data: dict):
     """Store the submitted text for display."""
     text_state.set(form_data.get("content", ""))
@@ -157,9 +160,9 @@ def TextForm() -> Div:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return TextForm()
+    return ui.page(TextForm())
 
 
 # --- Start ---

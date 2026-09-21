@@ -37,7 +37,9 @@ To test:
 3. Click "Reset" — the template re-renders with 0
 """
 
-from inguitive import Button, Div, State, TemplateComponent, create_app
+from fastapi import FastAPI
+
+from inguitive import Button, Div, State, TemplateComponent, UI
 
 from .css import (
     BUTTON_PRIMARY_BLUE_CSS,
@@ -46,7 +48,8 @@ from .css import (
 from .custom_components import BaseContainer, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -56,12 +59,12 @@ counter_state = State(0, "counter_state")
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@ui.trigger_handler
 def increment():
     counter_state.set(counter_state.get() + 1)
 
 
-@app.trigger_handler
+@ui.trigger_handler
 def reset():
     counter_state.set(0)
 
@@ -91,9 +94,9 @@ def CounterCard() -> TemplateComponent:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return BaseContainer(
+    return ui.page(BaseContainer(
         InguitiveLogo(),
         Title("TemplateComponent Example"),
         CounterCard(),
@@ -102,7 +105,7 @@ def home():
             Button("Reset", trigger=reset, css=f"{BUTTON_SECONDARY_CSS} w-full"),
             css="flex w-sm gap-6",
         ),
-    )
+    ))
 
 
 # --- Start ---

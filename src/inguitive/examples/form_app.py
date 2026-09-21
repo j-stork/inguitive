@@ -41,6 +41,8 @@ To test:
 3. Submit again with different values — the panel reflects the new submission
 """
 
+from fastapi import FastAPI
+
 from inguitive import (
     Button,
     Checkbox,
@@ -53,7 +55,7 @@ from inguitive import (
     State,
     Text,
     Textarea,
-    create_app,
+    UI,
 )
 
 from .css import (
@@ -66,7 +68,8 @@ from .css import (
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -75,7 +78,7 @@ form_state: State[dict] = State({}, "form_state")
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@ui.trigger_handler
 def submit(form_data: dict):
     """Store the submitted form data for display.
 
@@ -181,9 +184,9 @@ def RegistrationForm() -> Div:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return RegistrationForm()
+    return ui.page(RegistrationForm())
 
 
 # --- Start ---

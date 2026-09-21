@@ -42,13 +42,15 @@ To test:
 
 import os
 
+from fastapi import FastAPI
+
 from inguitive import (
     Button,
     Div,
     MemoryBackend,
     State,
     Text,
-    create_app,
+    UI,
     get_session_backend,
     get_session_id,
     set_session_backend,
@@ -60,7 +62,7 @@ from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- Backend Selection ---
 # Choose the session backend at startup from the SESSION_BACKEND env var.
-# This must happen before create_app() wires middleware, so the module-level
+# This must happen before UI(app) wires middleware, so the module-level
 # code below runs at import time.
 _backend_name = os.getenv("SESSION_BACKEND", "memory").lower()
 if _backend_name == "redis":
@@ -74,7 +76,8 @@ else:
 
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -82,12 +85,12 @@ counter_state = State(0, "counter_state")
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@ui.trigger_handler
 def increment():
     counter_state.set(counter_state.get() + 1)
 
 
-@app.trigger_handler
+@ui.trigger_handler
 def reset():
     counter_state.set(0)
 
@@ -155,9 +158,9 @@ def Counter() -> Div:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return Counter()
+    return ui.page(Counter())
 
 
 # --- Start ---

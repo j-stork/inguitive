@@ -39,7 +39,9 @@ To test:
 4. Click "Reset" — both revert to defaults
 """
 
-from inguitive import Button, DataTable, Div, State, create_app
+from fastapi import FastAPI
+
+from inguitive import Button, DataTable, Div, State, UI
 
 from .css import (
     BRAND_COLORS,
@@ -50,7 +52,8 @@ from .css import (
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- Sample Data ---
@@ -70,7 +73,7 @@ style_state: State[str] = State("default", "style_state")
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@ui.trigger_handler
 def reorder_columns():
     """Toggle between default column order and a reversed order (no id)."""
     current = columns_state.get()
@@ -81,14 +84,14 @@ def reorder_columns():
         columns_state.set(None)
 
 
-@app.trigger_handler
+@ui.trigger_handler
 def toggle_style():
     """Toggle between default and custom dict-based styling."""
     current = style_state.get()
     style_state.set("custom" if current == "default" else "default")
 
 
-@app.trigger_handler
+@ui.trigger_handler
 def reset():
     """Reset both columns and styling to defaults."""
     columns_state.set(None)
@@ -132,16 +135,16 @@ def Controls() -> Div:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return BaseContainer(
+    return ui.page(BaseContainer(
         InguitiveLogo(),
         Title("Data Table Example"),
         Card(
             Controls(),
             PeopleTable(),
         ),
-    )
+    ))
 
 
 # --- Start ---

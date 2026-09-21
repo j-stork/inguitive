@@ -33,14 +33,17 @@ To test:
 3. Click again — it swaps back to a moon
 """
 
-from inguitive import Button, Div, Icon, State, create_app
+from fastapi import FastAPI
+
+from inguitive import Button, Div, Icon, State, UI
 
 from .css import BUTTON_PRIMARY_YELLOW_CSS
 from .custom_components import BaseContainer, Card, InguitiveLogo, Title
 from .svg import ARROWS_UP_DOWN, MOON, SUN
 
 # --- App Setup ---
-app = create_app()
+app = FastAPI()
+ui = UI(app)
 
 
 # --- State Instances ---
@@ -49,7 +52,7 @@ mode_state = State("moon", "mode_state")
 
 
 # --- Trigger Handlers ---
-@app.trigger_handler
+@ui.trigger_handler
 def toggle_mode():
     """Swap between moon and sun."""
     current = mode_state.get()
@@ -89,9 +92,9 @@ def IconDemo() -> Div:  # noqa: N802
 
 
 # --- Routes ---
-@app.page("/")
+@app.get("/")
 def home():
-    return IconDemo()
+    return ui.page(IconDemo())
 
 
 # --- Start ---
