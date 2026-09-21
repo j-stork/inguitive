@@ -6,14 +6,13 @@ from __future__ import annotations
 
 import asyncio
 import contextvars
-import functools
 import importlib.resources
 import inspect
 import uuid
 import warnings
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, ParamSpec, Protocol, TypeVar, runtime_checkable
+from typing import Any
 
 import markupsafe
 from fastapi import FastAPI, Request
@@ -44,32 +43,8 @@ from inguitive.state import (
 )
 from inguitive.trigger import _trigger_args_context
 
-# Type variables for decorator type annotations
-_P = ParamSpec("_P")
-_T = TypeVar("_T")
-
 # Type alias for head content (supports strings, Components, Markup, lists, or None)
 HeadContent = str | Component | markupsafe.Markup | list[str | Component | markupsafe.Markup] | None
-
-# Protocols for the decorator surfaces bound onto an app in create_app().
-#
-# Modelled as Protocols (not Callable aliases) so _PageDecorator can expose its
-# keyword arguments with defaults: a plain Callable[[A, B, C, D], R] alias has
-# no way to express optional arguments, which mypy reports as "Too few
-# arguments" at every @app.page("/path") call site. A Protocol's __call__
-# signature carries the defaults just like a real function.
-class _TriggerDecorator(Protocol[_P, _T]):
-    def __call__(self, handler: Callable[_P, _T]) -> Callable[_P, _T]: ...
-
-
-class _PageDecorator(Protocol[_P, _T]):
-    def __call__(
-        self,
-        path: str | None = None,
-        title: str | None = None,
-        favicon: str | None = None,
-        head: HeadContent = None,
-    ) -> Callable[[Callable[_P, _T]], Callable[_P, _T]]: ...
 
 
 def _render_template_content(value: HeadContent) -> str:
@@ -92,24 +67,6 @@ def _render_template_content(value: HeadContent) -> str:
         return value.render()
     return str(value)
 
-
-@runtime_checkable
-class InguitiveApp(Protocol[_P, _T]):
-    """Protocol describing an inguitive application with custom decorators.
-
-    This Protocol extends the FastAPI instance with inguitive-specific decorators.
-    Type checkers will recognize these custom attributes on objects of this type.
-    """
-
-    # Custom decorators
-    trigger_handler: _TriggerDecorator[_P, _T]
-    page: _PageDecorator[_P, _T]
-
-    # FastAPI event hook used by background-task patterns (e.g. the SSE
-    # startup task in sse_global_app.py). Declared here because the Protocol
-    # otherwise narrows FastAPI away to just the inguitive decorators; the
-    # real FastAPI instance provides this method.
-    def on_event(self, event_type: str) -> Callable[[Callable[..., Any]], Callable[..., Any]]: ...
 
 
 def _render_page_shell(content: str, title: str, favicon: str, head_extra: str) -> str:
@@ -175,91 +132,6 @@ def _render_page_shell(content: str, title: str, favicon: str, head_extra: str) 
 </html>"""
 
 
-def _register_page_route(
-    app,
-    path: str,
-    handler: Callable[_P, _T],
-    page_title: str | None = None,
-    page_favicon: str | None = None,
-    page_head: HeadContent = None,
-):
-    """Helper to register a page route on an app.
-
-    Args:
-        app: The FastAPI application
-        path: The URL path for the route
-        handler: The handler function to call
-        page_title: Optional page-specific title. Falls back to app.state.title or "inguitive"
-        page_favicon: Optional page-specific favicon. Falls back to app.state.favicon or default
-        page_head: Optional page-specific head content. Can be a string, Component, or list of both.
-            This is appended AFTER app-level head content (from create_app).
-    """
-    # Path is passed directly to FastAPI, which handles {param} syntax natively.
-    @app.get(path, response_class=HTMLResponse)
-    async def route_wrapper(request: Request, h=handler, pt=page_title, pf=page_favicon, ph=page_head):
-        _require_current_session()
-        sig = inspect.signature(h)
-        needs_request = "request" in sig.parameters
-        needs_form_data = "form_data" in sig.parameters
-        is_async = inspect.iscoroutinefunction(h)
-
-        kwargs: dict[str, Any] = {}
-
-        # Pass FastAPI path parameters through to the handler as keyword arguments.
-        path_params_dict = dict(request.path_params)
-        handler_params = sig.parameters
-        for param_name in path_params_dict:
-            if param_name in handler_params:
-                kwargs[param_name] = path_params_dict[param_name]
-
-        # Add request and form_data if the handler needs them
-        if needs_request:
-            kwargs["request"] = request
-        if needs_form_data:
-            form_data_dict = dict(await request.form())
-            kwargs["form_data"] = form_data_dict
-
-        result = await h(**kwargs) if is_async else h(**kwargs)
-
-        # If result is a Response object (e.g., RedirectResponse), return it directly
-        from starlette.responses import Response
-
-        if isinstance(result, Response):
-            return result
-
-        # Auto-render Components if they have a render method
-        if hasattr(result, "render") and callable(result.render):
-            content = result.render()
-        else:
-            content = str(result)
-
-        # Resolve effective title with fallback chain:
-        # 1. Page-level title (from decorator)
-        # 2. App-level title (from create_app)
-        # 3. Default title
-        effective_title = pt or getattr(app.state, "title", "inguitive")
-
-        # Resolve effective favicon with fallback chain:
-        # 1. Page-level favicon (from decorator)
-        # 2. App-level favicon (from create_app)
-        # 3. Default favicon
-        effective_favicon = pf or getattr(app.state, "favicon", None) or "/static/inguitive_favicon.svg"
-
-        # Collect all head content sources in order: app-level first, then page-level
-        head_sources = []
-        app_head = getattr(app.state, "head", None)
-        if app_head is not None:
-            head_sources.append(app_head)
-        if ph is not None:
-            head_sources.append(ph)
-        # Render and concatenate all sources
-        head_extra = "".join(_render_template_content(source) for source in head_sources)
-
-        # Wrap in the HTML document shell
-        html = _render_page_shell(content, effective_title, effective_favicon, head_extra)
-        return HTMLResponse(content=html)
-
-
 def _register_trigger_route(app, trigger_name: str, handler: Callable):
     """Helper to register a trigger route on an app."""
 
@@ -303,66 +175,15 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
                 return update_components(*all_component_ids)
 
 
-def page_decorator(
-    app,
-    path: str | None = None,
-    title: str | None = None,
-    favicon: str | None = None,
-    head: HeadContent = None,
-):
-    """Register a page handler at ``path`` and expose it as a route.
-
-    Bound onto a FastAPI app instance in :func:`create_app` as ``app.page``
-    (via :func:`functools.partial`), so user code writes ``@app.page("/")``.
-
-    The decorated function is stored in ``app.state.page_routes`` and
-    registered as a real FastAPI GET route through
-    :func:`_register_page_route`. The handler may declare ``request``,
-    ``form_data``, and any path parameters as parameters; these are
-    injected at request time.
-
-    Args:
-        app: The FastAPI application to register the route on. Bound
-            automatically when attached as ``app.page``, so users never
-            pass it.
-        path: URL path for the route. Supports ``{name}`` path parameters
-            (e.g. ``"/items/{item_id}"``). Defaults to ``"/"`` when None.
-        title: Optional page-specific ``<title>``. Falls back to the
-            app-level title from ``create_app(title=...)``, then to
-            ``"inguitive"``.
-        favicon: Optional page-specific favicon path. Falls back to the
-            app-level favicon, then the bundled
-            ``/static/inguitive_favicon.svg``.
-        head: Optional page-specific head content (string, Component, or
-            list). Appended *after* any app-level head content.
-
-    Returns:
-        A decorator that registers ``func`` and returns it unchanged.
-
-    Usage:
-        @app.page("/")
-        def home():
-            return Div(Text("Hello"))
-    """
-    def decorator(func: Callable):
-        actual_path = path if path is not None else "/"
-        app.state.page_routes[actual_path] = func
-        _register_page_route(app, actual_path, func, title, favicon, head)
-        return func
-
-    return decorator
-
-
 def trigger_handler_decorator(app, trigger_name: str | None | Callable = None):
-    """Register a trigger handler callable, exposed as ``app.trigger_handler``.
+    """Register a trigger handler callable, exposed as ``ui.trigger_handler``.
 
-    Bound onto a FastAPI app instance in :func:`create_app` as
-    ``app.trigger_handler`` (via :func:`functools.partial`). Supports two
+    Called by ``UI.trigger_handler`` with the bound ``app``. Supports two
     call styles:
 
-    - ``@app.trigger_handler`` (no parentheses): the handler is registered
+    - ``@ui.trigger_handler`` (no parentheses): the handler is registered
       under its own function name.
-    - ``@app.trigger_handler("name")`` (with parentheses): the handler is
+    - ``@ui.trigger_handler("name")`` (with parentheses): the handler is
       registered under the explicit name ``"name"``.
 
     The handler is stored in ``app.state.trigger_handlers`` and registered
@@ -841,242 +662,6 @@ class UI:
         return HTMLResponse(content=html)
 
 
-def create_app(
-    title: str = "inguitive",
-    favicon: str | None = None,
-    head: HeadContent = None,
-    session_backend: SessionBackend | None = None,
-    session_cookie_name: str = "inguitive_session_id",
-    session_cookie_max_age: int = 3600,
-    session_cookie_secure: bool = False,
-    session_cookie_httponly: bool = True,
-    session_cleanup_interval: int = 100,
-    dev_mode: bool = True,
-) -> InguitiveApp[Any, Any]:
-    """Create and configure a FastAPI application for inguitive.
-
-    Args:
-        title: Default title for pages. Can be overridden per-page via the @app.page decorator.
-            Defaults to "inguitive".
-        favicon: Default favicon path for pages. Can be overridden per-page via the @app.page
-            decorator. Can be a URL path (e.g. /static/favicon.ico) or an absolute URL (e.g. https://...).
-            Defaults to None, which uses the bundled INGUITIVE favicon at /static/inguitive_favicon.svg.
-        head: Default head content for pages (e.g., CSS, JS, meta tags). This content is
-            applied to ALL pages and can be a string, Component, or list of both. Page-level
-            head content (via @app.page decorator) is appended AFTER app-level content,
-            allowing app-wide resources to load first followed by page-specific additions.
-            Defaults to None (empty).
-        session_backend: Session backend to use (defaults to MemoryBackend)
-        session_cookie_name: Name of the session cookie
-        session_cookie_max_age: Cookie max age in seconds
-        session_cookie_secure: Whether cookie is secure (HTTPS only)
-        session_cookie_httponly: Whether cookie is HTTP-only
-        session_cleanup_interval: Call cleanup_expired() every N requests (default: 100)
-        dev_mode: Enable development mode warnings (default: True). Set to False in production
-            to disable warnings about state mutations with no listeners.
-
-    Returns:
-        InguitiveApp - the FastAPI application with inguitive decorators
-        (trigger_handler and page)
-    """
-    app = FastAPI()
-
-    # Store dev_mode on app state
-    app.state.dev_mode = dev_mode
-
-    # Set the default title for pages
-    app.state.title = title
-
-    # Set the default favicon for pages
-    app.state.favicon = favicon
-
-    # Set the default head content for pages
-    app.state.head = head
-
-    # Initialize per-app storage for handlers
-    app.state.trigger_handlers = {}
-    app.state.page_routes = {}
-
-    # Attach app-scoped decorator methods. The actual logic lives in the
-    # module-level page_decorator / trigger_handler_decorator functions so
-    # they are statically discoverable (e.g. by gather_package_documentation);
-    # functools.partial binds `app` so user code calls @app.page(...) and
-    # @app.trigger_handler exactly as before.
-    app.page = functools.partial(page_decorator, app)  # type: ignore
-    app.trigger_handler = functools.partial(trigger_handler_decorator, app)  # type: ignore
-
-    # Configure session backend
-    if session_backend is not None:
-        set_session_backend(session_backend)
-
-    # Enable or disable dev mode warnings based on dev_mode parameter
-    if dev_mode:
-        from inguitive.state import enable_dev_mode_warnings
-
-        enable_dev_mode_warnings()
-    else:
-        from inguitive.state import disable_dev_mode_warnings
-
-        disable_dev_mode_warnings()
-
-    # Add session middleware
-    app.add_middleware(
-        SessionMiddleware,
-        session_cookie_name=session_cookie_name,
-        session_cookie_max_age=session_cookie_max_age,
-        session_cookie_secure=session_cookie_secure,
-        session_cookie_httponly=session_cookie_httponly,
-        cleanup_interval=session_cleanup_interval,
-    )
-
-    # Mount static files - prioritize CWD/static/, then package static/
-    static_dirs = []
-
-    # 1. Check CWD/static/ first (user's project static files)
-    cwd_static = Path.cwd() / "static"
-    if cwd_static.exists() and cwd_static.is_dir():
-        static_dirs.append(str(cwd_static))
-
-    # 2. Check package static/ directory (Python 3.10+ guarantees importlib.resources exists)
-    pkg_static = Path(str(importlib.resources.files("inguitive"))) / "static"
-    if pkg_static.exists() and pkg_static.is_dir():
-        static_dirs.append(str(pkg_static))
-
-    if static_dirs:
-        # Custom static files app that checks all candidate directories in order.
-        #
-        # Note on path handling: Starlette's `Mount` does not strip the mount
-        # prefix from ``scope["path"]`` for a raw ASGI sub-app. The remainder
-        # is exposed via ``scope["root_path"]`` (set to the mount prefix), so we
-        # use Starlette's ``get_route_path`` helper which strips ``root_path``
-        # from ``scope["path"]`` to recover the path relative to the mount.
-        from starlette.responses import Response
-        from starlette.routing import get_route_path
-
-        async def static_files_app(scope, receive, send):
-            if scope["type"] != "http":
-                return
-
-            # Relative path below the mount, e.g. "inguitive_favicon.svg".
-            path = get_route_path(scope).lstrip("/")
-            for directory in static_dirs:
-                file_path = Path(directory) / path
-                if file_path.exists() and file_path.is_file():
-                    return await FileResponse(str(file_path))(scope, receive, send)
-
-            # No matching file in any directory — return a plain 404.
-            return await Response(
-                content=b"Not Found",
-                status_code=404,
-                media_type="text/plain",
-            )(scope, receive, send)
-
-        app.mount("/static", static_files_app, name="static")
-    else:
-        warnings.warn(
-            "Could not mount static files directory. "
-            "The default favicon at '/static/inguitive_favicon.svg' will not be available. "
-            "To fix this, either install the package properly or provide a custom favicon "
-            "path to create_app(favicon='...').",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    # -----------------------------------------------------------------------
-    # SSE endpoint — GET /_sse
-    # -----------------------------------------------------------------------
-
-    @app.get("/_sse")
-    async def _sse_route(request: Request):  # type: ignore[return-value]
-        """Persistent SSE stream for server-initiated component updates.
-
-        Every inguitive page connects here automatically via the hidden
-        ``#hx-target`` div in ``base.html``.  The session is authenticated
-        by the standard session cookie (handled by :class:`SessionMiddleware`).
-        """
-        session = _get_current_session_from_context()
-        if session is None:
-            return HTMLResponse("No active session", status_code=401)
-
-        session_id = session.session_id
-        queue = _register_sse_connection(session_id)
-
-        async def _event_generator():
-            # Wrap is_disconnected() as an asyncio Future so we can race it
-            # against queue.get() without blocking on either for 30 seconds.
-            loop = asyncio.get_event_loop()
-
-            async def _disconnect_future() -> None:
-                while not await request.is_disconnected():
-                    await asyncio.sleep(0.5)
-
-            disconnect_task = loop.create_task(_disconnect_future())
-            # Track the queue_task across loop iterations so the finally
-            # block can cancel and await it even if a CancelledError fires
-            # mid-iteration (otherwise it leaks as an orphaned pending task
-            # and Python logs "Task was destroyed but it is pending").
-            queue_task: asyncio.Task | None = None
-
-            try:
-                while True:
-                    queue_task = loop.create_task(queue.get())
-                    done, pending = await asyncio.wait(
-                        {queue_task, disconnect_task},
-                        timeout=30.0,
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-
-                    if disconnect_task in done or not done:
-                        # Client disconnected or heartbeat timeout elapsed.
-                        if not done:
-                            # Timeout — send keep-alive and loop.  The
-                            # queue_task is still pending; cancel and await
-                            # it so it does not leak before the next iteration
-                            # overwrites queue_task.
-                            queue_task.cancel()
-                            await asyncio.wait({queue_task})
-                            yield ": heartbeat\n\n"
-                            continue
-                        break
-
-                    # queue_task completed — send the HTML fragment.
-                    html: str | None = queue_task.result()
-                    if html is None:  # sentinel — close cleanly
-                        break
-                    lines = "\n".join(f"data: {line}" for line in html.splitlines())
-                    yield f"{lines}\n\n"
-            except asyncio.CancelledError:
-                pass
-            finally:
-                # Cancel and await both tasks so their cancellations settle
-                # before the generator returns.  A bare cancel() without
-                # awaiting leaves the task pending; Python then destroys it
-                # mid-flight and logs "Task was destroyed but it is pending".
-                # Awaiting guarantees the task body has unwound, which also
-                # frees the SSE stream promptly when the client navigates away.
-                for task in (disconnect_task, queue_task):
-                    if task is not None and not task.done():
-                        task.cancel()
-                        try:
-                            await asyncio.wait({task})
-                        except (asyncio.CancelledError, Exception):
-                            pass
-                # Remove only this tab's queue; other tabs are unaffected.
-                _unregister_sse_connection(session_id, queue)
-
-        return StreamingResponse(
-            _event_generator(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "X-Accel-Buffering": "no",
-                "Connection": "keep-alive",
-            },
-        )
-
-    return app  # type: ignore[return-value]
-
-
 async def push_update(session_id: str, *component_ids: str) -> None:
     """Push OOB HTML for specific components to a session's SSE stream.
 
@@ -1143,32 +728,3 @@ async def push_update(session_id: str, *component_ids: str) -> None:
         # _put_bounded is non-blocking and applies drop-oldest backpressure.
         for queue in list(queues):  # snapshot to avoid mutation during iteration
             _put_bounded(queue, html)
-
-
-def run_app(app_module: str = "app:app", host: str = "0.0.0.0", port: int = 8000, reload: bool = True):
-    """Run the FastAPI application using Uvicorn.
-
-    Args:
-        app_module: Uvicorn app module string (e.g., "app:app")
-        host: Host to bind to
-        port: Port to bind to
-        reload: Enable auto-reload in development
-    """
-    import uvicorn
-
-    uvicorn.run(app_module, host=host, port=port, reload=reload)
-
-
-def redirect(url: str, status_code: int = 302) -> Any:
-    """Perform an HTTP redirect to the specified URL.
-
-    Args:
-        url: The URL to redirect to
-        status_code: HTTP status code (302 for temporary redirect, 301 for permanent)
-
-    Returns:
-        RedirectResponse: FastAPI redirect response
-    """
-    from fastapi.responses import RedirectResponse
-
-    return RedirectResponse(url=url, status_code=status_code)
