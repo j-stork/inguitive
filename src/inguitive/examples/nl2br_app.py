@@ -52,9 +52,9 @@ To test:
 
 from collections.abc import Callable
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
-from inguitive import Button, Div, Form, State, Text, Textarea, UI, nl2br
+from inguitive import Button, Div, Form, State, Text, Textarea, UI, get_form_data, nl2br
 
 from .css import BUTTON_PRIMARY_GREEN_CSS, INPUT_CSS, TEXT_CSS
 from .custom_components import BaseContainer, Card, HorizontalRule, InguitiveLogo, Title
@@ -71,8 +71,9 @@ text_state = State(None, "text_state")
 
 # --- Trigger Handlers ---
 @ui.trigger_handler
-def submit(form_data: dict):
+async def submit(request: Request):
     """Store the submitted text for display."""
+    form_data = await get_form_data(request)
     text_state.set(form_data.get("content", ""))
     # No return: auto-propagation re-renders the display panel.
 

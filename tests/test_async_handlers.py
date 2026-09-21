@@ -1,9 +1,9 @@
 """Tests for async page and trigger handlers in inguitive."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from inguitive import Button, Div, SessionState, State, Text, UI, update_components
+from inguitive import Button, Div, SessionState, State, Text, UI, get_form_data, update_components
 
 
 class TestAsyncPageHandlers:
@@ -58,14 +58,14 @@ class TestAsyncTriggerHandlers:
     """Tests for async trigger handlers."""
 
     def test_async_trigger_handler_with_form_data(self):
-        """Test that async trigger handlers can receive form_data."""
+        """Test that async trigger handlers can read form data via get_form_data."""
         app = FastAPI()
         ui = UI(app)
         received = {}
 
         @ui.trigger_handler
-        async def async_handle_form(form_data: dict):
-            received.update(form_data)
+        async def async_handle_form(request: Request):
+            received.update(await get_form_data(request))
             return "OK"
 
         client = TestClient(app)
@@ -128,8 +128,8 @@ class TestAsyncTriggerHandlers:
         received = {}
 
         @ui.trigger_handler
-        async def async_complex_handler(form_data: dict):
-            received.update(form_data)
+        async def async_complex_handler(request: Request):
+            received.update(await get_form_data(request))
             return "OK"
 
         client = TestClient(app)

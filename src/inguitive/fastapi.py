@@ -140,7 +140,6 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
         _require_current_session()
         sig = inspect.signature(h)
         needs_request = "request" in sig.parameters
-        needs_form_data = "form_data" in sig.parameters
         is_async = inspect.iscoroutinefunction(h)
 
         kwargs: dict[str, Any] = {}
@@ -154,12 +153,6 @@ def _register_trigger_route(app, trigger_name: str, handler: Callable):
         with _track_mutations():
             # Set trigger_args in context for get_trigger_args() access
             with _trigger_args_context(query_params):
-                if needs_form_data:
-                    form_data_dict = dict(await request.form())
-                    # Merge query parameters (from trigger_args) into form_data
-                    form_data_dict.update(query_params)
-                    kwargs["form_data"] = form_data_dict
-
                 result = await h(**kwargs) if is_async else h(**kwargs)
 
                 # If handler returned explicit response, use it (allows overriding auto-propagation)

@@ -37,7 +37,7 @@ from inguitive.session import (
     set_session_backend,
 )
 from inguitive.state import State, SessionState
-from inguitive.trigger import get_trigger_args
+from inguitive.trigger import get_form_data, get_trigger_args
 from inguitive.utils import nl2br
 
 __all__ = [
@@ -66,6 +66,7 @@ __all__ = [
     "update_components",
     # Trigger
     "get_trigger_args",
+    "get_form_data",
     # Helpers
     # FastAPI
     "UI",

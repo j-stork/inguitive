@@ -1,9 +1,9 @@
 """Tests for get_trigger_args() functionality."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from inguitive import UI, get_trigger_args
+from inguitive import UI, get_form_data, get_trigger_args
 
 
 class TestGetTriggerArgsBasic:
@@ -91,9 +91,9 @@ class TestQueryParameterExtraction:
         form_result = {}
 
         @ui.trigger_handler
-        def mixed_handler(form_data: dict):
+        async def mixed_handler(request: Request):
             trigger_result.update(get_trigger_args())
-            form_result.update(form_data)
+            form_result.update(await get_form_data(request))
             return "OK"
 
         client = TestClient(app)
@@ -159,20 +159,20 @@ class TestContextIsolation:
         assert results[1] == {"async": "2"}
 
 
-class TestBackwardCompatibility:
-    """Tests ensuring old form_data pattern still works."""
+class TestFormDataAndTriggerArgs:
+    """Tests for get_form_data() alongside get_trigger_args()."""
 
     def test_trigger_args_and_form_data_coexist(self):
-        """Test that get_trigger_args() works alongside form_data parameter."""
+        """Test that get_trigger_args() (query params) and get_form_data() (POST body) are separate."""
         app = FastAPI()
         ui = UI(app)
         trigger_values = {}
         form_values = {}
 
         @ui.trigger_handler
-        def coexist_handler(form_data: dict):
+        async def coexist_handler(request: Request):
             trigger_values.update(get_trigger_args())
-            form_values.update(form_data)
+            form_values.update(await get_form_data(request))
             return "OK"
 
         client = TestClient(app)
@@ -183,23 +183,22 @@ class TestBackwardCompatibility:
         assert trigger_values["trigger_key"] == "trigger_val"
         assert form_values["form_key"] == "form_val"
 
-    def test_form_data_pattern_still_works(self):
-        """Test backward compatibility: form_data pattern continues to work."""
+    def test_form_data_excludes_query_params(self):
+        """get_form_data() returns only POST body fields, not query params."""
         app = FastAPI()
         ui = UI(app)
         received = {}
 
         @ui.trigger_handler
-        def old_pattern_handler(form_data: dict):
-            received.update(form_data)
+        async def form_only_handler(request: Request):
+            received.update(await get_form_data(request))
             return "OK"
 
         client = TestClient(app)
-        # Query params should be merged into form_data (existing behavior)
-        client.post("/_trigger/old_pattern_handler?query=qvalue", data={"post": "pvalue"})
+        client.post("/_trigger/form_only_handler?query=qvalue", data={"post": "pvalue"})
 
-        assert received["query"] == "qvalue"
         assert received["post"] == "pvalue"
+        assert "query" not in received
 
 
 class TestEdgeCases:

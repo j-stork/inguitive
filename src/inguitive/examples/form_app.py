@@ -41,7 +41,7 @@ To test:
 3. Submit again with different values — the panel reflects the new submission
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from inguitive import (
     Button,
@@ -56,6 +56,7 @@ from inguitive import (
     Text,
     Textarea,
     UI,
+    get_form_data,
 )
 
 from .css import (
@@ -79,15 +80,15 @@ form_state: State[dict] = State({}, "form_state")
 
 # --- Trigger Handlers ---
 @ui.trigger_handler
-def submit(form_data: dict):
+async def submit(request: Request):
     """Store the submitted form data for display.
 
-    ``form_data`` is auto-injected: inguitive sees the ``form_data`` parameter
-    name and passes the posted fields as a ``dict[str, str]``. Checkboxes only
-    submit a value when checked, so an absent ``terms`` key means unchecked —
-    normalise it to a bool here so the display can render it cleanly.
+    ``get_form_data(request)`` returns the posted fields as a
+    ``dict[str, str]``. Checkboxes only submit a value when checked, so an
+    absent ``terms`` key means unchecked — normalise it to a bool here so
+    the display can render it cleanly.
     """
-    data = dict(form_data)
+    data = await get_form_data(request)
     data["terms"] = data.get("terms") == "on"
     form_state.set(data)
     # No return: auto-propagation re-renders form_display (see app docstring).

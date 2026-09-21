@@ -1,9 +1,9 @@
 """Tests for @app.get + ui.page() and @ui.trigger_handler wiring in inguitive."""
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from inguitive import Div, SessionState, State, Text, UI, update_components
+from inguitive import Div, SessionState, State, Text, UI, get_form_data, update_components
 
 
 class TestPageDecorator:
@@ -83,14 +83,14 @@ class TestTriggerHandlerDecorator:
         assert response.status_code == 200
 
     def test_trigger_handler_form_data_injection(self):
-        """Test that form_data is correctly injected into trigger handlers."""
+        """Test that get_form_data(request) returns posted fields."""
         app = FastAPI()
         ui = UI(app)
         received_data = {}
 
         @ui.trigger_handler
-        def handle_form(form_data: dict):
-            received_data.update(form_data)
+        async def handle_form(request: Request):
+            received_data.update(await get_form_data(request))
             return "OK"
 
         client = TestClient(app)
@@ -242,8 +242,8 @@ class TestStateIntegration:
         form_state = SessionState({}, "form_state")
 
         @ui.trigger_handler
-        def submit_form(form_data: dict):
-            form_state.set(form_data)
+        async def submit_form(request: Request):
+            form_state.set(await get_form_data(request))
             return update_components(*form_state.listeners)
 
         @app.get("/form-test")
