@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.0] - 2026-09-21
+
+A major realignment. inguitive is now a **UI layer for FastAPI** — an alternative to template engines like Jinja2 — rather than a standalone web framework. The feature set is reduced to three pillars: **Components**, the **State system** (`State` + `SessionState`), and the **SSE workflow** (global broadcast + session-scoped push). Everything outside these pillars is left to FastAPI.
+
+This is a breaking release: the `create_app()` factory, `@app.page` decorator, CLI, form validation, path-param engine, Jinja2 template loader, and `push_update` are all removed. See the migration notes below.
+
+### Changed (breaking)
+
+- **`UI(app, ...)` replaces `create_app()`.** The user owns the FastAPI app and constructs it themselves (`app = FastAPI(); ui = UI(app, ...)`). `UI()` attaches the UI layer synchronously: `@ui.trigger_handler`, `ui.page()`, session middleware (auto-added by default; opt out via `configure_session_middleware=False`), the `/_sse` endpoint, and the `/static` mount. FastAPI's constructor surface (lifespan, docs URLs, OpenAPI metadata) stays fully in the user's hands.
+- **`ui.page(component, ...)` replaces `@app.page`.** Pages are plain `@app.get(...)` routes that return `ui.page(...)`. The method renders the component and wraps it in a full HTML document shell (`<!DOCTYPE html>`, `<head>` with metas, HTMX/Tailwind CDN scripts, the hidden `#hx-target` div) — no Jinja2 template, no `base.html`. Optional per-page overrides: `title`, `favicon`, `head`, `replace_global_head`.
+- **`State` is global; `SessionState` is per-session.** Scope is declared at construction time, not inferred from context. `State.set()` broadcasts OOB updates to every session. `SessionState.set()` pushes only to the current session. This replaces the previous implicit-scope model and removes a class of "which session did I just write to?" bugs.
+- **`.set()` returns `None`; propagation is automatic.** The framework tracks state mutations during a trigger handler's execution and, at handler exit, automatically renders OOB updates for the listening components. The handler does not return OOB HTML.
+- **`listen_to` accepts `State`/`SessionState` objects** (or a list of them), not strings. The framework registers the component as a listener on the state object directly — no name lookup.
+- **`trigger` accepts a callable** — the decorated trigger handler function. The `@ui.trigger_handler` decorator attaches the trigger's route URL to the function object, so `trigger=increment` resolves to the right `hx-post` URL without string lookups.
+- **`Link` renamed to `Anchor`.** The component that renders `<a>` is now `Anchor`, freeing the `Link` name for a future `<link>` component.
+- **Form data is opt-in, not auto-injected.** The magic `form_data: dict` parameter injection is removed. Handlers that want form data declare a `request: Request` parameter and call `get_form_data(request)` — a new explicit helper. All form-using handlers are now async.
+- **`RedisBackend` moved to an optional extra.** `pip install inguitive[redis]`, then `from inguitive.backends.redis import RedisBackend`. `MemoryBackend` is the default. `RedisBackend` is no longer exported from `inguitive.__init__`.
+
+### Added
+
+- **`session_active()`** — predicate returning `True` while the current session has at least one open SSE connection. Intended as the loop condition for session-scoped background tasks: `while session_active(): ...` terminates the task cleanly when the user closes every tab. The explicit, less-magic alternative to framework-injected task cancellation.
+- **`get_form_data(request: Request) -> dict[str, str]`** — explicit helper replacing the removed `form_data` auto-injection. Handlers declare `request: Request` and call `await get_form_data(request)`.
+- **Global `State.set()` SSE broadcast.** `State.set()` from any context (trigger handler or background task) now auto-pushes OOB HTML to every connected session's SSE queues. `SessionState.set()` from a background task (via `asyncio.create_task` context copy or `session_context`) auto-pushes to only that session's queues. No explicit push call needed.
+- **`configure_session_middleware` flag on `UI`.** `True` (default) auto-adds `SessionMiddleware` in `UI.__init__`. `False` opts out — the user adds it themselves. A startup check and request-time backstop raise a loud, actionable error if the middleware is missing.
+- **Document shell rendered in Python.** `ui.page()` composes `<!DOCTYPE html>`, `<head>`, CDN scripts, and the SSE auto-connect div as Python strings — no Jinja2, no `base.html`, no `error.html`.
+
+### Removed
+
+- **`create_app()`, `run_app()`, `redirect()`** — replaced by `UI(app, ...)` and FastAPI's own utilities.
+- **`@app.page` decorator** — replaced by `@app.get(...)` + `ui.page(...)`.
+- **CLI (`inguitive init`, `inguitive run`)** — removed entirely, along with the `[project.scripts]` entry in `pyproject.toml`.
+- **Form validation layer** — `FormSchema`, `field()`, `validate_form()`, all validators, `ValidationError`. Users use FastAPI's own validation or write their own.
+- **Path-parameter conversion engine** — `_PATH_PARAM_CONVERTERS`, `_convert_path_param`, `_parse_path_pattern`. Users use FastAPI's native path parameters.
+- **Jinja2 template loader and templates** — `base.html`, `error.html`, `Jinja2Templates`, `ChoiceLoader`, the `templates` env. `TemplateComponent` keeps the `jinja2` dependency (it renders Jinja2 templates as a component).
+- **`push_update()`** — redundant with the auto-push path: `State.set()` broadcasts globally; `SessionState.set()` auto-pushes to the current session. Removed from `fastapi.py`, `__init__.py`, tests, docs, and the multi-worker broker recipe (rewritten as a build-it-yourself recipe on `update_components` + `_get_sse_queues`).
+- **`push_update`, `create_app`, `run_app`, `redirect`, `Link`, `RedisBackend`** removed from `inguitive.__init__` exports.
+- **`Session`** no longer re-exported from the top-level package — advanced users import it from `inguitive.session`.
+
+### Kept
+
+- **`session_context` and `get_session_id`** — needed to bind a session by ID outside a request (e.g. a startup/webhook task targeting a specific user's `SessionState`).
+- **`DataTable`, `TemplateComponent`, `Icon`, `Label`** — kept for their respective use cases (quick data visualization, complex HTML escape hatch, SVG rendering, form semantics).
+- **`MemoryBackend`, `SessionBackend`, `set_session_backend`, `get_session_backend`** — core session infrastructure.
+- **`get_trigger_args`, `update_components`, `nl2br`** — unchanged.
+
+### Internal
+
+- `uvicorn[standard]` moved from a hard dependency to the `dev` extra — the library never imports it at module load; the server choice is the user's.
+- Package description and keywords reframed from "web framework" to "UI layer for FastAPI".
+- SSE guide (`docs/guide/sse.md`) rewritten to the new API. Session backends guide broker recipe rewritten without `push_update`.
+- All 13 surviving examples verified to use the `UI(app, ...)` pattern. `sse_session_app.py` rewritten to `SessionState` + `session_active()` + `asyncio.create_task`.
+- 336 tests passing, 1 skipped.
+
+---
+
 ## [1.0.1] - 2026-09-11
 
 ### Fixed
