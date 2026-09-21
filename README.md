@@ -11,8 +11,13 @@ Components automatically re-render when state changes, eliminating the need for 
 ## Quick Start
 
 ```bash
-pip install inguitive
+pip install inguitive uvicorn
 ```
+
+> inguitive depends on FastAPI but does not install an ASGI server — pick one
+> yourself. `uvicorn` is the lightest option; `uvicorn[standard]` adds
+> performant extras like `uvloop` and `httptools`. `fastapi dev` also works once
+> `fastapi[standard]` is installed, but it's a thin wrapper around uvicorn.
 
 ```python
 from fastapi import FastAPI
