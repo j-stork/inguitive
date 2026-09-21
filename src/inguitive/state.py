@@ -93,9 +93,13 @@ class State(Generic[_T]):
     When mutated from a background task, an SSE push broadcasts the update
     to every connected session.
 
-    Named states (``State(value, "my_state")``) are registered for
-    string-based ``listen_to`` lookups (until Task 2.2 switches
-    ``listen_to`` to accept State objects directly).
+    The ``name`` parameter is optional but recommended: it becomes the
+    storage key in the process-wide dict and in any serializing backend
+    (e.g. ``RedisBackend``). A named state (``State(0, "counter")``) keeps
+    the same key across process restarts, so the persisted value survives.
+    An unnamed state gets a fresh random UUID on every process start, so
+    its persisted value is orphaned after a restart. The name is not used
+    for listener resolution — ``listen_to`` takes the state object directly.
     """
 
     def __init__(self, initial_value: _T, name: str = ""):
@@ -164,6 +168,11 @@ class SessionState(State[_T]):
     only for the current session's listening components. When mutated
     from a background task (no active session), the value is stored as
     a global fallback and an SSE push is scheduled.
+
+    The ``name`` parameter is inherited from :class:`State` and remains
+    optional but recommended — see the :class:`State` docstring for the
+    rationale (stable storage key across restarts with a serializing
+    backend).
     """
 
     def get(self) -> _T:
