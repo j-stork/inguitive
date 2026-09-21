@@ -173,9 +173,8 @@ _session_backend: SessionBackend | None = None
 _current_session: ContextVar[Session | None] = ContextVar("current_session", default=None)
 
 # Tracks whether a session was explicitly bound by SessionMiddleware or
-# session_context — as opposed to auto-created by _get_or_create_current_session()
-# during component construction.  Used by _require_session_context() to detect
-# a missing SessionMiddleware without being fooled by auto-created sessions.
+# session_context — as opposed to being absent entirely.  Used by
+# _require_session_context() to detect a missing SessionMiddleware.
 _session_bound: ContextVar[bool] = ContextVar("session_bound", default=False)
 
 
@@ -204,26 +203,6 @@ def _get_current_session_from_context() -> Session | None:
     return _current_session.get()
 
 
-def _get_or_create_current_session() -> Session:
-    """Get current session or create a new one.
-
-    This function is used internally by the registry helper functions.
-    If no session exists in context, it creates a new one and sets it in context.
-    Note: This function does NOT call the backend - the middleware is responsible
-    for persisting sessions to the backend.
-    """
-    session = _get_current_session_from_context()
-    if session is not None:
-        return session
-
-    # Create new session
-    session = _create_session()
-
-    # Set in context (but don't call backend - middleware handles persistence)
-    _current_session.set(session)
-    return session
-
-
 def _set_current_session(session: Session) -> None:
     """Set the current session for this request/context.
 
@@ -243,6 +222,51 @@ def _clear_current_session() -> None:
 def _is_session_bound() -> bool:
     """Return True if a session was explicitly bound by middleware or session_context."""
     return _session_bound.get()
+
+
+_SESSION_MIDDLEWARE_MISSING_MSG = (
+    "inguitive's SessionMiddleware is not configured on this app. "
+    "SessionState, SSE, and OOB component re-rendering all require a "
+    "bound session. Either pass configure_session_middleware=True (the "
+    "default) to UI(...), or add it yourself:\n"
+    "\n"
+    "    from inguitive import SessionMiddleware\n"
+    "    app.add_middleware(SessionMiddleware)\n"
+    "\n"
+    "If you set configure_session_middleware=False on UI(...), you must "
+    "add this line yourself."
+)
+
+
+def _require_session_context() -> None:
+    """Raise a loud, actionable error if no session is bound to the context.
+
+    Fires when SessionMiddleware has not run for this request — i.e. the user
+    set ``configure_session_middleware=False`` on ``UI(...)`` and forgot to
+    ``app.add_middleware(SessionMiddleware)`` themselves.  Without a bound
+    session, SessionState, SSE, and OOB re-rendering silently degrade; this
+    turns that silent failure into an immediate, explained error.
+
+    Checks ``_is_session_bound()`` rather than just looking for a Session
+    object, because components construct before ``ui.page()`` is called and
+    a Session object alone doesn't prove the middleware ran.
+    """
+    if not _is_session_bound():
+        raise RuntimeError(_SESSION_MIDDLEWARE_MISSING_MSG)
+
+
+def _require_current_session() -> Session:
+    """Return the current session, or raise if none is bound.
+
+    Used by the registry helpers (:func:`_get_component_registry`,
+    :func:`_get_state_registry`, :func:`_get_data_registry`) so that
+    component construction fails fast with the actionable error when no
+    session is bound, rather than auto-creating a phantom session.
+    """
+    session = _get_current_session_from_context()
+    if session is None:
+        raise RuntimeError(_SESSION_MIDDLEWARE_MISSING_MSG)
+    return session
 
 
 def get_session_id() -> str | None:
@@ -486,17 +510,17 @@ def _prune_component_registry_cache() -> None:
 
 def _get_component_registry() -> dict[str, Any]:
     """Get the component registry for the current session."""
-    session = _get_or_create_current_session()
+    session = _require_current_session()
     return session.component_registry
 
 
 def _get_state_registry() -> dict[str, Any]:
     """Get the state registry for the current session."""
-    session = _get_or_create_current_session()
+    session = _require_current_session()
     return session.state_registry
 
 
 def _get_data_registry() -> dict[str, Any]:
     """Get the data registry for the current session."""
-    session = _get_or_create_current_session()
+    session = _require_current_session()
     return session.data_registry

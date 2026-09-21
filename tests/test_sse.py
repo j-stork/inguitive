@@ -197,6 +197,7 @@ def test_push_sse_sends_html_to_connected_queue():
 
     async def run():
         session = Session(session_id="push-sess")
+        _set_current_session(session)
         txt = Text(lambda: s.get(), id="push-txt", listen_to=s)
         session.component_registry["push-txt"] = txt
         session.data_registry["__listeners___sse_push_state"] = {"push-txt"}
@@ -224,6 +225,7 @@ def test_push_sse_fans_out_to_all_tabs_of_a_session():
 
     async def run():
         session = Session(session_id="mt-sess")
+        _set_current_session(session)
         txt = Text(lambda: s.get(), id="mt-txt", listen_to=s)
         session.component_registry["mt-txt"] = txt
         session.data_registry["__listeners___sse_multi_tab"] = {"mt-txt"}
@@ -256,6 +258,7 @@ def test_push_sse_closed_tab_does_not_affect_remaining_tab():
 
     async def run():
         session = Session(session_id="close-sess")
+        _set_current_session(session)
         txt = Text(lambda: s.get(), id="ct-txt", listen_to=s)
         session.component_registry["ct-txt"] = txt
         session.data_registry["__listeners___sse_closed_tab"] = {"ct-txt"}
@@ -331,6 +334,7 @@ def test_push_update_sends_oob_html():
 
     async def run():
         session = Session(session_id="pu-sess")
+        _set_current_session(session)
         txt = Text(lambda: s.get(), id="pu-txt")
         session.component_registry["pu-txt"] = txt
         session.data_registry["_sse_pu_state"] = "updated"
@@ -355,6 +359,7 @@ def test_push_update_fans_out_to_all_tabs():
 
     async def run():
         session = Session(session_id="pu-multi")
+        _set_current_session(session)
         txt = Text(lambda: s.get(), id="pu-m-txt")
         session.component_registry["pu-m-txt"] = txt
         session.data_registry["_sse_pu_multi"] = "value"
@@ -393,6 +398,7 @@ def test_push_update_multiple_components():
 
     async def run():
         session = Session(session_id="mc-sess")
+        _set_current_session(session)
         for cid in ("mc-a", "mc-b"):
             session.component_registry[cid] = Text(lambda: s.get(), id=cid)
         session.data_registry["_sse_multi_comp"] = "value"
@@ -419,6 +425,7 @@ def test_push_update_inside_session_context_uses_listeners_form():
 
     async def run():
         session = Session(session_id="ctx-sess")
+        _set_current_session(session)
         session.component_registry["ctx-txt"] = Text(lambda: str(s.get()), id="ctx-txt")
         session.data_registry["_sse_ctx_listeners"] = 0
         session.data_registry["__listeners___sse_ctx_listeners"] = {"ctx-txt"}
@@ -453,6 +460,7 @@ def test_push_update_inside_context_uses_in_memory_session_not_stale_reload():
         set_session_backend(backend)
 
         session = Session(session_id="ctx-serial-sess")
+        _set_current_session(session)
         session.component_registry["cs-txt"] = Text(lambda: str(s.get()), id="cs-txt")
         session.data_registry["_sse_ctx_serial"] = 0
         session.data_registry["__listeners___sse_ctx_serial"] = {"cs-txt"}
@@ -484,6 +492,7 @@ def test_push_update_outside_context_still_reloads_from_backend():
 
     async def run():
         session = Session(session_id="ctx-outside-sess")
+        _set_current_session(session)
         session.component_registry["co-txt"] = Text(lambda: s.get(), id="co-txt")
         session.data_registry["_sse_ctx_outside"] = "persisted"
         from inguitive.session import get_session_backend
@@ -556,6 +565,7 @@ def test_push_sse_stays_bounded_for_stalled_tab():
 
     async def run():
         session = Session(session_id="bp-sess")
+        _set_current_session(session)
         txt = Text(lambda: s.get(), id="bp-txt")
         session.component_registry["bp-txt"] = txt
         session.data_registry["_sse_bp_state"] = "value"
@@ -733,6 +743,7 @@ def test_push_sse_works_with_serialising_backend():
         set_session_backend(backend)
 
         session = Session(session_id="redis-sess")
+        _set_current_session(session)
         txt = Text(lambda: s.get(), id="redis-txt", listen_to=s)
         session.component_registry["redis-txt"] = txt
         session.data_registry["__listeners___sse_redis_state"] = {"redis-txt"}
@@ -763,6 +774,7 @@ def test_push_update_works_with_serialising_backend():
         set_session_backend(backend)
 
         session = Session(session_id="redis-pu-sess")
+        _set_current_session(session)
         session.component_registry["rpu-txt"] = Text(lambda: s.get(), id="rpu-txt")
         session.data_registry["_sse_redis_pu"] = "value"
         await backend.save_session(session)

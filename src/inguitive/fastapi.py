@@ -32,6 +32,8 @@ from inguitive.session import (
     _is_session_bound,
     _put_bounded,
     _register_sse_connection,
+    _require_session_context,
+    _SESSION_MIDDLEWARE_MISSING_MSG,
     _set_current_session,
     _unregister_sse_connection,
     get_session_backend,
@@ -407,38 +409,6 @@ def trigger_handler_decorator(app, trigger_name: str | None | Callable = None):
             return func
 
         return decorator
-
-
-_SESSION_MIDDLEWARE_MISSING_MSG = (
-    "inguitive's SessionMiddleware is not configured on this app. "
-    "SessionState, SSE, and OOB component re-rendering all require a "
-    "bound session. Either pass configure_session_middleware=True (the "
-    "default) to UI(...), or add it yourself:\n"
-    "\n"
-    "    from inguitive import SessionMiddleware\n"
-    "    app.add_middleware(SessionMiddleware)\n"
-    "\n"
-    "If you set configure_session_middleware=False on UI(...), you must "
-    "add this line yourself."
-)
-
-
-def _require_session_context() -> None:
-    """Raise a loud, actionable error if no session is bound to the context.
-
-    Fires when SessionMiddleware has not run for this request — i.e. the user
-    set ``configure_session_middleware=False`` on ``UI(...)`` and forgot to
-    ``app.add_middleware(SessionMiddleware)`` themselves.  Without a bound
-    session, SessionState, SSE, and OOB re-rendering silently degrade; this
-    turns that silent failure into an immediate, explained error.
-
-    Checks ``_is_session_bound()`` rather than just looking for a Session
-    object, because ``_get_or_create_current_session()`` auto-creates sessions
-    during component construction — a Session object alone doesn't prove the
-    middleware ran.
-    """
-    if not _is_session_bound():
-        raise RuntimeError(_SESSION_MIDDLEWARE_MISSING_MSG)
 
 
 class SessionMiddleware:

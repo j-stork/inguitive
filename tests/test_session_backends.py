@@ -5,7 +5,7 @@ import json
 import pytest
 
 from inguitive.components import Button
-from inguitive.session import MemoryBackend, Session, _create_session
+from inguitive.session import MemoryBackend, Session, _create_session, _set_current_session
 
 # Mark all test methods in this file as async
 pytestmark = pytest.mark.asyncio
@@ -23,6 +23,7 @@ class TestRedisBackendSerialization:
         """
         # Create a session with components in registry
         session = _create_session()
+        _set_current_session(session)
         session.component_registry["test_button"] = Button("Test")
         session.state_registry["test_state"] = "some_state"
         session.data_registry["test_data"] = "some_data"
