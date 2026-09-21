@@ -4,54 +4,49 @@
 
 # inguitive
 
-A pure Python web framework combining intuitive syntax with **HTMX** for partial page reloads and **Tailwind CSS** for styling.
+A pure Python UI layer for **FastAPI** — an alternative to template engines like Jinja2. Compose pages from Python components instead of templates, with reactive state and SSE-driven partial updates via **HTMX**. Styled with **Tailwind CSS**.
 
-Components automatically re-render when state changes, eliminating the need for manual DOM manipulation or JavaScript. It is designed for Python developers who want to build interactive web applications using only Python, without sacrificing the dynamic feel of modern SPAs.
+Components automatically re-render when state changes, eliminating the need for manual DOM manipulation or JavaScript. inguitive complements FastAPI rather than replacing it: routing, path parameters, form handling, and lifespan events stay FastAPI's job; inguitive owns the UI.
 
-## 3 Steps to a Running App
+## Quick Start
 
 ```bash
 pip install inguitive
-inguitive init
-inguitive run
 ```
 
-`inguitive init` scaffolds a ready-to-run `app.py` in the current directory. `inguitive run` serves it at `http://localhost:8000`.
-
-## A Simple Example
-
-Here's what a simple app might look like — a reactive counter that updates without a full page reload:
-
 ```python
-from inguitive import Div, Button, Label, State, create_app
+from fastapi import FastAPI
+from inguitive import UI, Div, Button, Text, SessionState
 
-app = create_app(title="Counter")
+app = FastAPI()
+ui = UI(app, title="Counter")    # attaches middleware, the /_sse route, and /static
 
-counter = State(0, "counter")
+counter = SessionState(0, "counter")
 
-@app.trigger_handler
+@ui.trigger_handler
 def increment():
-    counter.set(counter.get() + 1)
+    counter.set(counter.get() + 1)    # listening components re-render automatically
 
-@app.page("/")
-def index():
-    return Div(
-        Label(text=lambda: f"Count: {counter.get()}", id="counter-label", listen_to="counter"),
-        Button("+1", trigger="increment"),
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Text(lambda: f"Count: {counter.get()}", listen_to=counter),
+            Button("+1", trigger=increment),
+        ),
     )
 ```
 
+Run it with `uvicorn app:app --reload` and open `http://localhost:8000`.
+
 ## Features
 
-- **Reactive State Management** — `State` propagates to all listening components automatically; no manual DOM updates or JavaScript
-- **Component-Based** — composable UI components with clean Python syntax; all attributes can be static strings or callables
-- **Trigger Handlers** — Python functions wired directly to HTMX POST actions; pass data from components to handlers via `trigger_args` and `get_trigger_args()`
-- **Form Validation** — declarative `FormSchema` with type coercion and per-constraint messages
-- **URL Routing** — dynamic path parameters with type validation (`<name:type>`)
-- **Session Backends** — `MemoryBackend` for development, `RedisBackend` for production, with automatic per-user state isolation
-- **CLI** — `inguitive init` and `inguitive run` to scaffold and serve
-- **Type Safe** — full type hints throughout the codebase
-- **Tailwind CSS** — first-class support for utility-first styling
+- **Components** — composable UI primitives (`Div`, `Text`, `Button`, ...). All attributes can be static strings or callables.
+- **State system** — `State` (global, shared across sessions) and `SessionState` (per-session). `state.set()` triggers automatic partial page updates via HTMX out-of-band (OOB) swaps to components that `listen_to` that state.
+- **SSE workflow** — server-initiated updates, both global (broadcast to all sessions) and session-scoped (pushed to one session's open connections).
+- **Trigger handlers** — Python functions wired to HTMX POST actions via `@ui.trigger_handler`. `trigger=increment` on a component resolves to the handler's URL; `listen_to=counter` resolves to the state object.
+- **`ui.page()`** — renders the full HTML document shell (`<!DOCTYPE html>`, `<head>`, HTMX/Tailwind CDN scripts, the hidden SSE auto-connect div). You compose only the body content with components.
+- **Session backends** — `MemoryBackend` for development (default), `RedisBackend` for production via the optional `inguitive[redis]` extra.
 
 ## Documentation
 
