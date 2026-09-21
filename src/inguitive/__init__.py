@@ -33,6 +33,7 @@ from inguitive.session import (
     SessionBackend,
     get_session_backend,
     get_session_id,
+    session_active,
     session_context,
     set_session_backend,
 )
@@ -79,6 +80,7 @@ __all__ = [
     "set_session_backend",
     "get_session_backend",
     "get_session_id",
+    "session_active",
     "session_context",
     # Utilities
     "nl2br",

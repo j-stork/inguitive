@@ -243,6 +243,35 @@ def get_session_id() -> str | None:
     return session.session_id if session else None
 
 
+def session_active() -> bool:
+    """Return ``True`` while the current session has at least one open SSE connection.
+
+    Intended for session-scoped background tasks (e.g. a per-session tick loop
+    started from a trigger handler). The task runs in the request's context
+    (Python's ``asyncio.create_task`` copies the contextvars at spawn time), so
+    ``session_active()`` resolves the current session via
+    :func:`_get_current_session_from_context` and checks the SSE connection
+    registry for that session's id. Once all SSE connections for the session
+    have closed (all tabs navigated away), this returns ``False`` and the loop
+    should terminate.
+
+    Example::
+
+        async def session_tick():
+            while session_active():
+                await asyncio.sleep(1)
+                counter_state.set(counter_state.get() + 1)
+
+    Returns:
+        bool: ``True`` if a session is bound in the current context and it has
+        at least one open SSE queue; ``False`` otherwise.
+    """
+    session = _get_current_session_from_context()
+    if session is None:
+        return False
+    return bool(_get_sse_queues(session.session_id))
+
+
 @asynccontextmanager
 async def session_context(session_id: str) -> AsyncIterator[Session | None]:
     """Bind a session into the current context for the duration of the block.
