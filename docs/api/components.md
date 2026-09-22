@@ -24,11 +24,11 @@
 
 ::: inguitive.components.Form
 
-::: inguitive.components.Link
-
-::: inguitive.components.Icon
+::: inguitive.components.Anchor
 
 ::: inguitive.components.Image
+
+::: inguitive.components.Icon
 
 ::: inguitive.components.DataTable
 

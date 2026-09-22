@@ -65,18 +65,19 @@ nav:
   - Getting Started: getting-started.md
   - User Guide:
     - Components: guide/components.md
-    - Routing and URL Parameters: guide/routing.md
-    - Reactive State: guide/state.md
+    - State System: guide/state.md
+    - SSE Workflow: guide/sse.md
     - Trigger Handlers: guide/trigger-handlers.md
-    - Form Validation: guide/form-validation.md
+    - Routing and URL Parameters: guide/routing.md
     - Session Backends: guide/session-backends.md
   - API Reference:
     - Overview: api/index.md
     - Components: api/components.md
     - State: api/state.md
-    - Validation: api/validation.md
+    - Trigger: api/trigger.md
     - FastAPI Integration: api/fastapi.md
     - Session: api/session.md
+    - Backends: api/backends.md
     - HTMX Helpers: api/htmx.md
     - Utilities: api/utils.md
   - Examples: examples.md

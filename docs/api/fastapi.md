@@ -1,11 +1,9 @@
 # FastAPI Integration API
 
-::: inguitive.fastapi.create_app
+::: inguitive.fastapi.UI
 
-::: inguitive.fastapi.InguitiveApp
+::: inguitive.fastapi.SessionMiddleware
 
-::: inguitive.fastapi.redirect
-
-::: inguitive.fastapi.run_app
-
-**See also:** [Routing and URL Parameters](../guide/routing.md) for information on using dynamic URL segments with the `@app.page` decorator.
+**See also:** [Routing and URL Parameters](../guide/routing.md) for routing
+with `@app.get` and `ui.page(...)`, and [Trigger Handlers](../guide/trigger-handlers.md)
+for the `@ui.trigger_handler` decorator.

@@ -1,27 +1,38 @@
 # inguitive
 
-**A pure Python reactive web framework — HTMX + Tailwind without JavaScript.**
+**A pure Python UI layer for FastAPI — HTMX + Tailwind without JavaScript.**
 
 inguitive lets Python developers build interactive web applications using only Python.
-Components automatically re-render when state changes via HTMX out-of-band swaps.
-Each browser session has isolated state — no global mutable variables, no JavaScript required.
+Pages are composed from Python components, not templates. Components automatically
+re-render when state changes via HTMX out-of-band swaps. State is either global (shared
+across all sessions) or per-session (isolated per browser) — no global mutable variables,
+no JavaScript required.
+
+inguitive complements FastAPI rather than replacing it: routing, path parameters, form
+handling, and lifespan events stay FastAPI's job; inguitive owns the UI.
 
 ```python
-from inguitive import Div, Button, Label, State, create_app
-from css import BUTTON_PRIMARY_CSS
+from fastapi import FastAPI
+from inguitive import UI, SessionState, Div, Text, Button
 
-app = create_app(title="Counter")
-counter = State(0, "counter")
+app = FastAPI()
+ui = UI(app, title="Counter")
 
-@app.trigger_handler
+counter = SessionState(0, "counter")
+
+
+@ui.trigger_handler
 def increment():
-    counter.set(counter.get() + 1)
+    counter.set(counter.get() + 1)    # listening components update automatically
 
-@app.page("/")
-def index():
-    return Div(
-        Label(text=lambda: f"Count: {counter.get()}", id="counter-label", listen_to="counter"),
-        Button("+1", trigger="increment", css=BUTTON_PRIMARY_CSS),
+
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Text(lambda: f"Count: {counter.get()}", id="counter-label", listen_to=counter),
+            Button("+1", trigger=increment),
+        ),
     )
 ```
 
@@ -31,22 +42,23 @@ def index():
 |---|---|---|
 | Interactivity | Requires JavaScript | Pure Python |
 | State updates | Full page reload or custom JS | HTMX out-of-band swaps |
-| Per-user state | Manual session plumbing | Built-in `State` + session isolation |
-| Form validation | Roll your own | Declarative `FormSchema` |
+| Per-user state | Manual session plumbing | Built-in `SessionState` (per-session) + `State` (global) |
+| Server push | WebSockets or polling | SSE with automatic OOB swaps |
+| Routing | Framework-specific wrappers | Native FastAPI routes |
 
 ## Features
 
-- **Reactive state** — `State` propagates to all listening components automatically
-- **Component model** — composable, callable-attribute UI components
-- **Trigger handlers** — Python functions wired directly to HTMX POST actions
-- **Form validation** — declarative schemas with type coercion and per-constraint messages
-- **URL routing** — dynamic path parameters with type validation (`<name:type>`)
-- **Session backends** — `MemoryBackend` for development, `RedisBackend` for production
-- **CLI** — `inguitive init` and `inguitive run` to scaffold and serve
+- **Component model** — composable, callable-attribute UI components (`Div`, `Text`, `Button`, …)
+- **Reactive state** — `State` (global) and `SessionState` (per-session); `.set()` propagates to listening components automatically
+- **Trigger handlers** — Python callables wired directly to HTMX POST actions via `@ui.trigger_handler`
+- **SSE workflow** — server-initiated updates, both global (broadcast to all sessions) and session-scoped (pushed to one session)
+- **Session backends** — `MemoryBackend` for development, `RedisBackend` for production (via the `inguitive[redis]` extra)
+- **FastAPI-native routing** — path parameters, form handling, and dependencies used directly
 
 ## Quick links
 
 - [Getting Started](getting-started.md) — install and run your first app in five minutes
-- [Component Reference](guide/components.md) — every built-in component with examples
-- [Form Validation](guide/form-validation.md) — the `FormSchema` / `validate_form` API
+- [Components](guide/components.md) — every built-in component with copy-paste recipes
+- [State System](guide/state.md) — global `State` vs per-session `SessionState`
+- [SSE Workflow](guide/sse.md) — server-initiated pushes, global and session-scoped
 - [API Reference](api/index.md) — full auto-generated reference from source docstrings

@@ -12,143 +12,154 @@ For Redis-backed sessions (production):
 pip install "inguitive[redis]"
 ```
 
-## Scaffold a new app
-
-The CLI creates a ready-to-run `app.py` in the current directory:
+inguitive does **not** bundle an ASGI server. You run your app with
+`uvicorn` (or any ASGI server you prefer):
 
 ```bash
-inguitive init
-inguitive run
+pip install uvicorn[standard]
 ```
-
-Then open [http://localhost:8000](http://localhost:8000).
-
-`inguitive run` accepts `--host`, `--port`, and `--no-reload` flags and starts
-uvicorn with auto-reload enabled by default.
 
 ## Your first app — step by step
 
-### 1. Create the app
+### 1. Create the app and the UI
 
 ```python
-from inguitive import create_app
+from fastapi import FastAPI
+from inguitive import UI
 
-app = create_app(title="My App")
+app = FastAPI()
+ui = UI(app, title="My App")
 ```
 
-`create_app` returns a FastAPI application with inguitive's session middleware,
-HTMX routing, and Tailwind CDN wired in. The optional `title` and `favicon`
-parameters control the browser tab; `head` accepts arbitrary HTML to inject
-into `<head>`.
+You construct the FastAPI app yourself, then pass it to `UI(app, ...)`.
+`UI` attaches inguitive's UI layer: the `@ui.trigger_handler` surface,
+`ui.page()`, session middleware, the `/_sse` endpoint, and the `/static`
+mount. The optional `title`, `favicon`, and `head` parameters control the
+browser tab and `<head>` content globally.
 
 ### 2. Define reactive state
 
 ```python
-from inguitive import State
+from inguitive import SessionState
 
-counter = State(0, "counter")
+counter = SessionState(0, "counter")
 ```
 
-`State(initial_value, name)` creates a per-session reactive container. The name
-must be unique across your app — it is used to route re-render notifications to
-listening components.
+inguitive has two state scopes:
+
+- **`SessionState`** — per-session. Each browser session gets its own isolated
+  value; `set()` pushes updates only to that session's components.
+- **`State`** — global. Shared across all sessions; `set()` broadcasts to
+  every connected browser.
+
+For a per-user counter, `SessionState` is the right choice. See
+[State System](guide/state.md) for the full global-vs-session model.
 
 ### 3. Write a trigger handler
 
 ```python
-@app.trigger_handler
+@ui.trigger_handler
 def increment():
     counter.set(counter.get() + 1)
 ```
 
 Trigger handlers are plain Python functions (sync or async) decorated with
-`@app.trigger_handler`. inguitive registers an HTMX POST endpoint for each one
-automatically.
+`@ui.trigger_handler`. inguitive registers an HTMX POST endpoint for each one
+automatically. The handler returns `None`; the framework detects the state
+mutation and generates the OOB swap response for you.
 
 ### 4. Build a component
 
 ```python
-from inguitive import Div, Label, Button
-from css import BUTTON_PRIMARY_CSS
+from inguitive import Div, Text, Button
 
 def Counter():
     return Div(
-        Label(
-            text=lambda: f"Count: {counter.get()}",
+        Text(
+            lambda: f"Count: {counter.get()}",
             id="counter-label",
-            listen_to="counter",
+            listen_to=counter,
         ),
-        Button("+1", trigger="increment", css=BUTTON_PRIMARY_CSS),
+        Button("+1", trigger=increment),
     )
 ```
 
 Key points:
 
 - `text=lambda: ...` — any attribute can be a callable; it is re-evaluated on every render.
-- `listen_to="counter"` — when `counter` changes, the component is re-rendered via OOB swap.
+- `listen_to=counter` — pass the `State`/`SessionState` object itself (not a string). When `counter` changes, the component is re-rendered via OOB swap.
+- `trigger=increment` — pass the handler callable itself (not a string). The component resolves the `hx-post` URL from the handler.
 - `id="counter-label"` — required for OOB swaps; must match the element in the DOM.
 
 ### 5. Define a page
 
 ```python
-@app.page("/")
-def index():
-    return Counter()
+@app.get("/")
+def home():
+    return ui.page(Counter())
 ```
 
-`@app.page` registers a GET route. The return value is rendered into a full HTML
-page with Tailwind and HTMX included.
+Pages are plain FastAPI routes that return `ui.page(...)`. The component is
+rendered and wrapped in a full HTML document (with Tailwind, HTMX, and the SSE
+connection wired in automatically).
 
-For dynamic URLs with parameters, see [Routing and URL Parameters](guide/routing.md).
+For dynamic URLs with parameters, see
+[Routing and URL Parameters](guide/routing.md).
 
 ### 6. Run
 
 ```bash
-inguitive run
-# or
 uvicorn app:app --reload
 ```
+
+Then open [http://localhost:8000](http://localhost:8000).
 
 ## Full counter example
 
 ```python
-from inguitive import Div, Button, Label, State, create_app
-from css import BUTTON_PRIMARY_CSS
+from fastapi import FastAPI
+from inguitive import UI, SessionState, Div, Text, Button
 
-app = create_app(title="Counter")
-counter = State(0, "counter")
+app = FastAPI()
+ui = UI(app, title="Counter")
 
-@app.trigger_handler
+counter = SessionState(0, "counter")
+
+
+@ui.trigger_handler
 def increment():
     counter.set(counter.get() + 1)
 
-@app.trigger_handler
+
+@ui.trigger_handler
 def decrement():
     counter.set(counter.get() - 1)
 
+
 def Counter():
     return Div(
-        Button("-1", trigger="decrement", css=BUTTON_PRIMARY_CSS),
-        Label(
-            text=lambda: str(counter.get()),
+        Button("-1", trigger=decrement),
+        Text(
+            lambda: str(counter.get()),
             id="counter-label",
-            listen_to="counter",
+            listen_to=counter,
             css="text-4xl font-bold mx-4",
         ),
-        Button("+1", trigger="increment", css=BUTTON_PRIMARY_CSS),
+        Button("+1", trigger=increment),
         css="flex items-center gap-4 p-8",
     )
 
-@app.page("/", title="Counter")
-def index():
-    return Counter()
+
+@app.get("/")
+def home():
+    return ui.page(Counter())
 ```
 
 ## Next steps
 
-- [Components](guide/components.md) — the full component library
-- [Routing and URL Parameters](guide/routing.md) — dynamic URLs with type validation
-- [Reactive State](guide/state.md) — how state isolation and propagation work
+- [Components](guide/components.md) — the full component library with recipes
+- [State System](guide/state.md) — global `State` vs per-session `SessionState`
+- [SSE Workflow](guide/sse.md) — server-initiated updates, global and session-scoped
 - [Trigger Handlers](guide/trigger-handlers.md) — trigger args, async handlers, form data
-- [Form Validation](guide/form-validation.md) — declarative schemas with `FormSchema`
-- [Session Backends](guide/session-backends.md) — scaling to production
+- [Routing and URL Parameters](guide/routing.md) — dynamic URLs with FastAPI native path params
+- [Session Backends](guide/session-backends.md) — scaling to production with Redis

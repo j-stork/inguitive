@@ -1,210 +1,179 @@
 # Routing and URL Parameters
 
-## Basic Routing
+Routing is FastAPI's job. Pages are plain `@app.get(...)` routes that return
+`ui.page(...)`. There is no custom path-parameter conversion engine — you use
+FastAPI's native `{name}` syntax and type annotations directly.
 
-Pages are defined with the `@app.page` decorator:
+## Basic routing
 
 ```python
-@app.page("/")
-def index():
-    return Div(Text("Home Page"))
+from fastapi import FastAPI
+from inguitive import UI, Div, Text
 
-@app.page("/about")
+app = FastAPI()
+ui = UI(app)
+
+@app.get("/")
+def home():
+    return ui.page(Div(Text("Home Page")))
+
+@app.get("/about")
 def about():
-    return Div(Text("About Us"))
+    return ui.page(Div(Text("About Us")))
 ```
 
-Each `@app.page` registers a GET route on your FastAPI application.
+Each `@app.get` registers a GET route. The handler returns `ui.page(component)`,
+which wraps the component in the full HTML document shell.
 
-## URL Path Parameters
+## URL path parameters
 
-You can define dynamic URL segments using the `<name:type>` syntax:
+Use FastAPI's `{name}` syntax to define dynamic segments. The handler's type
+annotation tells FastAPI how to parse and validate the segment:
 
 ```python
-@app.page("/user/<username>")
+@app.get("/user/{username}")
 def user_profile(username: str):
-    return Div(Text(f"Hello, {username}"))
+    return ui.page(Div(Text(f"Hello, {username}")))
 ```
 
-When a user visits `/user/john`, the `username` parameter will receive the value `"john"`.
+When a user visits `/user/john`, `username` receives the value `"john"`.
 
-### Type Annotations
-
-The type in `<name:type>` specifies how the URL segment should be parsed:
+## Type annotations
 
 | Type | Example | Description |
 |------|---------|-------------|
-| `str` | `/user/<name:str>` | String (default if no type specified) |
-| `int` | `/post/<id:int>` | Integer, validates and converts |
-| `float` | `/price/<amount:float>` | Floating point number |
-| `bool` | `/toggle/<state:bool>` | Boolean (accepts: true, false, 1, 0, yes, no, on, off) |
-| `path` | `/files/<subpath:path>` | Preserves slashes in the path |
-| `uuid` | `/user/<id:uuid>` | UUID validation and conversion |
+| `str` | `/user/{name}` | String (default when no type is given) |
+| `int` | `/post/{id}` | Integer, validates and converts |
+| `float` | `/price/{amount}` | Floating point number |
+| `path` | `/files/{subpath:path}` | Preserves slashes in the path |
+| `uuid` | `/user/{user_id}` | UUID validation and conversion |
 
-### Type Validation
+### Type validation
 
-If a URL segment doesn't match the expected type, inguitive returns an HTTP 400 error:
+If a URL segment doesn't match the expected type, FastAPI returns an HTTP 422
+error automatically — no handler-level validation code needed:
 
 ```python
-@app.page("/post/<post_id:int>")
+@app.get("/post/{post_id}")
 def show_post(post_id: int):
-    return Div(Text(f"Post {post_id}"))
+    return ui.page(Div(Text(f"Post {post_id}")))
 
 # /post/42    -> OK, post_id = 42 (int)
-# /post/abc   -> 400 Bad Request with detail: "Invalid post_id: invalid literal for int()"
+# /post/abc   -> 422 Unprocessable Entity
 ```
 
-### Boolean Values
-
-The `bool` type accepts these values (case-insensitive):
-
-- **True**: `true`, `1`, `yes`, `on`
-- **False**: `false`, `0`, `no`, `off`, or any other value
-
-```python
-@app.page("/toggle/<state:bool>")
-def toggle(state: bool):
-    return Div(Text(f"State: {state}"))
-
-# /toggle/true   -> state = True
-# /toggle/false  -> state = False
-# /toggle/1      -> state = True
-# /toggle/yes    -> state = True
-```
-
-### Path Type
+### Path type
 
 Use `path` when you need to capture URL segments that contain slashes:
 
 ```python
-@app.page("/files/<filepath:path>")
-def show_file(filepath: str):
-    return Div(Text(f"File: {filepath}"))
+@app.get("/files/{subpath:path}")
+def show_file(subpath: str):
+    return ui.page(Div(Text(f"File: {subpath}")))
 
-# /files/a/b/c.txt  -> filepath = "a/b/c.txt"
+# /files/a/b/c.txt  -> subpath = "a/b/c.txt"
 ```
 
-### UUID Type
-
-The `uuid` type validates and converts to a UUID object:
+### UUID type
 
 ```python
 import uuid
 
-@app.page("/user/<user_id:uuid>")
+@app.get("/user/{user_id}")
 def show_user(user_id: uuid.UUID):
-    return Div(Text(f"User: {user_id}"))
+    return ui.page(Div(Text(f"User: {user_id}")))
 
 # /user/550e8400-e29b-41d4-a716-446655440000  -> OK
-# /user/not-a-uuid                           -> 400 Bad Request
+# /user/not-a-uuid                           -> 422
 ```
 
-## Multiple Parameters
+## Multiple parameters
 
-You can use multiple path parameters in a single route:
+You can use multiple path parameters in a single route and mix types:
 
 ```python
-@app.page("/user/<user_id:int>/post/<post_id:int>")
+@app.get("/user/{user_id}/post/{post_id}")
 def show_user_post(user_id: int, post_id: int):
-    return Div(Text(f"User {user_id}, Post {post_id}"))
+    return ui.page(Div(Text(f"User {user_id}, Post {post_id}")))
 
 # /user/123/post/456  -> user_id = 123, post_id = 456
-```
 
-You can also mix types:
-
-```python
-@app.page("/category/<category:str>/page/<page:int>")
+@app.get("/category/{category}/page/{page}")
 def show_category_page(category: str, page: int):
-    return Div(Text(f"{category} page {page}"))
+    return ui.page(Div(Text(f"{category} page {page}")))
 
 # /category/books/page/5  -> category = "books", page = 5
 ```
 
-## Default Type
+## Navigation between pages
 
-If you omit the type, it defaults to `str`:
+Use `Anchor` for traditional navigation (the URL changes, the page is
+bookmarkable, the user can open in a new tab):
 
 ```python
-@app.page("/user/<username>")
+from inguitive import Anchor
+
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Anchor("About", href="/about", css="text-blue-600 hover:underline"),
+        ),
+    )
+```
+
+Use `RedirectResponse` for server-side redirects (e.g. redirecting the root
+path to a default page):
+
+```python
+from fastapi.responses import RedirectResponse
+
+@app.get("/")
+def root():
+    return RedirectResponse("/page1", status_code=302)
+```
+
+`Anchor` vs `trigger`: `Anchor` performs a full page navigation (the URL
+changes); `trigger` fires an HTMX POST that updates components in place (the
+URL stays the same). See the [Components](components.md#navigation) guide for
+the full comparison.
+
+## Request and dependencies
+
+Since pages are plain FastAPI routes, all FastAPI features are available
+directly: `Request`, `Form(...)`, dependencies, query parameters, and more.
+
+```python
+from fastapi import Request
+
+@app.get("/search")
+def search(request: Request):
+    q = request.query_params.get("q", "")
+    return ui.page(Div(Text(f"Searching for: {q}")))
+```
+
+## Complete example
+
+```python
+from fastapi import FastAPI
+from inguitive import UI, Div, Text
+
+app = FastAPI()
+ui = UI(app, title="User Profiles")
+
+@app.get("/user/{username}")
 def user_profile(username: str):
-    return Div(Text(f"Hello, {username}"))
+    return ui.page(Div(Text(f"Profile: {username}")))
 
-# Equivalent to: /user/<username:str>
-```
-
-## Unknown Types
-
-If you specify an unknown type name, it will be treated as `str`:
-
-```python
-@app.page("/test/<value:custom_type>")
-def test_page(value: str):
-    return Div(Text(f"Value: {value}"))
-
-# value will be a string regardless of the unknown type annotation
-```
-
-## Accessing Request and Form Data
-
-Path parameters work alongside the `request` and `form_data` parameters:
-
-```python
-@app.page("/user/<user_id:int>")
-def user_profile(user_id: int, request):
-    return Div(Text(f"User {user_id}, Method: {request.method}"))
-
-@app.page("/user/<user_id:int>")
-def user_profile(user_id: int, form_data: dict):
-    return Div(Text(f"User {user_id}, Form: {form_data}"))
-```
-
-## Reserved Parameter Names
-
-The names `request` and `form_data` are reserved for FastAPI request injection and **cannot** be used as path parameter names:
-
-```python
-# This will raise ValueError during app initialization:
-@app.page("/test/<request:str>")
-def test_page(request: str):
-    return Div(Text(f"Param: {request}"))
-
-# Error: Path parameter name 'request' is reserved and cannot be used.
-```
-
-## Parameter Precedence
-
-When a path parameter has the same name as a function parameter that would normally receive `request` or `form_data`, the path parameter takes precedence. However, since `request` and `form_data` are reserved names, this situation cannot occur with those specific names.
-
-## Root Path with Parameters
-
-You can use parameters in the root path:
-
-```python
-@app.page("/<page_name:str>")
-def dynamic_page(page_name: str):
-    return Div(Text(f"Dynamic page: {page_name}"))
-
-# /home      -> page_name = "home"
-# /about     -> page_name = "about"
-```
-
-## Complete Example
-
-```python
-from inguitive import Div, Text, create_app
-
-app = create_app(title="User Profiles")
-
-@app.page("/user/<username:str>")
-def user_profile(username: str):
-    return Div(Text(f"Profile: {username}"))
-
-@app.page("/user/<username:str>/post/<post_id:int>")
+@app.get("/user/{username}/post/{post_id}")
 def user_post(username: str, post_id: int):
-    return Div(Text(f"{username}'s post #{post_id}"))
+    return ui.page(Div(Text(f"{username}'s post #{post_id}")))
 
-@app.page("/settings/<section:str>/<page:int>")
+@app.get("/settings/{section}/{page}")
 def settings_page(section: str, page: int):
-    return Div(Text(f"{section} settings, page {page}"))
+    return ui.page(Div(Text(f"{section} settings, page {page}")))
 ```
+
+See `examples/routing_app.py` for a multi-page routing demo with
+`RedirectResponse` and `Anchor`, and `examples/url_params_app.py` for a path
+parameter demo with `int`, `str`, and `path` types.

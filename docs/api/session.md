@@ -6,4 +6,12 @@
 
 ::: inguitive.session.MemoryBackend
 
-::: inguitive.session.RedisBackend
+::: inguitive.session.set_session_backend
+
+::: inguitive.session.get_session_backend
+
+::: inguitive.session.get_session_id
+
+::: inguitive.session.session_active
+
+::: inguitive.session.session_context

@@ -13,19 +13,21 @@ components, and data. The backend controls where sessions are stored.
 ## `MemoryBackend` (default)
 
 Sessions are stored in RAM. No configuration required — it is the default when
-no `session_backend` is passed to `create_app`.
+no `session_backend` is passed to `UI(...)`.
 
 ```python
-from inguitive import create_app
+from fastapi import FastAPI
+from inguitive import UI
 
-app = create_app()  # MemoryBackend by default
+app = FastAPI()
+ui = UI(app)  # MemoryBackend by default
 ```
 
 **Limitations:**
 
 - State is lost when the process restarts.
 - Sessions are not shared across multiple uvicorn workers. Run with a single
-  worker in development (`inguitive run` does this by default).
+  worker in development.
 
 ## `RedisBackend`
 
@@ -36,13 +38,17 @@ pip install "inguitive[redis]"
 ```
 
 ```python
-from inguitive import create_app, RedisBackend
+from fastapi import FastAPI
+from inguitive import UI
+from inguitive.backends.redis import RedisBackend
 
-app = create_app(
+app = FastAPI()
+ui = UI(
+    app,
     session_backend=RedisBackend(
         redis_url="redis://localhost:6379",
         ttl_seconds=3600,    # session timeout in seconds (default: 3600)
-    )
+    ),
 )
 ```
 
@@ -57,6 +63,32 @@ app = create_app(
 > connection queues, the component registry cache, and any background tasks you
 > start. See [Multi-worker deployment](#multi-worker-deployment) for how to make
 > SSE pushes and background tasks correct under multiple workers.
+
+## Choosing the backend at startup
+
+Instead of passing `session_backend` to `UI(...)`, you can set the backend
+before the app handles requests using `set_session_backend()`. This is useful
+when the backend is chosen from an environment variable at startup:
+
+```python
+import os
+
+from fastapi import FastAPI
+from inguitive import UI, MemoryBackend, set_session_backend
+from inguitive.backends.redis import RedisBackend
+
+if os.getenv("SESSION_BACKEND") == "redis":
+    set_session_backend(RedisBackend(redis_url=os.getenv("REDIS_URL", "redis://localhost:6379")))
+else:
+    set_session_backend(MemoryBackend())
+
+app = FastAPI()
+ui = UI(app)  # picks up the backend set above
+```
+
+`get_session_backend()` returns the live backend object at runtime, which is
+useful for diagnostics or health checks. See `examples/session_backend_app.py`
+for a complete runnable version.
 
 ## Session lifetime
 
@@ -73,14 +105,19 @@ cookie.
 ## Production configuration
 
 ```python
-from inguitive import create_app, RedisBackend
+from fastapi import FastAPI
+from inguitive import UI
+from inguitive.backends.redis import RedisBackend
 
-app = create_app(
+app = FastAPI()
+ui = UI(
+    app,
     title="My App",
     session_backend=RedisBackend(redis_url="redis://localhost:6379"),
     session_cookie_secure=True,       # HTTPS only
     session_cookie_httponly=True,     # no JS access (default: True)
     session_cookie_max_age=86400,     # 24-hour browser-side expiry
+    dev_mode=False,                   # suppress development warnings
 )
 ```
 
@@ -128,7 +165,7 @@ http:
         cookie: true
 ```
 
-The cookie name is whatever you pass to `create_app(..., session_cookie_name=)`
+The cookie name is whatever you pass to `UI(..., session_cookie_name=)`
 (default `inguitive_session`). Hash on that.
 
 ### Option B — Message broker (broker-optional, opt-in)

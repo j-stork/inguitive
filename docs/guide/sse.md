@@ -1,9 +1,13 @@
 # Server-Sent Events (SSE)
 
+This is the third pillar of inguitive. The [Components](components.md) pillar
+covers building UI; the [State System](state.md) pillar covers reactive data.
+SSE is the server-initiated push layer: the server sends component updates to
+the browser at any time, with no user interaction required.
+
 By default, inguitive follows a request-response model: a user action triggers
 an HTMX POST, which returns OOB HTML that updates the relevant components.
-**SSE support** breaks this constraint — the server can push component updates
-to the browser at any time, with no user interaction required.
+**SSE support** breaks this constraint.
 
 This unlocks use cases such as:
 
@@ -110,7 +114,7 @@ import asyncio
 
 from fastapi import FastAPI
 
-from inguitive import UI, SessionState, Div, Text, Button, get_session_id, session_active
+from inguitive import UI, SessionState, Div, Text, Button, session_active
 
 app = FastAPI()
 ui = UI(app)
@@ -162,7 +166,9 @@ not the one bound by the current request — for example, a task started from
 `@app.on_event("startup")` that targets a specific user:
 
 ```python
-from inguitive import session_context, SessionState
+import asyncio
+
+from inguitive import session_context, SessionState, session_active
 
 counter_state = SessionState(0, "counter_state")
 
@@ -171,7 +177,9 @@ async def tick_for_user(session_id: str):
     async with session_context(session_id) as session:
         if session is None:
             return                       # session was evicted — stop
-        counter_state.set(counter_state.get() + 1)   # auto-push to this session
+        while session_active():
+            await asyncio.sleep(1)
+            counter_state.set(counter_state.get() + 1)   # auto-push to this session
 ```
 
 `.set()` called inside the block triggers the auto-push path: the framework
@@ -254,7 +262,18 @@ under the hood:
   inactivity (or when the session is deleted).
 
 No configuration is required — install the `redis` extra, set
-`session_backend=RedisBackend(...)` on `UI(...)`, and auto-push keeps working.
+`session_backend=RedisBackend(...)` on `UI(...)`, and auto-push keeps working:
+
+```bash
+pip install "inguitive[redis]"
+```
+
+```python
+from inguitive import UI
+from inguitive.backends.redis import RedisBackend
+
+ui = UI(app, session_backend=RedisBackend(redis_url="redis://localhost:6379"))
+```
 
 ## Limitations and notes
 

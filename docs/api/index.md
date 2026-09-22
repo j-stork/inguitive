@@ -5,24 +5,30 @@ Auto-generated from source docstrings. All public names are exported from
 
 ```python
 from inguitive import (
-    # App
-    create_app, redirect, run_app,
+    # UI
+    UI, SessionMiddleware,
     # Components
-    Div, Button, Input, Textarea, Select, Checkbox, Radio,
-    Form, Text, Label, Link, Icon, DataTable, TemplateComponent, Component,
+    Component, Div, Button, Label, Text, Header,
+    Input, Textarea, Select, Checkbox, Radio, Form,
+    Anchor, Image, Icon, DataTable, TemplateComponent,
     # State
-    State,
-    # Triggers
-    get_trigger_args,
-    # Validation
-    FormSchema, field, validate_form, ValidationError,
-    RequiredValidator, MinLengthValidator, MaxLengthValidator,
-    MinValueValidator, MaxValueValidator, RegexValidator, CustomValidator,
-    # Sessions
-    MemoryBackend, RedisBackend,
-    # Helpers
+    State, SessionState,
+    # Trigger
+    get_trigger_args, get_form_data,
+    # Session
+    SessionBackend, MemoryBackend,
+    set_session_backend, get_session_backend,
+    get_session_id, session_active, session_context,
+    # HTMX helpers
     update_components, nl2br,
 )
+```
+
+Redis-backed sessions are an optional extra:
+
+```python
+# pip install "inguitive[redis]"
+from inguitive.backends.redis import RedisBackend
 ```
 
 Use the navigation to browse individual modules.
