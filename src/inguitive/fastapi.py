@@ -352,6 +352,11 @@ class UI:
         session_cookie_httponly: bool = True,
         session_cleanup_interval: int = 100,
         dev_mode: bool = True,
+        *,
+        htmx_src: str = "https://unpkg.com/htmx.org@1.9.6",
+        sse_ext_src: str = "https://unpkg.com/htmx.org@1.9.6/dist/ext/sse.js",
+        tailwind_src: str | None = "https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4",
+        replace_default_head: bool = False,
     ):
         """Attach inguitive's UI layer to *app*.
 
@@ -384,6 +389,24 @@ class UI:
             session_cookie_httponly: Whether cookie is HTTP-only.
             session_cleanup_interval: Call ``cleanup_expired()`` every N requests.
             dev_mode: Enable development mode warnings (default True).
+            htmx_src: URL for the HTMX core ``<script>`` tag. Override to
+                self-host (e.g. ``"/static/htmx.min.js"``). Essential — there
+                is no opt-out; HTMX must always load. Defaults to the unpkg CDN.
+            sse_ext_src: URL for the HTMX SSE extension ``<script>`` tag.
+                Override to self-host. Essential — no opt-out; the SSE
+                extension must always load. Defaults to the unpkg CDN.
+            tailwind_src: URL for the Tailwind ``<script>`` or
+                ``<link rel="stylesheet">`` tag, or ``None`` to omit Tailwind
+                entirely. If the URL ends with ``.css`` a ``<link>`` tag is
+                emitted; otherwise a ``<script>`` tag (the default browser
+                build). Defaults to the jsdelivr CDN browser build.
+            replace_default_head: When False (default), the shell emits the
+                framework assets (HTMX, SSE extension, Tailwind) before the
+                user's ``head`` content. When True, the shell emits no
+                framework assets — the user's ``head`` is the sole source of
+                ``<head>`` content. ``ui.page()`` verifies that the rendered
+                head contains HTMX and the SSE extension and raises if either
+                is missing.
         """
         self.app = app
 
@@ -393,6 +416,10 @@ class UI:
         app.state.favicon = favicon
         app.state.head = head
         app.state.dev_mode = dev_mode
+        app.state.htmx_src = htmx_src
+        app.state.sse_ext_src = sse_ext_src
+        app.state.tailwind_src = tailwind_src
+        app.state.replace_default_head = replace_default_head
         app.state.trigger_handlers = {}
         app.state.page_routes = {}
 
