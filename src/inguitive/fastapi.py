@@ -65,14 +65,42 @@ def _render_template_content(value: HeadContent) -> str:
 
 
 
-def _render_page_shell(content: str, title: str, favicon: str, head_extra: str) -> str:
+def _render_page_shell(
+    content: str,
+    title: str,
+    favicon: str,
+    head_extra: str,
+    htmx_src: str,
+    sse_ext_src: str,
+    tailwind_src: str | None,
+    replace_default_head: bool,
+) -> str:
     """Render a full HTML document shell wrapping the given content.
 
     Replaces the former base.html Jinja2 template with inline Python string
-    composition. The shell includes HTMX + SSE extension, Tailwind CSS, Inter
-    font, the hidden #hx-target div for SSE auto-connect, and the pagehide
-    cleanup script.
+    composition. The shell includes HTMX + SSE extension and (optionally)
+    Tailwind CSS, plus the hidden #hx-target div for SSE auto-connect and
+    the pagehide cleanup script.
+
+    When *replace_default_head* is False (default), the framework assets
+    (HTMX core, SSE extension, Tailwind) are emitted before *head_extra*.
+    When True, no framework assets are emitted — *head_extra* is the sole
+    source of ``<head>`` content (after meta/title/favicon).
     """
+    if replace_default_head:
+        head_assets = ""
+    else:
+        lines = [
+            f'        <script src="{htmx_src}"></script>',
+            f'        <script src="{sse_ext_src}"></script>',
+        ]
+        if tailwind_src is not None:
+            if tailwind_src.endswith(".css"):
+                lines.append(f'        <link rel="stylesheet" href="{tailwind_src}">')
+            else:
+                lines.append(f'        <script src="{tailwind_src}"></script>')
+        head_assets = "\n".join(lines) + "\n"
+
     return f"""<!DOCTYPE html>
 <html lang="en">
     <head>
@@ -80,22 +108,7 @@ def _render_page_shell(content: str, title: str, favicon: str, head_extra: str) 
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>{title}</title>
         <link rel="icon" href="{favicon}">
-        <!-- HTMX -->
-        <script src="https://unpkg.com/htmx.org@1.9.6"></script>
-        <!-- HTMX SSE extension — enables server-initiated component updates -->
-        <script src="https://unpkg.com/htmx.org@1.9.6/dist/ext/sse.js"></script>
-        <!-- Tailwind CSS -->
-        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-        <!-- Inter Font -->
-        <link rel="stylesheet" href="https://rsms.me/inter/inter.css" />
-        <!-- Configure Tailwind to use Inter as default sans-serif -->
-        <style type="text/tailwindcss">
-            @theme {{
-                --font-sans: Inter, sans-serif;
-            }}
-        </style>
-        {head_extra}  <!-- Custom head content injection -->
-    </head>
+{head_assets}{head_extra}    </head>
     <body class="min-h-screen">
         {content}
         <!-- Hidden target for HTMX requests (POST triggers and SSE updates) -->
@@ -671,5 +684,14 @@ class UI:
                 head_sources.append(head)
         head_extra = "".join(_render_template_content(source) for source in head_sources)
 
-        html = _render_page_shell(content, effective_title, effective_favicon, head_extra)
+        html = _render_page_shell(
+            content,
+            effective_title,
+            effective_favicon,
+            head_extra,
+            htmx_src=getattr(self.app.state, "htmx_src", "https://unpkg.com/htmx.org@1.9.6"),
+            sse_ext_src=getattr(self.app.state, "sse_ext_src", "https://unpkg.com/htmx.org@1.9.6/dist/ext/sse.js"),
+            tailwind_src=getattr(self.app.state, "tailwind_src", "https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"),
+            replace_default_head=getattr(self.app.state, "replace_default_head", False),
+        )
         return HTMLResponse(content=html)
