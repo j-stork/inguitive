@@ -65,6 +65,18 @@ def _render_template_content(value: HeadContent) -> str:
 
 
 
+def _tailwind_tag(src: str) -> str:
+    """Return the HTML tag for a Tailwind source URL.
+
+    If *src* ends with ``.css``, emit a ``<link rel="stylesheet">`` tag
+    (pre-built CSS). Otherwise emit a ``<script>`` tag (the default
+    browser-build JIT compiler).
+    """
+    if src.endswith(".css"):
+        return f'<link rel="stylesheet" href="{src}">'
+    return f'<script src="{src}"></script>'
+
+
 def _render_page_shell(
     content: str,
     title: str,
@@ -95,10 +107,7 @@ def _render_page_shell(
             f'        <script src="{sse_ext_src}"></script>',
         ]
         if tailwind_src is not None:
-            if tailwind_src.endswith(".css"):
-                lines.append(f'        <link rel="stylesheet" href="{tailwind_src}">')
-            else:
-                lines.append(f'        <script src="{tailwind_src}"></script>')
+            lines.append(f"        {_tailwind_tag(tailwind_src)}")
         head_assets = "\n".join(lines) + "\n"
 
     return f"""<!DOCTYPE html>
