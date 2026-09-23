@@ -710,14 +710,15 @@ class UI:
         # scripts were forgotten entirely, not whether the URLs resolve.
         # The SSE extension URL contains "htmx" in its domain, so we split
         # on "<script" and check each chunk: a core HTMX reference is one
-        # that contains "htmx" but not "sse".
+        # that contains "htmx" but not "sse.js". We match on "sse.js"
+        # (not bare "sse") to avoid false positives like "assess".
         if getattr(self.app.state, "replace_default_head", False):
             head_lower = head_extra.lower()
             script_chunks = head_lower.split("<script")
             has_htmx_core = any(
-                "htmx" in chunk and "sse" not in chunk for chunk in script_chunks
+                "htmx" in chunk and "sse.js" not in chunk for chunk in script_chunks
             )
-            has_sse = "sse" in head_lower
+            has_sse = "sse.js" in head_lower
             missing = []
             if not has_htmx_core:
                 missing.append("the HTMX core script")
