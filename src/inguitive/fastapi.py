@@ -42,6 +42,17 @@ from inguitive.trigger import _trigger_args_context
 # Type alias for head content (supports strings, Components, Markup, lists, or None)
 HeadContent = str | Component | markupsafe.Markup | list[str | Component | markupsafe.Markup] | None
 
+_REPLACE_DEFAULT_HEAD_MISSING_MSG = (
+    "replace_default_head=True was set, but the rendered head content is "
+    "missing {missing}. inguitive's reactivity depends on the HTMX core "
+    "script and the HTMX SSE extension being present in <head>. "
+    "Add them to the `head` parameter of UI(...) or ui.page(...), e.g.:\n"
+    '  head=[\n'
+    '      \'<script src="https://unpkg.com/htmx.org@1.9.6"></script>\',\n'
+    '      \'<script src="https://unpkg.com/htmx.org@1.9.6/dist/ext/sse.js"></script>\',\n'
+    '  ]'
+)
+
 
 def _render_template_content(value: HeadContent) -> str:
     """Render a value (Component, list, string, or Markup) to HTML string for template injection.
@@ -692,6 +703,32 @@ class UI:
             if head is not None:
                 head_sources.append(head)
         head_extra = "".join(_render_template_content(source) for source in head_sources)
+
+        # When replace_default_head is True the shell emits no framework
+        # assets, so the user's head must include HTMX and the SSE extension.
+        # This is a heuristic substring check — it catches the case where the
+        # scripts were forgotten entirely, not whether the URLs resolve.
+        # The SSE extension URL contains "htmx" in its domain, so we split
+        # on "<script" and check each chunk: a core HTMX reference is one
+        # that contains "htmx" but not "sse".
+        if getattr(self.app.state, "replace_default_head", False):
+            head_lower = head_extra.lower()
+            script_chunks = head_lower.split("<script")
+            has_htmx_core = any(
+                "htmx" in chunk and "sse" not in chunk for chunk in script_chunks
+            )
+            has_sse = "sse" in head_lower
+            missing = []
+            if not has_htmx_core:
+                missing.append("the HTMX core script")
+            if not has_sse:
+                missing.append("the HTMX SSE extension")
+            if missing:
+                raise RuntimeError(
+                    _REPLACE_DEFAULT_HEAD_MISSING_MSG.format(
+                        missing=" and ".join(missing)
+                    )
+                )
 
         html = _render_page_shell(
             content,
