@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "inguitive"
-version = "2.0.0"
+version = "2.1.0"
 description = "A pure Python UI layer for FastAPI: compose pages from Python components instead of templates, with reactive state and SSE-driven partial updates via HTMX"
 readme = "README.md"
 license = "MIT"

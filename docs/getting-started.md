@@ -37,6 +37,42 @@ You construct the FastAPI app yourself, then pass it to `UI(app, ...)`.
 mount. The optional `title`, `favicon`, and `head` parameters control the
 browser tab and `<head>` content globally.
 
+By default `UI` loads HTMX, the HTMX SSE extension, and the Tailwind CSS
+browser build from their CDNs, so inguitive works right after installation.
+You can self-host or replace any of these:
+
+```python
+ui = UI(
+    app,
+    htmx_src="/static/htmx.min.js",          # self-hosted HTMX core
+    sse_ext_src="/static/sse.js",             # self-hosted SSE extension
+    tailwind_src="/static/tw.css",            # pre-built CSS (.css → <link>)
+    # tailwind_src=None,                      # omit Tailwind entirely
+    replace_default_head=True,               # emit no framework assets;
+    head=[                                    # supply everything yourself
+        '<script src="/static/htmx.min.js"></script>',
+        '<script src="/static/sse.js"></script>',
+    ],
+)
+```
+
+When `replace_default_head=True`, the shell emits no framework assets — your
+`head` content is the sole source of `<head>`. inguitive verifies that HTMX
+and the SSE extension are present and raises if either is missing, because
+its reactivity depends on them.
+
+`tailwind_src` accepts a `.css` URL (emits a `<link rel="stylesheet">`) or
+any other URL (emits a `<script>`). Pass `None` to omit Tailwind entirely.
+
+Inguitive no longer bundles the Inter font. To use it, add it via `head`:
+
+```python
+ui = UI(app, head=[
+    '<link rel="stylesheet" href="https://rsms.me/inter/inter.css">',
+    '<style type="text/tailwindcss">@theme { --font-sans: Inter, sans-serif; }</style>',
+])
+```
+
 ### 2. Define reactive state
 
 ```python

@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.1.0] - 2026-09-24
+
+Configurable `<head>` assets. inguitive still works out of the box with CDN
+defaults, but every framework asset can now be self-hosted, replaced, or
+omitted.
+
+### Changed (breaking)
+
+- **Inter font removed from the shell defaults.** The Inter `<link>` and the
+  `<style type="text/tailwindcss">@theme { --font-sans: Inter }</style>` block
+  are no longer emitted by `_render_page_shell`. Defining a custom font is now
+  the user's job via the `head` parameter. To restore the previous behavior:
+
+  ```python
+  ui = UI(app, head=[
+      '<link rel="stylesheet" href="https://rsms.me/inter/inter.css">',
+      '<style type="text/tailwindcss">@theme { --font-sans: Inter, sans-serif; }</style>',
+  ])
+  ```
+
+### Added
+
+- **`htmx_src`** (keyword-only, default `https://unpkg.com/htmx.org@1.9.6`) —
+  override URL for the HTMX core `<script>`. Essential: no opt-out; HTMX must
+  always load. Pass a self-hosted URL to avoid the CDN.
+- **`sse_ext_src`** (keyword-only, default
+  `https://unpkg.com/htmx.org@1.9.6/dist/ext/sse.js`) — override URL for the
+  HTMX SSE extension `<script>`. Essential: no opt-out.
+- **`tailwind_src`** (keyword-only, default
+  `https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4`) — override URL for
+  Tailwind, or `None` to omit Tailwind entirely. If the URL ends with `.css`,
+  a `<link rel="stylesheet">` tag is emitted (pre-built CSS); otherwise a
+  `<script>` tag (the default browser JIT build).
+- **`replace_default_head`** (keyword-only, default `False`) — when `True`,
+  the shell emits no framework assets at all. The user's `head` content is
+  the sole source of `<head>` (after meta/title/favicon). `ui.page()` verifies
+  that HTMX and the SSE extension are present in the rendered head and raises
+  a `RuntimeError` with an actionable message if either is missing. This is a
+  heuristic substring check (matches `htmx` and `sse.js`), not a URL validator.
+
+---
+
 ## [2.0.0] - 2026-09-21
 
 A major realignment. inguitive is now a **UI layer for FastAPI** — an alternative to template engines like Jinja2 — rather than a standalone web framework. The feature set is reduced to three pillars: **Components**, the **State system** (`State` + `SessionState`), and the **SSE workflow** (global broadcast + session-scoped push). Everything outside these pillars is left to FastAPI.
