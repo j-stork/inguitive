@@ -9,6 +9,19 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from inguitive import UI, Div, SessionMiddleware, Text
+from inguitive.fastapi import _tailwind_tag
+
+
+def test_tailwind_tag_css_emits_link():
+    """_tailwind_tag emits a <link> for .css URLs."""
+    assert _tailwind_tag("/static/tw.css") == '<link rel="stylesheet" href="/static/tw.css">'
+
+
+def test_tailwind_tag_js_emits_script():
+    """_tailwind_tag emits a <script> for non-.css URLs."""
+    assert _tailwind_tag("https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4") == (
+        '<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>'
+    )
 
 
 class TestUIConstruction:
@@ -170,9 +183,8 @@ class TestUIConstruction:
         Asserts the skeleton that _render_page_shell produces: DOCTYPE, <html>,
         <head> with charset + viewport metas, the <title>, the favicon <link>,
         the HTMX + SSE extension + Tailwind CDN <script> tags, and the hidden
-        #hx-target div wired to sse-connect="/_sse". These are the load-bearing
-        pieces for HTMX OOB swaps and SSE auto-connect; a regression in any
-        breaks the whole UI layer silently.
+        #hx-target div wired to sse-connect="/_sse". Inter font and the
+        @theme style block are no longer in the default output.
         """
         app = FastAPI()
         ui = UI(app, title="Shell Test", favicon="/fav.ico")
@@ -191,10 +203,14 @@ class TestUIConstruction:
         assert '<meta name="viewport"' in html
         assert "<title>Shell Test</title>" in html
         assert '<link rel="icon" href="/fav.ico">' in html
-        # HTMX core + SSE extension + Tailwind CDN
-        assert "htmx.org" in html
+        # HTMX core + SSE extension + Tailwind CDN (all as <script> by default)
+        assert "htmx.org@1.9.6" in html
         assert "sse.js" in html
-        assert "tailwindcss" in html
+        assert "tailwindcss/browser@4" in html
+        # Inter font and @theme style block are no longer in the default shell
+        assert "rsms.me/inter" not in html
+        assert "text/tailwindcss" not in html
+        assert "--font-sans" not in html
         # Hidden SSE auto-connect target
         assert 'id="hx-target"' in html
         assert 'sse-connect="/_sse"' in html
@@ -295,3 +311,128 @@ class TestUIConstruction:
         client = TestClient(app)
         response = client.post("/_trigger/custom_name")
         assert response.status_code == 200
+
+    # ------------------------------------------------------------------
+    # Task 1664.6: configurable head assets
+    # ------------------------------------------------------------------
+
+    def test_self_hosted_htmx_and_sse(self):
+        """htmx_src and sse_ext_src overrides appear in the rendered shell."""
+        app = FastAPI()
+        ui = UI(
+            app,
+            htmx_src="/static/htmx.min.js",
+            sse_ext_src="/static/sse.js",
+        )
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")))
+
+        client = TestClient(app)
+        html = client.get("/").text
+        assert "/static/htmx.min.js" in html
+        assert "/static/sse.js" in html
+        assert "unpkg.com" not in html
+
+    def test_tailwind_src_css_emits_link_tag(self):
+        """tailwind_src ending in .css emits a <link>, not a <script>."""
+        app = FastAPI()
+        ui = UI(app, tailwind_src="/static/tw.css")
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")))
+
+        client = TestClient(app)
+        html = client.get("/").text
+        assert '<link rel="stylesheet" href="/static/tw.css">' in html
+        assert "/static/tw.css" not in html.replace(
+            '<link rel="stylesheet" href="/static/tw.css">', ""
+        )
+
+    def test_tailwind_src_none_omits_tailwind(self):
+        """tailwind_src=None omits Tailwind entirely."""
+        app = FastAPI()
+        ui = UI(app, tailwind_src=None)
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")))
+
+        client = TestClient(app)
+        html = client.get("/").text
+        assert "tailwind" not in html.lower()
+
+    def test_replace_default_head_emits_no_framework_assets(self):
+        """replace_default_head=True emits only meta/title/favicon + head_extra."""
+        app = FastAPI()
+        ui = UI(
+            app,
+            replace_default_head=True,
+            head=[
+                "<script src='/static/htmx.min.js'></script>",
+                "<script src='/static/sse.js'></script>",
+                "<link rel='stylesheet' href='/static/tw.css'>",
+            ],
+        )
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")), title="Custom")
+
+        client = TestClient(app)
+        html = client.get("/").text
+        # User head content is present
+        assert "/static/htmx.min.js" in html
+        assert "/static/sse.js" in html
+        assert "/static/tw.css" in html
+        # Framework defaults are absent
+        assert "unpkg.com" not in html
+        assert "tailwindcss/browser" not in html
+        # Title still rendered
+        assert "<title>Custom</title>" in html
+        # Body still rendered
+        assert "Hi" in html
+
+    def test_replace_default_head_missing_htmx_raises(self):
+        """replace_default_head=True with no HTMX core script raises RuntimeError."""
+        app = FastAPI()
+        ui = UI(
+            app,
+            replace_default_head=True,
+            head=[
+                "<script src='https://unpkg.com/htmx.org@1.9.6/dist/ext/sse.js'></script>",
+            ],
+        )
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")))
+
+        client = TestClient(app)
+        import pytest
+
+        with pytest.raises(RuntimeError, match="HTMX core script"):
+            client.get("/")
+
+    def test_replace_default_head_missing_sse_raises(self):
+        """replace_default_head=True with no SSE extension raises RuntimeError."""
+        app = FastAPI()
+        ui = UI(
+            app,
+            replace_default_head=True,
+            head=[
+                "<script src='https://unpkg.com/htmx.org@1.9.6'></script>",
+            ],
+        )
+
+        @app.get("/")
+        def home():
+            return ui.page(Div(Text("Hi")))
+
+        client = TestClient(app)
+        import pytest
+
+        with pytest.raises(RuntimeError, match="SSE extension"):
+            client.get("/")
