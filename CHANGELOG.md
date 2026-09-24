@@ -47,6 +47,15 @@ omitted.
   a `RuntimeError` with an actionable message if either is missing. This is a
   heuristic substring check (matches `htmx` and `sse.js`), not a URL validator.
 
+### Removed
+
+- **`gather_package_documentation()` and its helpers** removed from
+  `src/inguitive/utils.py`. This was the `llms-inguitive.md` index generator
+  used by the `inguitive init` CLI command, which was removed in 2.0.0. The
+  function was not imported, exported, or tested anywhere. The `ast`,
+  `importlib.resources`, and `pathlib` imports are dropped along with it;
+  only `nl2br()` and its `markupsafe` import remain.
+
 ---
 
 ## [2.0.0] - 2026-09-21
