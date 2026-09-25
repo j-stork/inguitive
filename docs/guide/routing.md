@@ -173,7 +173,3 @@ def user_post(username: str, post_id: int):
 def settings_page(section: str, page: int):
     return ui.page(Div(Text(f"{section} settings, page {page}")))
 ```
-
-See `examples/routing_app.py` for a multi-page routing demo with
-`RedirectResponse` and `Anchor`, and `examples/url_params_app.py` for a path
-parameter demo with `int`, `str`, and `path` types.
