@@ -1,0 +1,813 @@
+# inguitive
+
+A pure Python UI layer for **FastAPI** — an alternative to template engines like Jinja2. Compose pages from Python components instead of templates, with reactive state and SSE-driven partial updates via **HTMX**. Styled with **Tailwind CSS**.
+
+Components automatically re-render when state changes, eliminating the need for manual DOM manipulation or JavaScript. inguitive complements FastAPI rather than replacing it: routing, path parameters, form handling, and lifespan events stay FastAPI's job; inguitive owns the UI.
+
+## Quick Start
+
+```bash
+pip install inguitive uvicorn
+```
+
+> inguitive depends on FastAPI but does not install an ASGI server — pick one
+> yourself. `uvicorn` is the lightest option; `uvicorn[standard]` adds
+> performant extras like `uvloop` and `httptools`. `fastapi dev` also works once
+> `fastapi[standard]` is installed, but it's a thin wrapper around uvicorn.
+
+```python
+from fastapi import FastAPI
+from inguitive import UI, Div, Button, Text, SessionState
+
+app = FastAPI()
+ui = UI(app, title="Counter")    # attaches middleware, the /_sse route, and /static
+
+counter = SessionState(0, "counter")
+
+@ui.trigger_handler
+def increment():
+    counter.set(counter.get() + 1)    # listening components re-render automatically
+
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Text(lambda: f"Count: {counter.get()}", listen_to=counter),
+            Button("+1", trigger=increment),
+        ),
+    )
+```
+
+Run it with `uvicorn app:app --reload` and open `http://localhost:8000`.
+
+## Features
+
+- **Components** — composable UI primitives (`Div`, `Text`, `Button`, ...). All attributes can be static strings or callables.
+- **State system** — `State` (global, shared across sessions) and `SessionState` (per-session). `state.set()` triggers automatic partial page updates via HTMX out-of-band (OOB) swaps to components that `listen_to` that state.
+- **SSE workflow** — server-initiated updates, both global (broadcast to all sessions) and session-scoped (pushed to one session's open connections).
+- **Trigger handlers** — Python functions wired to HTMX POST actions via `@ui.trigger_handler`. `trigger=increment` on a component resolves to the handler's URL; `listen_to=counter` resolves to the state object.
+- **`ui.page()`** — renders the full HTML document shell (`<!DOCTYPE html>`, `<head>`, HTMX/Tailwind CDN scripts, the hidden SSE auto-connect div). You compose only the body content with components.
+- **Session backends** — `MemoryBackend` for development (default), `RedisBackend` for production via the optional `inguitive[redis]` extra.
+
+## Documentation
+
+For the full component reference, guides, and API docs, see [docs/index.md](docs/index.md).
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## Examples
+
+### `sse_session_app.py`
+
+```
+"""
+Session SSE counter example using inguitive.
+
+Run with: uvicorn examples.sse_session_app:app --reload
+
+A ``SessionState`` counter that increments every second as a per-session
+background task. Each browser window starts its own loop via the button
+and displays its own independent value, updating live via SSE.
+
+The background task uses auto-propagation: ``SessionState.set()`` is
+called from a task that inherited the handler's session context, so the
+framework auto-pushes the update only to that session's SSE connections.
+No explicit ``return update_components(...)`` is needed.
+
+Clicking the button again after the loop finished resets the counter
+to 0 and restarts it. Clicking while running is a no-op. The loop
+runs until all of the session's tabs are closed.
+"""
+
+import asyncio
+
+from fastapi import FastAPI
+
+from inguitive import UI, Button, Div, SessionState, Text, get_session_id, session_active
+
+# --- App Setup ---
+app = FastAPI()
+ui = UI(app)
+
+# --- State Instances ---
+# SessionState: each session has its own isolated value.
+counter_state = SessionState(0, "counter_state")
+
+# Per-session registry of running counter loops. The live Task handle is
+# not JSON-serializable, so it stays out of session state.
+_counter_tasks: dict[str, asyncio.Task] = {}
+
+
+# --- Trigger Handlers ---
+@ui.trigger_handler
+def start_counter():
+    """Start the per-session counter loop, idempotently."""
+    session_id = get_session_id()
+    existing = _counter_tasks.get(session_id)
+    if existing is not None and not existing.done():
+        return  # already running — refuse the duplicate start
+    counter_state.set(0)  # reset so each start begins from 0
+    task = asyncio.create_task(_tick(session_id))
+    _counter_tasks[session_id] = task
+    task.add_done_callback(lambda t, sid=session_id: _counter_tasks.pop(sid, None))
+
+
+# --- Background Task ---
+async def _tick(session_id: str):
+    """Increment the per-session counter once per second and auto-push via SSE.
+
+    Runs in the trigger handler's copied context, so SessionState.set()
+    writes to this session's isolated value and auto-pushes to this
+    session's open SSE connections. The loop terminates when
+    session_active() returns False (all tabs closed).
+    """
+    while session_active():
+        await asyncio.sleep(1)
+        counter_state.set(counter_state.get() + 1)
+        # Auto-propagation pushes to this session only. Explicit alternative:
+        # return update_components(*counter_state.listeners)
+
+
+# --- Routes ---
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Text(
+                lambda: str(counter_state.get()),
+                css="text-6xl text-center font-mono",
+                listen_to=counter_state,
+            ),
+            Button(
+                "Start my counter",
+                trigger=start_counter,
+                css="px-3 py-2 bg-green-500",
+            ),
+            css="flex flex-col items-center gap-6 p-6",
+        )
+    )
+
+
+# --- Start ---
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("examples.sse_session_app:app", host="0.0.0.0", port=8000, reload=True)
+```
+
+---
+
+### `sse_global_app.py`
+
+```
+"""
+Global SSE counter example using inguitive.
+
+Run with: uvicorn examples.sse_global_app:app --reload
+
+A ``State`` counter that automatically increments every second as a
+background task when the server starts. Since the counter is global,
+all sessions (browser windows) display the same value, updating live
+via SSE.
+
+The background task uses auto-propagation: ``State.set()`` is called
+with no session bound, so the framework broadcasts the update to every
+connected tab whose components ``listen_to`` the state. No explicit
+``return update_components(...)`` is needed.
+"""
+
+import asyncio
+
+from fastapi import FastAPI
+
+from inguitive import UI, Div, State, Text
+
+# --- App Setup ---
+app = FastAPI()
+ui = UI(app)
+
+# --- State Instances ---
+# State is global: the same value is shared across all sessions.
+counter_state = State(0, "counter_state")
+
+
+# --- Startup Task ---
+@app.on_event("startup")
+async def start_counter():
+    """Start the global counter loop when the server starts."""
+    asyncio.create_task(_tick())
+
+
+async def _tick():
+    """Increment the global counter once per second and broadcast via SSE.
+
+    Runs with no session bound, so State.set() writes to the global
+    broadcast value and the framework auto-pushes OOB HTML to every
+    connected tab whose components listen_to=counter_state.
+    """
+    while True:
+        await asyncio.sleep(1)
+        counter_state.set(counter_state.get() + 1)
+        # Auto-propagation broadcasts to all sessions. Explicit alternative:
+        # return update_components(*counter_state.listeners)
+
+
+# --- Routes ---
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Text(
+                lambda: str(counter_state.get()),
+                css="text-6xl text-center font-mono",
+                listen_to=counter_state,
+            ),
+            css="flex flex-col items-center gap-6 p-6",
+        )
+    )
+
+
+# --- Start ---
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("examples.sse_global_app:app", host="0.0.0.0", port=8000, reload=True)
+```
+
+---
+
+### `counter_global_app.py`
+
+```
+"""
+Manual global counter example using inguitive.
+
+Run with: uvicorn examples.counter_global_app:app --reload
+
+A ``State`` counter shared across all sessions. Each click of the "+1"
+button increments it by 1. Open the app in two browser windows and both
+display the same value — ``State`` is global, not per-session.
+
+The handler uses auto-propagation: it calls ``State.set()`` and returns
+nothing, so the framework detects which states changed and re-renders
+their listeners automatically. ``return update_components(...)`` would
+be the explicit alternative.
+"""
+
+from fastapi import FastAPI
+
+from inguitive import UI, Button, Div, State, Text
+
+# --- App Setup ---
+app = FastAPI()
+ui = UI(app)
+
+# --- State Instances ---
+# State is global: the same value is shared across all sessions.
+counter_state = State(0, "counter_state")
+
+
+# --- Trigger Handlers ---
+@ui.trigger_handler
+def increment():
+    counter_state.set(counter_state.get() + 1)
+    # Auto-propagation re-renders the listeners. Explicit alternative:
+    # return update_components(*counter_state.listeners)
+
+
+@ui.trigger_handler
+def reset():
+    counter_state.set(0)
+    # Auto-propagation re-renders the listeners. Explicit alternative:
+    # return update_components(*counter_state.listeners)
+
+
+# --- Routes ---
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Text(
+                lambda: f"Count: {counter_state.get()}",
+                css="text-xl text-center",
+                listen_to=counter_state,
+            ),
+            Div(
+                Button("+1", trigger=increment, css="px-3 py-2 bg-blue-500"),
+                Button("Reset", trigger=reset, css="px-3 py-2 bg-gray-400"),
+                css="flex gap-6 justify-center",
+            ),
+            css="flex flex-col items-center gap-6 p-6",
+        )
+    )
+
+
+# --- Start ---
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("examples.counter_global_app:app", host="0.0.0.0", port=8000, reload=True)
+```
+
+---
+
+### `nl2br_app.py`
+
+```
+"""
+nl2br utility example using inguitive.
+
+Run with: uvicorn examples.nl2br_app:app --reload
+
+Demonstrates the ``nl2br`` helper, which converts newline characters in
+a string to ``<br>`` tags so that multiline text renders with line breaks
+in HTML. The same fixed text is displayed twice: once without ``nl2br``
+(newlines collapse to spaces in the browser) and once with ``nl2br``
+(newlines become ``<br>`` tags).
+"""
+
+from fastapi import FastAPI
+
+from inguitive import UI, Div, Header, Text, nl2br
+
+# --- App Setup ---
+app = FastAPI()
+ui = UI(app)
+
+# A fixed, multi-line string defined as a constant.
+SAMPLE_TEXT = (
+    "First line of text.\n"
+    "Second line of text.\n"
+    "Third line of text."
+)
+
+
+# --- Routes ---
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Header("nl2br Example", level=1, css="text-2xl"),
+
+            # Without nl2br: newlines collapse to spaces in the browser.
+            Header("Without nl2br", level=2, css="text-lg"),
+            Text(SAMPLE_TEXT, css="whitespace-pre-wrap"),
+
+            # With nl2br: newlines are converted to <br> tags.
+            Header("With nl2br", level=2, css="text-lg"),
+            Text(nl2br(SAMPLE_TEXT)),
+
+            css="flex flex-col gap-6 p-6 max-w-2xl mx-auto",
+        )
+    )
+
+
+# --- Start ---
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("examples.nl2br_app:app", host="0.0.0.0", port=8000, reload=True)
+```
+
+---
+
+### `components_app.py`
+
+```
+"""
+Component showcase example using inguitive.
+
+Run with: uvicorn examples.components_app:app --reload
+
+A static app that displays all available inguitive components one below
+the other. No reactivity — this is a visual reference for the component
+library. We'll add reactivity later.
+"""
+
+from fastapi import FastAPI
+
+from inguitive import (
+    UI,
+    Anchor,
+    Button,
+    Checkbox,
+    DataTable,
+    Div,
+    Form,
+    Header,
+    Icon,
+    Image,
+    Input,
+    Label,
+    Radio,
+    Select,
+    TemplateComponent,
+    Text,
+    Textarea,
+)
+
+# --- App Setup ---
+app = FastAPI()
+ui = UI(app)
+
+# A small inline SVG for the Icon demo.
+_CHECK_SVG = (
+    '<svg viewBox="0 0 20 20" fill="currentColor">'
+    '<path d="M16.7 5.3a1 1 0 0 1 0 1.4l-7 7a1 1 0 0 1-1.4 0l-3-3'
+    'a1 1 0 1 1 1.4-1.4L9 11.6l6.3-6.3a1 1 0 0 1 1.4 0z"/>'
+    '</svg>'
+)
+
+_TABLE_DATA = [
+    {"name": "Alice", "role": "Engineer"},
+    {"name": "Bob", "role": "Designer"},
+]
+
+
+# --- Custom component ---
+def IsRenderedTo(tag: str) -> Text:  # noqa: N802
+    return Text(tag, css="font-mono text-gray-600")
+
+
+# --- Routes ---
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            # Text
+            Header("Component Showcase", level=1, css="col-span-2 text-2xl font-bold"),
+            Header("Component", level=2, css="text-xl font-semibold border-b"),
+            Header("is rendered to:", level=2, css="text-xl font-semibold border-b"),
+
+            Div("Div", css="px-4 py-8 border text-center text-gray-400"),
+            IsRenderedTo("<div>"),
+
+            Text("Text component — a paragraph of text."),
+            IsRenderedTo("<p>"),
+
+            # Header levels
+            Header("Header level 1", level=1, css="text-2xl"),
+            IsRenderedTo("<h1>"),
+            Header("Header level 2", level=2, css="text-xl"),
+            IsRenderedTo("<h2>"),
+            Header("Header level 3", level=3, css="text-lg"),
+            IsRenderedTo("<h3>"),
+
+            # Button
+            Button("Button", css="px-3 py-2 bg-blue-500"),
+            IsRenderedTo("<button>"),
+
+            # Anchor
+            Anchor("Anchor link", href="#"),
+            IsRenderedTo("<a>"),
+
+            # Image
+            Image(src="https://placehold.co/150x50", alt="Placeholder", css="h-12"),
+            IsRenderedTo("<img>"),
+
+            # Icon
+            Icon(_CHECK_SVG, css="w-6 h-6 text-green-500"),
+            IsRenderedTo("<svg>"),
+
+            # Label
+            Label("Label for input", for_="demo-input"),
+            IsRenderedTo("<label>"),
+
+            # Input
+            Input(id="demo-input", placeholder="Type here", css="border p-2"),
+            IsRenderedTo("<input>"),
+
+            # Textarea
+            Textarea(id="demo-textarea", placeholder="Multi-line text", rows=3, css="border p-2"),
+            IsRenderedTo("<textarea>"),
+
+            # Select
+            Select(
+                id="demo-select",
+                options=[("a", "Option A"), ("b", "Option B")],
+                css="border p-2",
+            ),
+            IsRenderedTo("<select>"),
+
+            # Checkbox
+            Div(
+                Checkbox(id="demo-checkbox", checked=True),
+                Label("Checkbox", for_="demo-checkbox"),
+                css="flex items-center gap-2",
+            ),
+            IsRenderedTo('<input type="checkbox">'),
+
+            # Radio
+            Div(
+                Radio(id="demo-radio-1", name="demo-radio", value="yes", checked=True),
+                Label("Yes", for_="demo-radio-1"),
+                Radio(id="demo-radio-2", name="demo-radio", value="no"),
+                Label("No", for_="demo-radio-2"),
+                css="flex items-center gap-4",
+            ),
+            IsRenderedTo('<input type="radio">'),
+
+            # Form
+            Form(
+                Input(id="form-input", placeholder="Form input", css="border p-2"),
+                Button("Submit", type="submit", css="px-3 py-2 bg-green-500"),
+                css="flex flex-col gap-4 p-4 border shadow-lg",
+            ),
+            IsRenderedTo("<form>"),
+
+            # DataTable
+            DataTable(data=_TABLE_DATA, css="w-full border"),
+            IsRenderedTo("<table>"),
+
+            # TemplateComponent
+            TemplateComponent(
+                template='<div class="border p-4">Template: {{ message }}</div>',
+                message="Rendered via Jinja2",
+            ),
+            IsRenderedTo("Depends on the template"),
+
+            css="grid grid-cols-2 gap-6 p-6 max-w-4xl mx-auto",
+        )
+    )
+
+
+# --- Start ---
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("examples.components_app:app", host="0.0.0.0", port=8000, reload=True)
+```
+
+---
+
+### `counter_session_app.py`
+
+```
+"""
+Manual session counter example using inguitive.
+
+Run with: uvicorn examples.counter_session_app:app --reload
+
+A ``SessionState`` counter isolated per session. Each click of the "+1"
+button increments it by 1. Open the app in two browser windows and each
+shows its own independent value — ``SessionState`` is per-session.
+
+The handler uses auto-propagation: it calls ``SessionState.set()`` and
+returns nothing, so the framework detects which states changed and
+re-renders their listeners automatically. ``return update_components(...)``
+would be the explicit alternative.
+"""
+
+from fastapi import FastAPI
+
+from inguitive import UI, Button, Div, SessionState, Text
+
+# --- App Setup ---
+app = FastAPI()
+ui = UI(app)
+
+# --- State Instances ---
+# SessionState is per-session: each browser window has its own value.
+counter_state = SessionState(0, "counter_state")
+
+
+# --- Trigger Handlers ---
+@ui.trigger_handler
+def increment():
+    counter_state.set(counter_state.get() + 1)
+    # Auto-propagation re-renders the listeners. Explicit alternative:
+    # return update_components(*counter_state.listeners)
+
+
+@ui.trigger_handler
+def reset():
+    counter_state.set(0)
+    # Auto-propagation re-renders the listeners. Explicit alternative:
+    # return update_components(*counter_state.listeners)
+
+
+# --- Routes ---
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Text(
+                lambda: f"Count: {counter_state.get()}",
+                css="text-xl text-center",
+                listen_to=counter_state,
+            ),
+            Div(
+                Button("+1", trigger=increment, css="px-3 py-2 bg-blue-500"),
+                Button("Reset", trigger=reset, css="px-3 py-2 bg-gray-400"),
+                css="flex gap-6 justify-center",
+            ),
+            css="flex flex-col items-center gap-6 p-6",
+        )
+    )
+
+
+# --- Start ---
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("examples.counter_session_app:app", host="0.0.0.0", port=8000, reload=True)
+```
+
+---
+
+### `trigger_args_app.py`
+
+```
+"""
+Trigger arguments example using inguitive.
+
+Run with: uvicorn examples.trigger_args_app:app --reload
+
+Demonstrates passing data from a component to its trigger handler via
+``trigger_args`` and ``get_trigger_args()``, without a form. Four buttons
+("+1", "+5", "+10", "-1") all point to the same ``add`` handler and differ
+only in their ``trigger_args``. The handler reads the ``step`` value,
+coerces it to ``int``, and adds it to the counter.
+
+``trigger_args`` are serialised onto the HTMX POST URL as query
+parameters (e.g. ``/_trigger/add?step=5``), so they are available even on
+a plain ``Button`` with no enclosing ``Form``.
+
+The handler uses auto-propagation: it calls ``State.set()`` and returns
+nothing, so the framework re-renders the listeners automatically.
+``return update_components(...)`` would be the explicit alternative.
+"""
+
+from fastapi import FastAPI
+
+from inguitive import UI, Button, Div, State, Text, get_trigger_args
+
+# --- App Setup ---
+app = FastAPI()
+ui = UI(app)
+
+# --- State Instances ---
+counter_state = State(0, "counter_state")
+
+
+# --- Trigger Handlers ---
+@ui.trigger_handler
+def add():
+    """Add the ``step`` trigger_arg to the counter.
+
+    ``step`` arrives as a string via ``get_trigger_args()`` because
+    trigger args are serialised to query parameters, so it is coerced
+    to ``int`` here. A missing or non-numeric value falls back to 0.
+    """
+    raw = get_trigger_args().get("step", 0)
+    try:
+        step = int(raw)
+    except (TypeError, ValueError):
+        step = 0
+    counter_state.set(counter_state.get() + step)
+    # Auto-propagation re-renders the listeners. Explicit alternative:
+    # return update_components(*counter_state.listeners)
+
+
+# --- Routes ---
+@app.get("/")
+def home():
+    return ui.page(
+        Div(
+            Text(
+                lambda: f"Count: {counter_state.get()}",
+                css="text-xl text-center",
+                listen_to=counter_state,
+            ),
+            Div(
+                Button("+1", trigger=add, trigger_args={"step": 1}, css="px-3 py-2 bg-blue-500"),
+                Button("+5", trigger=add, trigger_args={"step": 5}, css="px-3 py-2 bg-green-500"),
+                Button("+10", trigger=add, trigger_args={"step": 10}, css="px-3 py-2 bg-yellow-500"),
+                Button("-1", trigger=add, trigger_args={"step": -1}, css="px-3 py-2 bg-red-500"),
+                css="flex gap-4 justify-center",
+            ),
+            css="flex flex-col items-center gap-6 p-6",
+        )
+    )
+
+
+# --- Start ---
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("examples.trigger_args_app:app", host="0.0.0.0", port=8000, reload=True)
+```
+
+---
+
+## `UI()` Class
+
+UI layer that attaches inguitive to a user-owned FastAPI app.
+
+The user constructs their own `FastAPI()` instance and passes it to
+`UI(app, ...)`.  The constructor synchronously wires up session
+middleware, the `/_sse` endpoint, the `/static` mount (the user's
+`./static/` directory takes precedence over the bundled package
+assets), and the trigger-handler decorator surface.  The instance
+exposes the wrapped app as `ui.app`.  FastAPI's own constructor surface
+(lifespan, docs URLs, OpenAPI metadata, root path, etc.) stays fully in
+the user's hands — `UI()` takes only inguitive-specific parameters.
+
+Usage:
+
+```python
+from fastapi import FastAPI
+from inguitive import UI
+
+app = FastAPI()
+ui = UI(app, title="My App", favicon="/static/favicon.ico")
+```
+
+### Constructor
+
+Attach inguitive's UI layer to *app*.
+
+`UI` wires up page-rendering defaults, the `/_sse` endpoint, and
+the `/static` mount.  By default it also adds
+`SessionMiddleware` to *app*, because SessionState, SSE, and
+OOB re-rendering all require a bound session.  Set
+`configure_session_middleware=False` to opt out and add
+`SessionMiddleware` yourself (e.g. to control middleware ordering
+or swap the session source).  When opted out, inguitive raises a
+loud, actionable error on the first request if the middleware is
+missing — see `_require_current_session`.
+
+Args:
+    app: The user's FastAPI application instance.
+    title: Default `<title>` for all pages. Overridden per-page
+        via `ui.page(..., title=...)`.
+    favicon: Default favicon path. Defaults to the bundled
+        `/static/inguitive_favicon.svg`.
+    head: Default head content (components and/or raw HTML strings)
+        appended to every page's `<head>`.
+    configure_session_middleware: When True (default), add
+        `SessionMiddleware` to *app* automatically.  When
+        False, the user must add it themselves.
+    session_backend: Session backend (defaults to `MemoryBackend`).
+        Only used when `configure_session_middleware` is True.
+    session_cookie_name: Name of the session cookie.
+    session_cookie_max_age: Cookie max age in seconds.
+    session_cookie_secure: Whether cookie is secure (HTTPS only).
+    session_cookie_httponly: Whether cookie is HTTP-only.
+    session_cleanup_interval: Call `cleanup_expired()` every N requests.
+    dev_mode: Enable development mode warnings (default True).
+    htmx_src: URL for the HTMX core `<script>` tag. Override to
+        self-host (e.g. `"/static/htmx.min.js"`). Essential — there
+        is no opt-out; HTMX must always load. Defaults to the unpkg CDN.
+    sse_ext_src: URL for the HTMX SSE extension `<script>` tag.
+        Override to self-host. Essential — no opt-out; the SSE
+        extension must always load. Defaults to the unpkg CDN.
+    tailwind_src: URL for the Tailwind `<script>` or
+        `<link rel="stylesheet">` tag, or `None` to omit Tailwind
+        entirely. If the URL ends with `.css` a `<link>` tag is
+        emitted; otherwise a `<script>` tag (the default browser
+        build). Defaults to the jsdelivr CDN browser build.
+    replace_default_head: When False (default), the shell emits the
+        framework assets (HTMX, SSE extension, Tailwind) before the
+        user's `head` content. When True, the shell emits no
+        framework assets — the user's `head` is the sole source of
+        `<head>` content. `ui.page()` verifies that the rendered
+        head contains HTMX and the SSE extension and raises if either
+        is missing.
+
+---
+
+## `ui.page()` Method
+
+Render *component* inside the HTML document shell and return it.
+
+Called from inside a plain FastAPI route:
+
+```python
+@app.get("/")
+def home():
+    return ui.page(Div(Text("Hello")), title="Home")
+```
+
+Renders the component via `.render()`, resolves per-page
+`title`/`favicon`/`head` against the `UI` defaults stored on
+`app.state`, merges or replaces `head` per `replace_global_head`,
+and wraps everything in `_render_page_shell`.
+
+Args:
+    component: A `Component` (or anything with a `.render()`
+        method, or a plain string) to render as the page body.
+    title: Per-page `<title>`. Falls back to the UI default, then
+        `"inguitive"`.
+    favicon: Per-page favicon path. Falls back to the UI default, then
+        the bundled `/static/inguitive_favicon.svg`.
+    head: Per-page head content (components and/or raw HTML strings).
+        Merged *after* the UI-level head content unless
+        `replace_global_head` is True.
+    replace_global_head: When False (default), both the UI-level and
+        page-level head content are included (UI-level first). When
+        True, only the page-level head content is used.

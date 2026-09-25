@@ -357,8 +357,10 @@ class UI:
 
     The user constructs their own ``FastAPI()`` instance and passes it to
     ``UI(app, ...)``.  The constructor synchronously wires up session
-    middleware, the ``/_sse`` endpoint, the ``/static`` mount, and the
-    trigger-handler decorator surface.  FastAPI's own constructor surface
+    middleware, the ``/_sse`` endpoint, the ``/static`` mount (the user's
+    ``./static/`` directory takes precedence over the bundled package
+    assets), and the trigger-handler decorator surface.  The instance
+    exposes the wrapped app as ``ui.app``.  FastAPI's own constructor surface
     (lifespan, docs URLs, OpenAPI metadata, root path, etc.) stays fully in
     the user's hands — ``UI()`` takes only inguitive-specific parameters.
 
