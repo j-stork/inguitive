@@ -75,6 +75,7 @@ Thumbs.db
 *.pyc
 TODO.md
 ISSUES.md
+_create_llms_file.py
 
 # FastAPI/UVicorn
 uvicorn.log
