@@ -727,7 +727,11 @@ app = FastAPI()
 ui = UI(app, title="My App", favicon="/static/favicon.ico")
 ```
 
-### Constructor
+Constructor:
+
+```python
+UI(app: FastAPI, title: str = "inguitive", favicon: str | None = None, head: HeadContent = None, configure_session_middleware: bool = True, session_backend: SessionBackend | None = None, session_cookie_name: str = "inguitive_session_id", session_cookie_max_age: int = 3600, session_cookie_secure: bool = False, session_cookie_httponly: bool = True, session_cleanup_interval: int = 100, dev_mode: bool = True, *, htmx_src: str = "https://unpkg.com/htmx.org@1.9.6", sse_ext_src: str = "https://unpkg.com/htmx.org@1.9.6/dist/ext/sse.js", tailwind_src: str | None = "https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4", replace_default_head: bool = False)
+```
 
 Attach inguitive's UI layer to *app*.
 
@@ -811,6 +815,10 @@ Args:
     replace_global_head: When False (default), both the UI-level and
         page-level head content are included (UI-level first). When
         True, only the page-level head content is used.
+
+```python
+UI.page(component, title: str | None = None, favicon: str | None = None, head: HeadContent = None, replace_global_head: bool = False) -> HTMLResponse
+```
 
 ---
 
@@ -1327,6 +1335,10 @@ Return the current global value.
 Always reads from the process-wide store; the value is the same
 for every session.
 
+```python
+State.get() -> _T
+```
+
 #### `State.set`
 
 Write a new global value and broadcast the update.
@@ -1339,9 +1351,17 @@ requesting session immediately in the HTTP response; the broadcast
 then delivers the same update to all other (and the requesting)
 sessions via SSE.
 
+```python
+State.set(new_value: _T) -> None
+```
+
 #### `State.listeners`
 
 Return the set of component IDs listening to this state in the active session.
+
+```python
+State.listeners() -> set[str]
+```
 
 ### `SessionState` (per-session, subclasses `State`)
 
@@ -1366,6 +1386,10 @@ Falls back to the global broadcast value (if set from a
 background task) and then to the initial value when the session
 has no local value.
 
+```python
+SessionState.get() -> _T
+```
+
 #### `SessionState.set`
 
 Write a new session-scoped value and push to the current session.
@@ -1378,6 +1402,10 @@ contextvars), the value is written and an SSE push is scheduled
 to the current session's queues only — not a broadcast. When no
 session is bound at all, the value is stored as a global fallback
 and a broadcast is scheduled (edge case).
+
+```python
+SessionState.set(new_value: _T) -> None
+```
 
 ### `update_components()`
 
@@ -1480,7 +1508,7 @@ Returns:
     rather than `data["field"]` for optional fields.
 
 ```python
-async def get_form_data(request: Request) -> dict[str, str | UploadFile]
+get_form_data(request: Request) -> dict[str, str | UploadFile]
 ```
 
 ---
@@ -1561,7 +1589,7 @@ concurrent request handler) is last-save-wins; guard against it in your
 app logic if needed.
 
 ```python
-async def session_context(session_id: str) -> AsyncIterator[Session | None]
+session_context(session_id: str) -> AsyncIterator[Session | None]
 ```
 
 ### `set_session_backend()`
