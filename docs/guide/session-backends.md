@@ -87,8 +87,7 @@ ui = UI(app)  # picks up the backend set above
 ```
 
 `get_session_backend()` returns the live backend object at runtime, which is
-useful for diagnostics or health checks. See `examples/session_backend_app.py`
-for a complete runnable version.
+useful for diagnostics or health checks.
 
 ## Session lifetime
 
