@@ -106,8 +106,8 @@ class MemoryBackend(SessionBackend):
 
         Args:
             ttl_seconds: Session timeout in seconds (default: 3600 = 1 hour).
-                        Sessions older than this will be cleaned up.
-                        Set to 0 or negative for no expiry (not recommended).
+                Sessions older than this will be cleaned up.
+                Set to 0 or negative for no expiry (not recommended).
         """
         self._sessions: dict[SessionId, Session] = {}
         self._ttl_seconds = ttl_seconds
