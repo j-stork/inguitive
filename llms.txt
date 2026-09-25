@@ -811,3 +811,807 @@ Args:
     replace_global_head: When False (default), both the UI-level and
         page-level head content are included (UI-level first). When
         True, only the page-level head content is used.
+
+---
+
+## Components
+
+### `Component` (base class)
+
+Base component class for inguitive.
+
+Every component accepts these common keyword arguments (handled in
+`__init__`):
+
+- `id`: HTML id attribute. Auto-generated as `comp-<uuid8>` when
+  omitted. A stable id is what HTMX out-of-band swaps target, so pass an
+  explicit id for components you re-render via OOB/SSE updates.
+- `css`: Tailwind classes for the `class` attribute (string or
+  zero-argument callable).
+- `listen_to`: a `State`/`SessionState` object (or list of them)
+  whose mutation re-renders this component automatically.
+- `trigger`: a function decorated with `@ui.trigger_handler`; wired
+  as an HTMX POST to the handler's `/_trigger/<name>` URL.
+- `trigger_args`: dict of query parameters appended to the trigger URL.
+- `**attrs`: any other keyword argument becomes an HTML attribute on
+  the rendered element.
+
+Dynamic attributes: any component attribute may be a zero-argument
+callable instead of a static value; callables are resolved at render
+time. String results are HTML-escaped unless wrapped in
+`markupsafe.Markup`.
+
+Every instantiated component registers itself in the component registry
+under its id, which is what enables OOB/SSE re-rendering.
+
+Constructor:
+
+```python
+Component(id: str | None = None, css: str | Callable[[], str] | None = None, listen_to: State | list[State] | None = None, trigger: Callable | None = None, trigger_args: dict[str, str] | None = None, **attrs: Any)
+```
+
+### `Div`
+
+HTML div component.
+
+General-purpose container. Children may be strings, Components,
+zero-argument callables, or a single list of these.
+
+Constructor:
+
+```python
+Div(*children: Any, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any)
+```
+
+Args:
+    *children: Child content (strings, Components, or callables)
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    **attrs: Additional HTML attributes
+
+### `Button`
+
+HTML button component.
+
+Renders a <button> element. Click actions use the common component
+parameters: `trigger` (POST to a `@ui.trigger_handler` route for
+partial updates) and `trigger_args` (query parameters appended to
+the trigger URL). Any other keyword argument becomes an HTML attribute,
+so plain HTML/HTMX attributes (e.g. `type="submit"`,
+`hx-get="/page"`) pass through unchanged.
+
+Constructor:
+
+```python
+Button(*children: Any, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any)
+```
+
+### `Label`
+
+HTML label component.
+
+Renders a <label> element. Use for_ parameter to associate with input elements.
+
+Example:
+    Label("Username", for_="username-input")
+    Label("Remember me", for_="remember", css="text-sm")
+
+Constructor:
+
+```python
+Label(text: str | Callable[[], str], id: str | None = None, css: str | Callable[[], str] | None = None, for_: str | None = None, **attrs: Any)
+```
+
+Args:
+    text: Label text content
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    for_: ID of the form element this label is for (uses 'for' HTML attribute)
+    **attrs: Additional HTML attributes
+
+### `Anchor`
+
+HTML anchor (<a>) component for semantic navigation.
+
+Renders a standard <a> tag. Use for traditional links where semantic
+HTML matters (SEO, accessibility, browser behavior).
+
+Supports children like Div and Button, allowing nested components.
+
+Example:
+    Anchor("Home", href="/")
+    Anchor(Text("Documentation"), href="/docs", css="text-blue-500 hover:underline")
+    Anchor(Icon(HOME_SVG), href="/", css="w-6 h-6")
+    Anchor(Button("Click"), href="/page1")
+    Anchor([Text("A"), Text("B")], href="/")
+
+Constructor:
+
+```python
+Anchor(*children: Any, href: str, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any)
+```
+
+Args:
+    *children: Anchor content (strings, Components, or callables)
+    href: URL to link to
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    **attrs: Additional HTML attributes (target, rel, etc.)
+
+### `Text`
+
+HTML paragraph/text component.
+
+Renders a <p> tag for paragraph text content. Use for standalone text blocks,
+descriptions, and any content that isn't a form label.
+
+Example:
+    Text("Welcome to our application")
+    Text("This is a paragraph", css="text-gray-600 mt-4")
+    Text(lambda: get_description(), listen_to=desc_state)
+
+Constructor:
+
+```python
+Text(text: str | Callable[[], str], id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any)
+```
+
+Args:
+    text: Text content (string or callable returning string)
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    **attrs: Additional HTML attributes
+
+### `Header`
+
+HTML heading component.
+
+Renders an <h1> through <h6> tag based on the level parameter.
+Use for page titles, section headings, and hierarchical content structure.
+
+Example:
+    Header("Main Title", level=1)
+    Header("Section Heading", level=2, css="text-blue-600")
+    Header(lambda: get_title(), level=3, listen_to=title_state)
+
+Constructor:
+
+```python
+Header(text: str | Callable[[], str], level: int = 1, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any)
+```
+
+Args:
+    text: Text content (string or callable returning string)
+    level: Heading level (1-6), defaults to 1 for <h1>
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    **attrs: Additional HTML attributes
+
+### `Icon`
+
+SVG icon component.
+
+Renders inline SVG markup. The SVG must be well-formed XML (it is
+parsed with ElementTree to merge `css`/`attrs` into the root
+element); malformed SVG raises a ValueError.
+
+Constructor:
+
+```python
+Icon(svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs: Any)
+```
+
+Args:
+    svg: Inline SVG markup (string or callable returning markup)
+    css: Tailwind CSS classes (merged into the SVG root element)
+    **attrs: Additional attributes set on the SVG root element
+
+### `Image`
+
+HTML image component.
+
+Renders an <img> tag for displaying images. Use for logos, icons, photos,
+and any visual content.
+
+Example:
+    Image(src="/static/logo.png", alt="Company Logo", css="h-10 w-auto")
+    Image(src=lambda: get_avatar_url(), alt="User Avatar", css="rounded-full h-12 w-12")
+    Image(src="/static/hero.jpg", alt="Hero", loading="lazy", width="800", height="400")
+
+Constructor:
+
+```python
+Image(src: str | Callable[[], str], alt: str | Callable[[], str] | None = None, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any)
+```
+
+Args:
+    src: Image source URL (string or callable returning string)
+    alt: Alternative text for accessibility (string or callable returning string)
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    **attrs: Additional HTML attributes (width, height, loading, etc.)
+
+### `Input`
+
+HTML input component for text, email, password, etc.
+
+Example:
+    Input(id="email", type="email", placeholder="Enter email", css="border rounded p-2")
+    Input(id="name", value=name_state.get, listen_to=name_state)
+
+Constructor:
+
+```python
+Input(id: str | None = None, css: str | Callable[[], str] | None = None, type: str = "text", value: str | Callable[[], str] | None = None, placeholder: str = "", listen_to: State | list[State] | None = None, **attrs: Any)
+```
+
+Args:
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    type: Input type (text, email, password, number, etc.)
+    value: Initial value (string or callable)
+    placeholder: Placeholder text
+    listen_to: State/SessionState object (or list) to listen for changes
+    **attrs: Additional HTML attributes (name, required, etc.)
+
+### `Textarea`
+
+HTML textarea component for multi-line text input.
+
+Example:
+    Textarea(id="bio", placeholder="Tell us about yourself", rows=5)
+    Textarea(id="notes", value=content_state.get, listen_to=content_state)
+
+Constructor:
+
+```python
+Textarea(id: str | None = None, css: str | Callable[[], str] | None = None, value: str | Callable[[], str] | None = None, placeholder: str = "", rows: int = 3, listen_to: State | list[State] | None = None, **attrs: Any)
+```
+
+Args:
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    value: Initial value (string or callable)
+    placeholder: Placeholder text
+    rows: Number of visible rows
+    listen_to: State/SessionState object (or list) to listen for changes
+    **attrs: Additional HTML attributes (name, required, etc.)
+
+### `Select`
+
+HTML select dropdown component.
+
+Example:
+    Select(id="country", options=[("us", "USA"), ("de", "Germany")], value="us")
+    Select(id="theme", options=[("light", "Light"), ("dark", "Dark")],
+           value=lambda: theme_state.get(), listen_to=theme_state)
+
+Constructor:
+
+```python
+Select(id: str | None = None, css: str | Callable[[], str] | None = None, options: list[tuple[str, str]] | Callable[[], list[tuple[str, str]]] | None = None, value: str | Callable[[], str] | None = None, listen_to: State | list[State] | None = None, **attrs: Any)
+```
+
+Args:
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    options: List of (value, display_text) tuples, or callable returning such list
+    value: Selected value (string or callable)
+    listen_to: State/SessionState object (or list) to listen for changes
+    **attrs: Additional HTML attributes (name, required, disabled, etc.)
+
+### `Checkbox`
+
+HTML checkbox input component.
+
+Renders only the <input type="checkbox"> element. Use with Label and Div
+for composed structures.
+
+Example:
+    Div(
+        Checkbox(id="agree", checked=True),
+        Label("I agree to terms", for_="agree"),
+        css="flex items-center gap-2"
+    )
+
+Constructor:
+
+```python
+Checkbox(id: str | None = None, css: str | Callable[[], str] | None = None, checked: bool | Callable[[], bool] = False, listen_to: State | list[State] | None = None, **attrs: Any)
+```
+
+Args:
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    checked: Checked state (boolean or callable)
+    listen_to: State/SessionState object (or list) to listen for changes
+    **attrs: Additional HTML attributes (name, required, disabled, etc.)
+
+### `Radio`
+
+HTML radio input component.
+
+Renders only the <input type="radio"> element. Use with Label and Div
+for composed radio groups.
+
+Example:
+    Div(
+        Radio(id="male", name="gender", value="male", checked=True),
+        Label("Male", for_="male"),
+        Radio(id="female", name="gender", value="female"),
+        Label("Female", for_="female"),
+        css="flex gap-4"
+    )
+
+Constructor:
+
+```python
+Radio(id: str | None = None, css: str | Callable[[], str] | None = None, value: str = "", checked: bool | Callable[[], bool] = False, listen_to: State | list[State] | None = None, **attrs: Any)
+```
+
+Args:
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    value: Value for this radio option
+    checked: Checked state (boolean or callable)
+    listen_to: State/SessionState object (or list) to listen for changes
+    **attrs: Additional HTML attributes (name, required, disabled, etc.)
+
+### `Form`
+
+HTML form component for grouping input elements.
+
+Example:
+    Form(
+        Input(id="name", name="name"),
+        Select(id="country", name="country", options=[...]),
+        Button("Submit", type="submit"),
+        action="/submit",
+        method="POST"
+    )
+    Form(Button("Save", trigger=save), ...)  # HTMX form with trigger handler
+
+Note: Forms with triggers automatically reset after successful submission.
+
+Constructor:
+
+```python
+Form(*children: Any, id: str | None = None, css: str | Callable[[], str] | None = None, action: str = "", method: str = "post", listen_to: State | list[State] | None = None, **attrs: Any)
+```
+
+Args:
+    *children: Form elements (Input, Textarea, Select, Button, etc.)
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    action: Form action URL
+    method: HTTP method (get, post, etc.)
+    listen_to: State/SessionState object (or list) to listen for changes
+    **attrs: Additional HTML attributes (hx-post, hx-target, etc.)
+
+### `TemplateComponent`
+
+Component that renders a Jinja2 template.
+
+Allows embedding complex HTML structures with dynamic content using Jinja2 templating.
+
+Example:
+    # Inline template
+    TemplateComponent(
+        template='<div class="{{ css }}">{{ content }}</div>',
+        content="Hello World",
+        css="text-red-500"
+    )
+
+    # Template with state
+    TemplateComponent(
+        template='<span>{{ value }}</span>',
+        value=my_state.get,
+        listen_to=my_state
+    )
+
+Constructor:
+
+```python
+TemplateComponent(template: str, id: str | None = None, css: str | Callable[[], str] | None = None, listen_to: State | list[State] | None = None, **context: Any)
+```
+
+Args:
+    template: Jinja2 template string with placeholders
+    id: HTML id attribute
+    css: Tailwind CSS classes
+    listen_to: State/SessionState object (or list) to listen for changes
+    **context: Variables to pass to the template
+
+### `DataTable`
+
+HTML table component for rendering tabular data.
+
+Renders a list of dictionaries as an HTML table. Each dictionary represents
+a row, and keys represent column names. Supports optional column ordering
+and fine-grained CSS styling.
+
+Example:
+    # Basic usage with automatic column detection
+    DataTable(
+        data=[
+            {"name": "Alice", "age": 30},
+            {"name": "Bob", "age": 25}
+        ],
+        css="w-full"
+    )
+
+    # With explicit column order
+    DataTable(
+        data=[
+            {"name": "Alice", "age": 30, "city": "NYC"},
+            {"name": "Bob", "age": 25, "city": "LA"}
+        ],
+        columns=["name", "city", "age"],
+        css="w-full"
+    )
+
+    # With dynamic data from state
+    DataTable(
+        data=table_data_state.get,
+        listen_to=table_data_state,
+        columns=["id", "name", "status"]
+    )
+
+    # With dictionary-based CSS for fine-grained styling
+    DataTable(
+        data=data,
+        css={
+            "table": "w-full border-2 border-blue-500",
+            "header": "px-4 py-3 bg-blue-600 text-white font-bold",
+            "cell": "px-4 py-3 border border-blue-200",
+            "row": "hover:bg-blue-50",
+        }
+    )
+
+Constructor:
+
+```python
+DataTable(data: list[dict] | Callable[[], list[dict]], columns: list[str] | Callable[[], list[str] | None] | None = None, id: str | None = None, css: str | Mapping[str, str | Callable[[], str]] | Callable[[], str | Mapping[str, str | Callable[[], str]]] | None = None, listen_to: State | list[State] | None = None, **attrs: Any)
+```
+
+Args:
+    data: Tabular data as list of dictionaries, or callable returning such list.
+          Each dict represents a row, keys are column names.
+    columns: Optional list of column names to display, in order, or callable returning such list or None.
+            If None, columns are extracted from the first row's keys.
+            Use this to control column order or select a subset of columns.
+            Can be a callable to enable dynamic column configuration based on state.
+    id: HTML id attribute
+    css: CSS styling. Can be:
+        - str: Applied to the root <table> element (original behavior)
+        - dict: Maps element types to CSS classes:
+            - "table": Root <table> element
+            - "header": <th> elements (header cells)
+            - "row": <tr> elements (body rows)
+            - "cell": <td> elements (body cells)
+        - Callable: Returns either str or dict
+    listen_to: State/SessionState object (or list) to listen for changes (triggers re-render)
+    **attrs: Additional HTML attributes (e.g., data-testid)
+
+---
+
+## State and Reactivity
+
+### `State` (global)
+
+Reactive state container with global (process-wide) scope.
+
+The value is stored in a process-wide dict, shared across all sessions.
+When mutated inside a trigger handler, the auto-propagation path
+generates OOB updates for the current session's listening components.
+When mutated from a background task, an SSE push broadcasts the update
+to every connected session.
+
+The `name` parameter is required: it becomes the storage key in the
+process-wide dict and in any serializing backend (e.g. `RedisBackend`).
+A named state (`State(0, "counter")`) keeps the same key across
+process restarts, so the persisted value survives. The name is not
+used for listener resolution — `listen_to` takes the state object
+directly.
+
+Constructor:
+
+```python
+State(initial_value: _T, name: str)
+```
+
+#### `State.get`
+
+Return the current global value.
+
+Always reads from the process-wide store; the value is the same
+for every session.
+
+#### `State.set`
+
+Write a new global value and broadcast the update.
+
+A global `State` is shared across all sessions. When mutated, the
+update is pushed to every connected session's SSE queues (broadcast).
+Inside a trigger handler, the mutation is also tracked so the
+trigger route's auto-propagation renders the OOB update for the
+requesting session immediately in the HTTP response; the broadcast
+then delivers the same update to all other (and the requesting)
+sessions via SSE.
+
+#### `State.listeners`
+
+Return the set of component IDs listening to this state in the active session.
+
+### `SessionState` (per-session, subclasses `State`)
+
+Reactive state container with per-session scope.
+
+The value is stored in the session's `data_registry`, so each
+session maintains fully independent state. When mutated inside a
+trigger handler, the auto-propagation path generates OOB updates
+only for the current session's listening components. When mutated
+from a background task (no active session), the value is stored as
+a global fallback and an SSE push is scheduled.
+
+The `name` parameter is inherited from `State` and remains
+required — see the `State` docstring for the rationale (stable
+storage key across restarts with a serializing backend).
+
+#### `SessionState.get`
+
+Return the current value for the active session.
+
+Falls back to the global broadcast value (if set from a
+background task) and then to the initial value when the session
+has no local value.
+
+#### `SessionState.set`
+
+Write a new session-scoped value and push to the current session.
+
+Inside a trigger handler, the value is written to the session's
+isolated data registry and tracked for auto-propagation via the
+trigger route's OOB response (current session only). Outside a
+trigger handler (background task with a session bound via
+contextvars), the value is written and an SSE push is scheduled
+to the current session's queues only — not a broadcast. When no
+session is bound at all, the value is stored as a global fallback
+and a broadcast is scheduled (edge case).
+
+### `update_components()`
+
+Render multiple components as OOB HTML for HTMX updates.
+
+Args:
+    *component_ids: Component IDs to update
+
+Returns:
+    Concatenated HTML string with hx-swap-oob attributes
+
+```python
+update_components(*component_ids: str) -> str
+```
+
+---
+
+## Trigger Handlers and Form Data
+
+### `@ui.trigger_handler`
+
+Register a trigger handler callable, exposed as `ui.trigger_handler`.
+
+Called by `UI.trigger_handler` with the bound `app`. Supports two
+call styles:
+
+- `@ui.trigger_handler` (no parentheses): the handler is registered
+  under its own function name.
+- `@ui.trigger_handler("name")` (with parentheses): the handler is
+  registered under the explicit name `"name"`.
+
+The handler is stored in `app.state.trigger_handlers` and registered
+as a POST route at `/_trigger/<name>` via
+`_register_trigger_route`. Trigger arguments sent from
+components are available inside the handler via
+`inguitive.get_trigger_args`.
+
+Args:
+    app: The FastAPI application to register the handler on. Bound
+        automatically when attached as `app.trigger_handler`.
+    trigger_name: Either a callable (used directly when the decorator
+        is applied without parentheses) or a string name, or None to
+        fall back to the function's `__name__`.
+
+Returns:
+    When applied without parentheses, returns the handler unchanged.
+    When applied with parentheses, returns a decorator that does the
+    same.
+
+Usage:
+    @app.trigger_handler
+    def increment():
+        counter_state.set(counter_state.get() + 1)
+
+### `get_trigger_args()`
+
+Get trigger_args dictionary for the current trigger handler execution.
+
+Returns the dictionary of trigger arguments that were passed via Component's
+trigger_args parameter. Returns an empty dict if no trigger_args were passed
+or if called outside of a trigger handler context.
+
+Example:
+    @ui.trigger_handler
+    def my_handler():
+        args = get_trigger_args()
+        column = args.get("column")
+
+Returns:
+    Dict[str, str]: The trigger arguments dictionary.
+
+```python
+get_trigger_args() -> dict[str, str]
+```
+
+### `get_form_data()`
+
+Return the posted form fields as a dictionary.
+
+A thin convenience wrapper around `await request.form()` so handlers do
+not have to write `dict(await request.form())` themselves. The handler
+must declare a `request: Request` parameter (FastAPI injects it) and call
+this helper explicitly:
+
+Example:
+    @ui.trigger_handler
+    async def submit(request: Request):
+        data = await get_form_data(request)
+        name = data.get("name")
+
+Args:
+    request: The FastAPI `Request` object (declared as a handler parameter).
+
+Returns:
+    Dict[str, str | UploadFile]: The posted form fields. Text inputs are
+    returned as `str` values; file inputs are returned as
+    `starlette.datastructures.UploadFile` (the concrete type that
+    `request.form()` yields). Checkboxes that are unchecked do not appear
+    in the dict (HTML omits them), so use `data.get("field", default)`
+    rather than `data["field"]` for optional fields.
+
+```python
+async def get_form_data(request: Request) -> dict[str, str | UploadFile]
+```
+
+---
+
+## Sessions and Backends
+
+### `get_session_id()`
+
+Get the current session ID, or None if no session is active.
+
+```python
+get_session_id() -> str | None
+```
+
+### `session_active()`
+
+Return `True` while the current session has at least one open SSE connection.
+
+Intended for session-scoped background tasks (e.g. a per-session tick loop
+started from a trigger handler). The task runs in the request's context
+(Python's `asyncio.create_task` copies the contextvars at spawn time), so
+`session_active()` resolves the current session via
+`_get_current_session_from_context` and checks the SSE connection
+registry for that session's id. Once all SSE connections for the session
+have closed (all tabs navigated away), this returns `False` and the loop
+should terminate.
+
+Example:
+
+```python
+async def session_tick():
+    while session_active():
+        await asyncio.sleep(1)
+        counter_state.set(counter_state.get() + 1)
+```
+
+Returns:
+    bool: `True` if a session is bound in the current context and it has
+    at least one open SSE queue; `False` otherwise.
+
+```python
+session_active() -> bool
+```
+
+### `session_context()`
+
+Bind a session into the current context for the duration of the block.
+
+This is the background-task analog of the request middleware: it loads the
+session from the backend, restores its live component registry, makes it
+the active session so that `State.get()` / `State.set()` operate on
+this session's isolated data, and persists the session on exit if it was
+mutated. Use it to run per-session logic outside an HTTP request.
+
+The yielded value is `None` when the session no longer exists (e.g. it
+was evicted or the tab closed and the TTL elapsed); callers should treat
+that as a signal to stop any loop bound to that session.
+
+Example:
+
+```python
+async with session_context(session_id) as session:
+    if session is None:
+        return
+    counter_state.set(counter_state.get() + 1)
+```
+
+`State.set()` / `SessionState.set()` called inside the block write to
+the bound session's isolated data. When called from outside a trigger
+handler (i.e. from a background task, which is the typical
+`session_context` use case), the framework's auto-push path schedules
+the OOB update to the session's open SSE queues — no explicit push call is
+needed. Listener IDs are captured automatically from the session's
+registry at render time.
+
+Concurrent mutation of the same session (e.g. a background task and a
+concurrent request handler) is last-save-wins; guard against it in your
+app logic if needed.
+
+```python
+async def session_context(session_id: str) -> AsyncIterator[Session | None]
+```
+
+### `set_session_backend()`
+
+Set the session backend. Call this during app initialization.
+
+```python
+set_session_backend(backend: SessionBackend) -> None
+```
+
+### `MemoryBackend`
+
+In-memory session backend for **development only**. NOT SUITABLE FOR PRODUCTION with multiple workers or threads.
+
+Constructor:
+
+```python
+MemoryBackend(ttl_seconds: int = 3600)
+```
+
+Args:
+    ttl_seconds: Session timeout in seconds (default: 3600 = 1 hour).
+                Sessions older than this will be cleaned up.
+                Set to 0 or negative for no expiry (not recommended).
+
+### `RedisBackend`
+
+Redis-based session backend for production.
+
+Requires the optional `redis` package: `pip install inguitive[redis]`.
+Configure during app initialization:
+
+```python
+from inguitive.backends.redis import RedisBackend
+from inguitive import set_session_backend
+
+set_session_backend(RedisBackend(redis_url="redis://localhost:6379"))
+```
+
+Alternatively pass the backend to `UI(app, session_backend=...)`.
+Sessions are stored JSON-serialized under `inguitive:session:<id>`
+with a TTL.
+
+Constructor:
+
+```python
+RedisBackend(redis_url: str = "redis://localhost:6379", ttl_seconds: int = 3600, db: int = 0)
+```
+
+Args:
+    redis_url: Redis connection URL
+    ttl_seconds: Session timeout in seconds (default: 3600 = 1 hour)
+    db: Redis database number

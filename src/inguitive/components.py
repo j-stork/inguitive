@@ -28,7 +28,32 @@ ET.register_namespace("xml", "http://www.w3.org/XML/1998/namespace")
 
 
 class Component:
-    """Base component class for inguitive."""
+    """Base component class for inguitive.
+
+    Every component accepts these common keyword arguments (handled in
+    ``__init__``):
+
+    - ``id``: HTML id attribute. Auto-generated as ``comp-<uuid8>`` when
+      omitted. A stable id is what HTMX out-of-band swaps target, so pass an
+      explicit id for components you re-render via OOB/SSE updates.
+    - ``css``: Tailwind classes for the ``class`` attribute (string or
+      zero-argument callable).
+    - ``listen_to``: a ``State``/``SessionState`` object (or list of them)
+      whose mutation re-renders this component automatically.
+    - ``trigger``: a function decorated with ``@ui.trigger_handler``; wired
+      as an HTMX POST to the handler's ``/_trigger/<name>`` URL.
+    - ``trigger_args``: dict of query parameters appended to the trigger URL.
+    - ``**attrs``: any other keyword argument becomes an HTML attribute on
+      the rendered element.
+
+    Dynamic attributes: any component attribute may be a zero-argument
+    callable instead of a static value; callables are resolved at render
+    time. String results are HTML-escaped unless wrapped in
+    ``markupsafe.Markup``.
+
+    Every instantiated component registers itself in the component registry
+    under its id, which is what enables OOB/SSE re-rendering.
+    """
 
     def __init__(
         self,
@@ -155,11 +180,23 @@ class Component:
 
 
 class Div(Component):
-    """HTML div component."""
+    """HTML div component.
+
+    General-purpose container. Children may be strings, Components,
+    zero-argument callables, or a single list of these.
+    """
 
     def __init__(
         self, *children: Any, id: str | None = None, css: str | Callable[[], str] | None = None, **attrs: Any
     ):
+        """Initialize a Div component.
+
+        Args:
+            *children: Child content (strings, Components, or callables)
+            id: HTML id attribute
+            css: Tailwind CSS classes
+            **attrs: Additional HTML attributes
+        """
         super().__init__(id=id, css=css, **attrs)
         self.children = self._normalize_children(children)
 
@@ -178,12 +215,14 @@ class Div(Component):
 
 
 class Button(Component):
-    """HTML button component with HTMX support.
+    """HTML button component.
 
-    Use trigger, navigate, or redirect parameters for click actions:
-    - trigger: POST action for partial updates (replaces old on_click)
-    - navigate: GET navigation for full page changes
-    - redirect: Immediate browser redirect
+    Renders a <button> element. Click actions use the common component
+    parameters: ``trigger`` (POST to a ``@ui.trigger_handler`` route for
+    partial updates) and ``trigger_args`` (query parameters appended to
+    the trigger URL). Any other keyword argument becomes an HTML attribute,
+    so plain HTML/HTMX attributes (e.g. ``type="submit"``,
+    ``hx-get="/page"``) pass through unchanged.
     """
 
     def __init__(
@@ -325,7 +364,7 @@ class Text(Component):
     Example:
         Text("Welcome to our application")
         Text("This is a paragraph", css="text-gray-600 mt-4")
-        Text(lambda: get_description(), listen_to="desc_state")
+        Text(lambda: get_description(), listen_to=desc_state)
     """
 
     def __init__(
@@ -369,7 +408,7 @@ class Header(Component):
     Example:
         Header("Main Title", level=1)
         Header("Section Heading", level=2, css="text-blue-600")
-        Header(lambda: get_title(), level=3, listen_to="title_state")
+        Header(lambda: get_title(), level=3, listen_to=title_state)
     """
 
     def __init__(
@@ -410,11 +449,23 @@ class Header(Component):
 
 
 class Icon(Component):
-    """SVG icon component."""
+    """SVG icon component.
+
+    Renders inline SVG markup. The SVG must be well-formed XML (it is
+    parsed with ElementTree to merge ``css``/``attrs`` into the root
+    element); malformed SVG raises a ValueError.
+    """
 
     def __init__(
         self, svg: str | Callable[[], str], css: str | Callable[[], str] | None = None, **attrs: Any
     ):
+        """Initialize an Icon component.
+
+        Args:
+            svg: Inline SVG markup (string or callable returning markup)
+            css: Tailwind CSS classes (merged into the SVG root element)
+            **attrs: Additional attributes set on the SVG root element
+        """
         super().__init__(css=css, **attrs)
         self.svg = svg
 
@@ -577,7 +628,7 @@ class Input(Component):
 
     Example:
         Input(id="email", type="email", placeholder="Enter email", css="border rounded p-2")
-        Input(id="name", value=state, listen_to="name_state")
+        Input(id="name", value=name_state.get, listen_to=name_state)
     """
 
     def __init__(
@@ -631,7 +682,7 @@ class Textarea(Component):
 
     Example:
         Textarea(id="bio", placeholder="Tell us about yourself", rows=5)
-        Textarea(id="notes", value=content_state, listen_to="notes_state")
+        Textarea(id="notes", value=content_state.get, listen_to=content_state)
     """
 
     def __init__(
@@ -687,7 +738,7 @@ class Select(Component):
     Example:
         Select(id="country", options=[("us", "USA"), ("de", "Germany")], value="us")
         Select(id="theme", options=[("light", "Light"), ("dark", "Dark")],
-               value=lambda: theme_state.get(), listen_to="theme_state")
+               value=lambda: theme_state.get(), listen_to=theme_state)
     """
 
     def __init__(
@@ -885,7 +936,7 @@ class Form(Component):
             action="/submit",
             method="POST"
         )
-        Form(Button("Save", trigger="save"), ...)  # HTMX form with trigger
+        Form(Button("Save", trigger=save), ...)  # HTMX form with trigger handler
 
     Note: Forms with triggers automatically reset after successful submission.
     """
@@ -955,7 +1006,7 @@ class TemplateComponent(Component):
         TemplateComponent(
             template='<span>{{ value }}</span>',
             value=my_state.get,
-            listen_to="my_state"
+            listen_to=my_state
         )
     """
 
@@ -1079,7 +1130,7 @@ class DataTable(Component):
         # With dynamic data from state
         DataTable(
             data=table_data_state.get,
-            listen_to="table_data_state",
+            listen_to=table_data_state,
             columns=["id", "name", "status"]
         )
 

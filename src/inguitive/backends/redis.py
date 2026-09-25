@@ -24,7 +24,20 @@ from inguitive.session import (
 
 
 class RedisBackend(SessionBackend):
-    """Redis-based session backend for production."""
+    """Redis-based session backend for production.
+
+    Requires the optional ``redis`` package: ``pip install inguitive[redis]``.
+    Configure during app initialization::
+
+        from inguitive.backends.redis import RedisBackend
+        from inguitive import set_session_backend
+
+        set_session_backend(RedisBackend(redis_url="redis://localhost:6379"))
+
+    Alternatively pass the backend to ``UI(app, session_backend=...)``.
+    Sessions are stored JSON-serialized under ``inguitive:session:<id>``
+    with a TTL.
+    """
 
     def __init__(self, redis_url: str = "redis://localhost:6379", ttl_seconds: int = 3600, db: int = 0):
         """
