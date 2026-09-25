@@ -3,14 +3,58 @@
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-# Import after setting up path
-from examples.counter_app import app
-from inguitive import UI, Button, Div, SessionState, Text, update_components
+from inguitive import (
+    UI,
+    Button,
+    Div,
+    SessionState,
+    Text,
+    get_session_id,
+    update_components,
+)
+
+# Inline counter app: examples/counter_app was removed during the
+# one-app-per-feature refactor. Building the app inline keeps these tests
+# independent of the examples/ directory.
+counter_app = FastAPI()
+counter_ui = UI(counter_app)
+
+counter_state = SessionState(0, "iso_counter_state")
+
+
+@counter_ui.trigger_handler
+def increment():
+    counter_state.set(counter_state.get() + 1)
+
+
+@counter_ui.trigger_handler
+def reset():
+    counter_state.set(0)
+
+
+@counter_app.get("/")
+def home():
+    return counter_ui.page(
+        Div(
+            Text(
+                lambda: f"Count: {counter_state.get()}",
+                listen_to=counter_state,
+                css="text-xl text-center",
+            ),
+            Text(lambda: f"Session: {get_session_id()}", css="text-sm text-center"),
+            Div(
+                Button("+1", trigger=increment, css="px-3 py-2 bg-blue-500"),
+                Button("Reset", trigger=reset, css="px-3 py-2 bg-gray-400"),
+                css="flex gap-6 justify-center",
+            ),
+            css="flex flex-col items-center gap-6 p-6",
+        )
+    )
 
 
 def get_client():
     """Create a fresh TestClient for each test to ensure clean state."""
-    return TestClient(app)
+    return TestClient(counter_app)
 
 
 class TestSessionIsolation:
@@ -64,10 +108,9 @@ class TestSessionIsolation:
         """Verify that two users have independent theme states.
 
         Uses a small inline app with a light/dark theme toggle rather than
-        counter_app, which is scoped to reactive counter state (the theme
-        toggle was extracted during the one-app-per-feature refactor). This
-        still exercises session isolation of a *second* per-session State
-        distinct from the counter State tested above.
+        a shared example app, so the test exercises session isolation of a
+        *second* per-session State distinct from the counter State tested
+        above.
         """
         theme_app = FastAPI()
         theme_ui = UI(theme_app)
