@@ -13,7 +13,8 @@ framework auto-pushes the update only to that session's SSE connections.
 No explicit ``return update_components(...)`` is needed.
 
 Clicking the button again after the loop finished resets the counter
-to 0 and restarts it. Clicking while running is a no-op.
+to 0 and restarts it. Clicking while running is a no-op. The loop
+runs until all of the session's tabs are closed.
 """
 
 import asyncio
@@ -43,7 +44,7 @@ def start_counter():
     existing = _counter_tasks.get(session_id)
     if existing is not None and not existing.done():
         return  # already running — refuse the duplicate start
-    counter_state.set(0)
+    counter_state.set(0)  # reset so each start begins from 0
     task = asyncio.create_task(_tick(session_id))
     _counter_tasks[session_id] = task
     task.add_done_callback(lambda t, sid=session_id: _counter_tasks.pop(sid, None))
@@ -55,16 +56,14 @@ async def _tick(session_id: str):
 
     Runs in the trigger handler's copied context, so SessionState.set()
     writes to this session's isolated value and auto-pushes to this
-    session's open SSE connections. The loop terminates when the counter
-    reaches 10 or when session_active() returns False (all tabs closed).
+    session's open SSE connections. The loop terminates when
+    session_active() returns False (all tabs closed).
     """
     while session_active():
         await asyncio.sleep(1)
         counter_state.set(counter_state.get() + 1)
         # Auto-propagation pushes to this session only. Explicit alternative:
         # return update_components(*counter_state.listeners)
-        if counter_state.get() >= 10:
-            return
 
 
 # --- Routes ---
